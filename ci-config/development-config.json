@@ -1,0 +1,24 @@
+{
+    "FUSION_FW_VERSION":"1.0.0",
+    "GENERIC":{
+        "GCP_PROJECT_ID":"warm-ring-360408",
+        "GCP_ARTIFACT_HOSTNAME":"europe-west1-docker.pkg.dev",
+        "GCP_ARTIFACT_REPO_NAME":"<staging artifact registry repository name>",
+        "EMAIL_RECIPIENTS":"<dsquares email or mail groups comma separated>",
+        "UPLOAD_JENKINS_LOGS": false,
+        "DOCKER_FILE_PATH": "<Dockerfile relative path inside your repository>",
+        "DOCKER_BUILD_DIR":"<Build dir where you run your docker build command>"
+    },
+    "CI":{
+        "SONAR_PROJECT_KEY":"<SonarQube project key (it'll be created if not already)>",
+        "UNIT_TEST":{
+            "DOCKER_FILE_PATH":"<UT Dockerfile relative path inside your repository>",
+            "DOCKER_BUILD_DIR":"<Build dir where you run your docker build command>",
+            "REPORT_PATH":"<report path inside docker container (if any)>"
+        }
+    },
+    "CD":{
+        "DEPLOYMENT_PATH":"<staging values.yaml file path in deployments-gitops repository>",
+        "DEPLOYMENT_SUBDOMAIN":"<your-project-staging-subdomain>"
+    }   
+}

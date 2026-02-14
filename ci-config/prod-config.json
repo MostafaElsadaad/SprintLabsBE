@@ -1,0 +1,16 @@
+{
+    "FUSION_FW_VERSION":"1.0.0",
+    "GENERIC":{
+        "GCP_PROJECT_ID":"dsq-tech-prod",
+        "GCP_ARTIFACT_HOSTNAME":"europe-west1-docker.pkg.dev",
+        "GCP_ARTIFACT_REPO_NAME":"<pre-prod artifact registry repository name>",
+        "EMAIL_RECIPIENTS":"<dsquares email or mail groups comma separated>",
+        "UPLOAD_JENKINS_LOGS": false,
+        "DOCKER_FILE_PATH": "<Dockerfile relative path inside your repository (same as development & pre-prod)>",
+        "DOCKER_BUILD_DIR":"<Build dir where you run your docker build command (same as development & pre-prod)>"
+    },
+    "CD":{
+        "DEPLOYMENT_PATH":"<prod values.yaml file path in deployments-gitops repository>",
+        "DEPLOYMENT_SUBDOMAIN":"<your-project-prod-subdomain>"
+    }   
+}
