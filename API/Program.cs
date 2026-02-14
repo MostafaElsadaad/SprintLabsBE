@@ -17,11 +17,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Swashbuckle.AspNetCore.Filters;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.WebHost.UseUrls("http://localhost:5005", "https://localhost:7005");
+//builder.WebHost.UseUrls("http://localhost:5005", "https://localhost:7005");
 
 builder.Services.AddControllers();
 
@@ -97,6 +99,15 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+}
+
 
 UnifiedLogger.UseMiddleware(app);
 app.UseMiddleware<GlobalExceptionHandler>();
