@@ -1,54 +1,60 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Claims;
 
 using Domain.Services;
 
-using Newtonsoft.Json;
+using Google.Apis.Auth;
 
-using Shared.Enums;
-using Shared.Exceptions;
+using Microsoft.Extensions.Configuration;
+
 using Shared.Responses;
 
 namespace Infrastructure.Services
 {
     public class GoogleAuthenticationService : IGoogleAuthenticationService
     {
-        private readonly HttpClient _httpClient;
+        private readonly string[] _allowedClientIds;
 
-        public GoogleAuthenticationService(HttpClient httpClient)
+        public GoogleAuthenticationService(IConfiguration configuration)
         {
-            _httpClient = httpClient;
+            _allowedClientIds = configuration
+                .GetSection("Authentication:Google:AllowedClientIds")
+                .Get<string[]>() ?? Array.Empty<string>();
         }
 
         public async Task<GoogleUserResponse> GetUserInfo(string accessToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            if (string.IsNullOrWhiteSpace(accessToken))
+                throw new UnauthorizedAccessException("ID token is required.");
 
-            var userInfoResponse = await _httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
+            if (_allowedClientIds.Length == 0)
+                throw new InvalidOperationException("Google AllowedClientIds are not configured.");
 
-            if (userInfoResponse.IsSuccessStatusCode)
+            var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                var userInfo = await userInfoResponse.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<GoogleUserResponse>(userInfo); ;
-            }
-            else
+                Audience = _allowedClientIds
+            };
+
+            var payload = await GoogleJsonWebSignature.ValidateAsync(accessToken, settings);
+
+            return new GoogleUserResponse
             {
-                throw new GenericException(
-                    message: ErrorMessage.InvalidAccessToken,
-                    statusCode: HttpStatusCode.Unauthorized,
-                    errorCode: ErrorCode.Failure);
-            }
+                Sub = payload.Subject,
+                Email = payload.Email,
+                Name = payload.Name,
+                Picture = payload.Picture,
+                Domain = payload.HostedDomain
+            };
         }
 
         public List<Claim> GenerateGoogleClaims(GoogleUserResponse response)
         {
             return new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Email, response.Email)
+                new Claim(JwtRegisteredClaimNames.Email, response.Email ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Sub, response.Sub ?? string.Empty),
+                new Claim("name", response.Name ?? string.Empty)
             };
         }
-
     }
 }

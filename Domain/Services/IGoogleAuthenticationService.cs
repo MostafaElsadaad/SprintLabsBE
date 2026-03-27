@@ -6,7 +6,7 @@ namespace Domain.Services
 {
     public interface IGoogleAuthenticationService
     {
-        Task<GoogleUserResponse> GetUserInfo(string accessToken);
-        List<Claim> GenerateGoogleClaims(GoogleUserResponse response);
+        public Task<GoogleUserResponse> GetUserInfo(string accessToken);
+        public List<Claim> GenerateGoogleClaims(GoogleUserResponse response);
     }
 }

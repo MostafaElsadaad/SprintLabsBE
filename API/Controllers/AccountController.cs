@@ -28,7 +28,7 @@ namespace API.Controllers
         {
             GoogleAuthenticationCommand command = new GoogleAuthenticationCommand
             {
-                AccessToken = googleAccessToken
+                IdToken = googleAccessToken
             };
             var compassAccessToken = await _mediator.Send(command);
 

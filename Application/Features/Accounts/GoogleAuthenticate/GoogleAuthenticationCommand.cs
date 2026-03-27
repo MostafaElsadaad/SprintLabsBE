@@ -12,6 +12,6 @@ namespace Application.Features.Accounts.GoogleAuthenticate
 {
     public class GoogleAuthenticationCommand : IRequest<LoginResponse>
     {
-        public string AccessToken { get; set; }
+        public string IdToken { get; set; } = string.Empty;
     }
 }

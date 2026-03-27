@@ -10,7 +10,7 @@ namespace Shared.Responses
 {
     public class GoogleUserResponse
     {
-        [JsonProperty("id")]
+        [JsonProperty("sub")]
         public string Sub { get; set; } // Google user ID
 
         [JsonProperty("email")]

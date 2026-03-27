@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using System.Security.Claims;
 
-using Domain.Models;
-using Domain.Repositories;
 using Domain.Services;
 
 using MediatR;
@@ -17,19 +15,20 @@ namespace Application.Features.Accounts.GoogleAuthenticate
     {
         private readonly IUserService _userService;
         private readonly IGoogleAuthenticationService _googleAuthenticationService;
-        //private readonly IBaseRepository<UserProfile> _userProfileRepository;
 
-        public GoogleAuthenticationCommandHandler(IUserService userService, IGoogleAuthenticationService googleAuthenticationService)
+        public GoogleAuthenticationCommandHandler(
+            IUserService userService,
+            IGoogleAuthenticationService googleAuthenticationService)
         {
             _userService = userService;
             _googleAuthenticationService = googleAuthenticationService;
-            //_userProfileRepository = userRepository;
         }
+
         public async Task<LoginResponse> Handle(GoogleAuthenticationCommand request, CancellationToken cancellationToken)
         {
-            var googleUserInfo = await _googleAuthenticationService.GetUserInfo(request.AccessToken);
+            var googleUserInfo = await _googleAuthenticationService.GetUserInfo(request.IdToken);
 
-            if (googleUserInfo == null || string.IsNullOrEmpty(googleUserInfo.Email) || googleUserInfo.Domain != "dsquares.com")
+            if (googleUserInfo == null || string.IsNullOrEmpty(googleUserInfo.Email))
             {
                 throw new GenericException(
                     message: ErrorMessage.InvalidAccessToken,
@@ -38,10 +37,6 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             }
 
             var userExists = await _userService.EnsureUserExists(googleUserInfo.Email);
-            //if (!userExists)
-            //{
-            //    await RegisterNewUserWithProfile(googleUserInfo);
-            //}
 
             List<Claim> claims = _googleAuthenticationService.GenerateGoogleClaims(googleUserInfo);
 
@@ -50,28 +45,8 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             loginResponse.Email = googleUserInfo.Email;
             loginResponse.Name = googleUserInfo.Name;
             loginResponse.PictureUrl = googleUserInfo.Picture;
+
             return loginResponse;
         }
-
-
-        //private async Task RegisterNewUserWithProfile(GoogleUserResponse googleUserInfo)
-        //{
-
-        //    var userProfile = new UserProfile
-        //    {
-        //        Name = googleUserInfo.Name,
-        //        ImagePath = googleUserInfo.Picture
-        //    };
-        //    await _userProfileRepository.AddAsync(userProfile);
-        //    await _userProfileRepository.SaveChangesAsync();
-
-        //    var userId = await _userService.CreateAccount(googleUserInfo, userProfile.Id);
-
-        //    userProfile.UserId = userId;
-        //    await _userProfileRepository.UpdateAsync(userProfile);
-        //    await _userProfileRepository.SaveChangesAsync();
-        //}
-
-
     }
 }
