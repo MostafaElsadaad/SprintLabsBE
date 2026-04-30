@@ -34,14 +34,34 @@ namespace Infrastructure.DataAccess
             // ✅ Player config INSIDE OnModelCreating
             modelBuilder.Entity<Player>(e =>
             {
-                e.Property(x => x.GoogleId).IsRequired();
-                e.Property(x => x.Email).IsRequired();
-                e.Property(x => x.Name).IsRequired();
+                e.Property(x => x.GoogleId)
+                    .IsRequired()
+                    .HasMaxLength(128);     
+
+                e.Property(x => x.Email)
+                    .IsRequired()
+                    .HasMaxLength(256);     
+
+                e.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);      
+
+                e.Property(x => x.AvatarUrl)
+                    .HasMaxLength(500);      
+
+                e.Property(x => x.Grade)
+                    .HasMaxLength(20);       
+
+                e.Property(x => x.SchoolName)
+                    .HasMaxLength(200);      
+
+                e.HasIndex(x => x.Email).IsUnique();
+                e.HasIndex(x => x.GoogleId).IsUnique();
+
                 e.Property(x => x.Gold).HasDefaultValue(0);
                 e.Property(x => x.Experience).HasDefaultValue(0);
                 e.Property(x => x.Level).HasDefaultValue(1);
                 e.Property(x => x.CreatedAt).IsRequired();
-                e.HasIndex(x => x.GoogleId).IsUnique();
             });
 
             modelBuilder.Entity<User>()

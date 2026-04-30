@@ -52,9 +52,7 @@ namespace Application.Features.Accounts.GoogleAuthenticate
                     Email = googleUserInfo.Email,
                     Name = googleUserInfo.Name,
                     AvatarUrl = googleUserInfo.Picture,
-                    Gold = 0,
-                    Experience = 0,
-                    Level = 1
+          
                 });
             }
 
@@ -66,8 +64,13 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             loginResponse.Email = googleUserInfo.Email;
             loginResponse.Name = googleUserInfo.Name;
             loginResponse.PictureUrl = googleUserInfo.Picture;
+            loginResponse.Gold = player.Gold;
+            loginResponse.Experience = player.Experience;
+            loginResponse.Level = player.Level;
 
             return loginResponse;
         }
+
+
     }
 }
