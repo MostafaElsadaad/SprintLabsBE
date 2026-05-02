@@ -12,5 +12,9 @@ namespace Shared.Responses
         public string Name { get; set; }
         public string Email { get; set; }
         public string PictureUrl { get; set; }
+
+        public int Gold { get; set; }
+        public int Experience { get; set; }
+        public int Level { get; set; }
     }
 }

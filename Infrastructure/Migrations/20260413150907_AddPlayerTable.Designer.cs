@@ -4,6 +4,7 @@ using Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260413150907_AddPlayerTable")]
+    partial class AddPlayerTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,16 +37,14 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("AvatarUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("longtext");
 
                     b.Property<int>("Experience")
                         .ValueGeneratedOnAdd()
@@ -57,11 +58,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("GoogleId")
                         .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("varchar(128)");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<int?>("Grade")
-                        .HasMaxLength(20)
                         .HasColumnType("int");
 
                     b.Property<int>("Level")
@@ -71,20 +70,15 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("longtext");
 
                     b.Property<string>("SchoolName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
 
                     b.HasIndex("GoogleId")
                         .IsUnique();
@@ -133,10 +127,10 @@ namespace Infrastructure.Migrations
                         {
                             Id = 1L,
                             Assignment = 1,
-                            CreatedAt = new DateTime(2026, 4, 30, 10, 54, 38, 593, DateTimeKind.Utc).AddTicks(399),
+                            CreatedAt = new DateTime(2026, 4, 13, 15, 9, 7, 257, DateTimeKind.Utc).AddTicks(4773),
                             Grade = 5,
                             PayloadJson = "{\r\n    \"Questions\": [\r\n        {\r\n            \"Type\": 0,\r\n            \"MCQ\": {\r\n                \"Prompt\": \"What is 2+2?\",\r\n                \"Choices\": [ \"3\", \"4\", \"5\", \"6\" ],\r\n                \"CorrectIndex\": 1,\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 1,\r\n            \"Ordering\": {\r\n                \"Prompt\": \"Arrange numbers\",\r\n                \"Items\": [ \"5\", \"3\", \"2\", \"4\", \"6\" ],\r\n                \"CorrectOrder\": [ 3, 1, 0, 2, 4 ],\r\n                \"Timer\": 10.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 3,\r\n            \"FillBlank\": {\r\n                \"Prompt\": \"What color is an apple?\",\r\n                \"CorrectAnswers\": [ \"red\", \"green\", \"yellow\" ],\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 6,\r\n            \"TrueOrFalse\": {\r\n                \"Prompt\": \"Can birds fly?\",\r\n                \"Answer\": true,\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 5,\r\n            \"DragAndDrop\": {\r\n                \"Prompt\": \"The lion eats @, and the cow gives us @\",\r\n                \"Spaces\": 2,\r\n                \"Answers\": [ \"milk\", \"apples\", \"meat\", \"cheese\" ],\r\n                \"CorrectAnswers\": [ \"meat\", \"milk\" ],\r\n                \"Timer\": 10.0\r\n            }\r\n        }\r\n    ]\r\n}",
-                            UpdatedAt = new DateTime(2026, 4, 30, 10, 54, 38, 593, DateTimeKind.Utc).AddTicks(399),
+                            UpdatedAt = new DateTime(2026, 4, 13, 15, 9, 7, 257, DateTimeKind.Utc).AddTicks(4773),
                             Version = 1
                         });
                 });
