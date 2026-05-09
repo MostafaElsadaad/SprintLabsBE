@@ -29,4 +29,12 @@ public class PlayerRepository : IPlayerRepository
         await _context.SaveChangesAsync();
         return player;
     }
+
+    public async Task<Player> UpdatePlayer (Player player)
+    {
+        player.UpdatedAt = DateTime.UtcNow;
+        _context.Players.Update(player);
+        await _context.SaveChangesAsync();
+        return player;
+    }
 }

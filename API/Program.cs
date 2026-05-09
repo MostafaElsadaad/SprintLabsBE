@@ -3,6 +3,7 @@ using API.Exceptions;
 using Application;
 
 using Asp.Versioning;
+using Asp.Versioning;
 
 using Dsquares.Logging;
 
@@ -10,14 +11,16 @@ using Infrastructure;
 using Infrastructure.DataAccess;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
-using Asp.Versioning;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Swashbuckle.AspNetCore.Filters;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.OpenApi.Models;
+
+using Shared.Options;
+
+using Swashbuckle.AspNetCore.Filters;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,7 +63,8 @@ builder.Services.AddSwaggerGen(
 );
 #endregion
 
-builder.Services.AddIdentity<User, IdentityRole<long>>()
+builder.Services.AddIdentityCore<User>()
+    .AddRoles<IdentityRole<long>>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -99,6 +103,12 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+var jwtSettings = builder.Configuration.GetSection("JWTOptions").Get<JWTOptions>();
+Console.WriteLine($"=== JWT DEBUG ===");
+Console.WriteLine($"Secret: {jwtSettings?.Secret}");
+Console.WriteLine($"Issuer: {jwtSettings?.Issuer}");
+Console.WriteLine($"Audience: {jwtSettings?.Audience}");
+Console.WriteLine($"=================");
 
 if (!app.Environment.IsDevelopment())
 {
