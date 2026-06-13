@@ -14,14 +14,15 @@ using Shared.Exceptions;
 
 using Shared.Enums;
 using Shared.Responses;
+using System;
 
 namespace Application.Features.Accounts.UpdateProfile
 {
     public class UpdateProfileCommandHandler: IRequestHandler<UpdateProfileCommand, BaseResponse<PlayerProfileResponse>>
     {
-        private readonly IPlayerRepository _playerRepository;
+        private readonly IBaseRepository<Player> _playerRepository;
 
-        public UpdateProfileCommandHandler(IPlayerRepository playerRepository)
+        public UpdateProfileCommandHandler(IBaseRepository<Player> playerRepository)
         {
             _playerRepository = playerRepository;
         }
@@ -48,8 +49,7 @@ namespace Application.Features.Accounts.UpdateProfile
 
 
             //Find the player by GoogleId
-            var player = await _playerRepository.GetByGoogleIdAsync(request.GoogleId);
-
+            var player = await _playerRepository.GetByCustomConditionAsync(p => p.GoogleId == request.GoogleId);
             // If no player was found
 
             if ( player == null)
@@ -83,7 +83,9 @@ namespace Application.Features.Accounts.UpdateProfile
             }
 
             // Update fields
-            var updatedPlayer = await _playerRepository.UpdatePlayer(player);
+            player.UpdatedAt = DateTime.UtcNow;
+            var updatedPlayer = await _playerRepository.UpdateAsync(player);
+            await _playerRepository.SaveChangesAsync();
 
             var response = new PlayerProfileResponse
             {
