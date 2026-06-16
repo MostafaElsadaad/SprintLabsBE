@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Claims;
 
+using Application.Features.Accounts.GetPlayer;
 using Application.Features.Accounts.GoogleAuthenticate;
 using Application.Features.Accounts.UpdateProfile;
 
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Shared.Enums;
 using Shared.Responses;
+using Application.Features.Accounts.GetPlayer;
 
 namespace API.Controllers
 {
@@ -64,6 +66,28 @@ namespace API.Controllers
             
 
             var result = await _mediator.Send(command);
+            return Ok(result);
+        }
+
+
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetPlayer()
+        {
+            var googleId = HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(googleId))
+            {
+                return Unauthorized();
+            }
+
+            var query = new GetPlayerQuery
+            {
+                GoogleId = googleId
+            };
+
+            var result = await _mediator.Send(query);
             return Ok(result);
         }
     }
