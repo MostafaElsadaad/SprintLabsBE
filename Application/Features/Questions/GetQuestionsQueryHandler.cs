@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -26,7 +26,9 @@ namespace Application.Features.Questions
 
         public async Task<GetQuestionsDto> Handle(GetQuestionsQuery request, CancellationToken cancellationToken)
         {
-            var question = await _questionsRepository.GetByCustomConditionAsync(x => x.Grade == request.Grade);
+            var question = await _questionsRepository.GetByCustomConditionAsync(x =>
+                x.Grade == request.Grade &&
+                (request.Assignment == null || x.Assignment == request.Assignment));
 
             if (question == null)
                 throw new GenericException(

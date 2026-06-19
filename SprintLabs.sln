@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Application", "Application\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D512FCC9-B1BC-439D-BAAF-38A2A264159D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compass.Tests", "Compass.Tests\Compass.Tests.csproj", "{F8E0485C-1DD0-4111-8BB6-029DF61D15F6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compass.Tests", "SprintLabs.Tests\Compass.Tests.csproj", "{F8E0485C-1DD0-4111-8BB6-029DF61D15F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
