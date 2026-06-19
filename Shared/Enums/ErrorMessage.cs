@@ -22,6 +22,7 @@ namespace Shared.Enums
         public const string DeletionFailed = "Failed to Delete Record";
         public const string ExistingRecord = "Record Already Exists";
         public const string NotModified = "Record is Not Modified";
+        public const string InvalidInput = "Invalid Data";
 
 
 

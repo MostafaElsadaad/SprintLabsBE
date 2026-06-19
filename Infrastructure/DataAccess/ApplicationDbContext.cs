@@ -1,4 +1,4 @@
-﻿using Domain.Models;
+using Domain.Models;
 
 using Infrastructure.Seed;
 
@@ -27,8 +27,10 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Grade).IsRequired();
                 e.Property(x => x.CreatedAt).IsRequired();
                 e.Property(x => x.PayloadJson).IsRequired();
+
+                e.HasIndex(x => x.Grade).IsUnique();
+
                 e.HasIndex(x => new { x.Grade, x.Assignment });
-                e.HasIndex(x => new { x.Grade, x.Assignment, x.Version }).IsUnique();
             });
 
             // ✅ Player config INSIDE OnModelCreating

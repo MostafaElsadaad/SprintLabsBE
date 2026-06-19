@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 using Shared.Enums;
 using Shared.Responses;
@@ -36,6 +37,19 @@ namespace API.Controllers
             var questions = await _mediator.Send(getQuestionsQuery);
             return Ok(new BaseResponse<GetQuestionsDto>(
                 data: questions,
+                statusCode: HttpStatusCode.OK,
+                errorCode: ErrorCode.Success,
+                message: ErrorMessage.Success));
+        }
+
+        [HttpPut]
+        //[Authorize]
+        public async Task<IActionResult> UpsertQuestions([FromBody] UpsertQuestionsCommand command)
+        {
+            var result = await _mediator.Send(command);
+
+            return Ok(new BaseResponse<GetQuestionsDto>(
+                data: result,
                 statusCode: HttpStatusCode.OK,
                 errorCode: ErrorCode.Success,
                 message: ErrorMessage.Success));

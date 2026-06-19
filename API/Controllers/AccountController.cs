@@ -1,13 +1,21 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security.Claims;
+
+using Application.Features.Accounts.GoogleAuthenticate;
+using Application.Features.Accounts.UpdateProfile;
+
+using Asp.Versioning;
+
+using Domain.Services;
+
+using MediatR;
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 using Shared.Enums;
 using Shared.Responses;
-using System.Net;
-
-using Domain.Services;
-using MediatR;
-using Application.Features.Accounts.GoogleAuthenticate;
-using Asp.Versioning;
 
 namespace API.Controllers
 {
@@ -39,5 +47,24 @@ namespace API.Controllers
                  message: ErrorMessage.Success));
         }
 
+        [Authorize]
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command)
+        {
+            
+            var googleId = HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(googleId))
+            {
+                return Unauthorized();
+            }
+
+            command.GoogleId = googleId;
+            
+
+            var result = await _mediator.Send(command);
+            return Ok(result);
+        }
     }
 }
