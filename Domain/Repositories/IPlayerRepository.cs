@@ -4,7 +4,8 @@ namespace Domain.Repositories;
 
 public interface IPlayerRepository
 {
-    Task<Player?> GetByGoogleIdAsync(string googleId);
-    Task<Player> CreateAsync(Player player);
-    Task<Player> UpdatePlayer(Player player);
+    public Task<Player?> GetByGoogleIdAsync(string googleId);
+    public Task<Player?> GetByUserIdAsync(long userId);
+    public Task<Player> CreateAsync(Player player);
+    public Task<Player> UpdatePlayer(Player player);
 }

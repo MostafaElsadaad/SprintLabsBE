@@ -43,24 +43,24 @@
 
 **Exit Criteria**: `POST /api/v1/Account/google-login` preserves current game login behavior while returning the shared identity fields and a token containing UserId plus backward-compatible player/Google identifiers.
 
-- [ ] T011 Inspect current Google login, JWT, response, and repository files before edits in API/Controllers/AccountController.cs, Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs, Infrastructure/Services/UserService.cs, Infrastructure/Services/GoogleAuthenticationService.cs, Shared/Responses/LoginResponse.cs, Domain/Repositories/IPlayerRepository.cs, Infrastructure/Repositories/PlayerRepository.cs
-- [ ] T012 [P] Add user repository contract for email/id lookup, create/update, and optional Player include access in Domain/Repositories/IUserRepository.cs
-- [ ] T013 Implement user repository methods using ApplicationDbContext and the existing Identity user table in Infrastructure/Repositories/UserRepository.cs
-- [ ] T014 Register IUserRepository with UserRepository in Infrastructure/ServiceConfig.cs
-- [ ] T015 Extend IPlayerRepository with lookup by UserId and safe link/update helpers in Domain/Repositories/IPlayerRepository.cs
-- [ ] T016 Implement PlayerRepository lookup by UserId and safe link/update helpers in Infrastructure/Repositories/PlayerRepository.cs
-- [ ] T017 Extend LoginResponse with UserId and nullable PlayerProfileId while preserving existing login response fields in Shared/Responses/LoginResponse.cs
-- [ ] T018 Update IUserService authentication contract if needed to accept final claim lists containing UserId and optional player id in Domain/Services/IUserService.cs
-- [ ] T019 Update UserService JWT creation to preserve existing claims and support UserId/player claims in Infrastructure/Services/UserService.cs
-- [ ] T020 Update GoogleAuthenticationCommandHandler to find or create User by Google email before player lookup in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T021 Update GoogleAuthenticationCommandHandler to update User.GoogleId, Name, AvatarUrl, Status, and UpdatedAt from Google identity data in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T022 Update GoogleAuthenticationCommandHandler to find existing Player by UserId or GoogleId and link it to UserId only when safe in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T023 Update GoogleAuthenticationCommandHandler to create Player with nullable-safe UserId, GoogleId, Email, Name, AvatarUrl, and existing default progression when no profile exists in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T024 Add controlled duplicate/ambiguous-link handling with GenericException for unsafe player-to-user matches in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T025 Generate JWT claims containing UserId and existing Google/player identifiers needed for backward compatibility in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T026 Populate LoginResponse.UserId and LoginResponse.PlayerProfileId while preserving Name, Email, PictureUrl, Gold, Experience, and Level in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
-- [ ] T027 Verify AccountController response envelope remains BaseResponse<LoginResponse> for google-login in API/Controllers/AccountController.cs
-- [ ] T028 Verify POST /api/v1/Account/google-login response fields against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
+- [X] T011 Inspect current Google login, JWT, response, and repository files before edits in API/Controllers/AccountController.cs, Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs, Infrastructure/Services/UserService.cs, Infrastructure/Services/GoogleAuthenticationService.cs, Shared/Responses/LoginResponse.cs, Domain/Repositories/IPlayerRepository.cs, Infrastructure/Repositories/PlayerRepository.cs
+- [X] T012 [P] Add shared user identity response for existing IUserService Google login lookup in Shared/Responses/UserIdentityResponse.cs
+- [X] T013 Extend IUserService with find-or-create Google user contract in Domain/Services/IUserService.cs
+- [X] T014 Implement find-or-create Google user behavior with existing Identity user table in Infrastructure/Services/UserService.cs
+- [X] T015 Extend IPlayerRepository with lookup by UserId and safe link/update helpers in Domain/Repositories/IPlayerRepository.cs
+- [X] T016 Implement PlayerRepository lookup by UserId and safe link/update helpers in Infrastructure/Repositories/PlayerRepository.cs
+- [X] T017 Extend LoginResponse with UserId and nullable PlayerProfileId while preserving existing login response fields in Shared/Responses/LoginResponse.cs
+- [X] T018 Update IUserService authentication contract if needed to accept final claim lists containing UserId and optional player id in Domain/Services/IUserService.cs
+- [X] T019 Update UserService JWT creation to preserve existing claims and support UserId/player claims in Infrastructure/Services/UserService.cs
+- [X] T020 Update GoogleAuthenticationCommandHandler to find or create User by Google email before player lookup in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T021 Update GoogleAuthenticationCommandHandler to update User.GoogleId, Name, AvatarUrl, Status, and UpdatedAt from Google identity data in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T022 Update GoogleAuthenticationCommandHandler to find existing Player by UserId or GoogleId and link it to UserId only when safe in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T023 Update GoogleAuthenticationCommandHandler to create Player with nullable-safe UserId, GoogleId, Email, Name, AvatarUrl, and existing default progression when no profile exists in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T024 Add controlled duplicate/ambiguous-link handling with GenericException for unsafe player-to-user matches in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T025 Generate JWT claims containing UserId and existing Google/player identifiers needed for backward compatibility in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T026 Populate LoginResponse.UserId and LoginResponse.PlayerProfileId while preserving Name, Email, PictureUrl, Gold, Experience, and Level in Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs
+- [X] T027 Verify AccountController response envelope remains BaseResponse<LoginResponse> for google-login in API/Controllers/AccountController.cs
+- [X] T028 Verify POST /api/v1/Account/google-login response fields against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
 
 **Checkpoint**: Google login and JWT phase is complete. `/api/users/me` endpoints should not be added until Phase 3.
 
