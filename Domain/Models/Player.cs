@@ -5,9 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Domain.Models;
+
 public class Player
 {
     public long Id { get; set; }
+    public long? UserId { get; set; }
     public string GoogleId { get; set; } = default!;
     public string Email { get; set; } = default!;
     public string Name { get; set; } = default!;

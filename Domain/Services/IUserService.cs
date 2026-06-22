@@ -11,9 +11,11 @@ namespace Domain.Services
 {
     public interface IUserService
     {
-       public Task<LoginResponse> Authenticate(List<Claim> claims);
-       public Task<bool> EnsureUserExists(string email);
-       public Task<long> CreateAccount(GoogleUserResponse response, int userProfileId);
+        public Task<LoginResponse> Authenticate(List<Claim> claims);
+        public Task<bool> EnsureUserExists(string email);
+        public Task<long> CreateAccount(GoogleUserResponse response, int userProfileId);
+        public Task<UserIdentityResponse> FindOrCreateGoogleUser(GoogleUserResponse response);
+        public Task<UserIdentityResponse?> GetCurrentUser(long userId);
 
     }
 }

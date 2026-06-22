@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs User Identity Foundation API
+  version: 1.0.0
+paths:
+  /api/v1/Account/google-login:
+    post:
+      summary: Sign in with Google
+      description: Finds or creates a shared user by Google email and creates or finds a player profile for the game flow.
+      parameters:
+        - name: googleAccessToken
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Login succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginBaseResponse"
+        "401":
+          description: Google token is invalid or identity cannot be authenticated.
+  /api/v1/Users/me:
+    get:
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUserBaseResponse"
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User is suspended or not allowed to access identity data.
+  /api/v1/Users/me/player-profile:
+    get:
+      summary: Get current authenticated user's player profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user's player profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerProfileBaseResponse"
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User is suspended or not allowed to access profile data.
+        "404":
+          description: Authenticated user has no player profile.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BaseResponseEnvelope:
+      type: object
+      properties:
+        data:
+          nullable: true
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+    LoginBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/LoginResponse"
+    LoginResponse:
+      type: object
+      required:
+        - accessToken
+        - userId
+        - name
+        - email
+        - gold
+        - experience
+        - level
+      properties:
+        accessToken:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        playerProfileId:
+          type: integer
+          format: int64
+          nullable: true
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        pictureUrl:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        experience:
+          type: integer
+        level:
+          type: integer
+    CurrentUserBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/CurrentUserResponse"
+    CurrentUserResponse:
+      type: object
+      required:
+        - userId
+        - email
+        - name
+        - status
+        - isPlatformAdmin
+      properties:
+        userId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - Active
+            - Suspended
+        isPlatformAdmin:
+          type: boolean
+        playerProfileId:
+          type: integer
+          format: int64
+          nullable: true
+    PlayerProfileBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PlayerProfileResponse"
+    PlayerProfileResponse:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - gold
+        - experience
+        - level
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        pictureUrl:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        experience:
+          type: integer
+        level:
+          type: integer
+        schoolName:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        grade:
+          type: integer
+          nullable: true

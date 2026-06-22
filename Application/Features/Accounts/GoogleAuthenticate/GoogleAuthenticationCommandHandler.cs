@@ -33,7 +33,7 @@ namespace Application.Features.Accounts.GoogleAuthenticate
         {
             // 1. Verify Google token
             var googleUserInfo = await _googleAuthenticationService.GetUserInfo(request.IdToken);
-            if (googleUserInfo == null || string.IsNullOrEmpty(googleUserInfo.Email))
+            if (googleUserInfo == null || string.IsNullOrEmpty(googleUserInfo.Email) || string.IsNullOrEmpty(googleUserInfo.Sub))
             {
                 throw new GenericException(
                     message: ErrorMessage.InvalidAccessToken,
@@ -41,26 +41,61 @@ namespace Application.Features.Accounts.GoogleAuthenticate
                     errorCode: ErrorCode.Failure);
             }
 
-            // 2. Find or create Player
-            var player = await _playerRepository.GetByGoogleIdAsync(googleUserInfo.Sub);
-            if (player == null)
+            // 2. Find or create shared login identity
+            var user = await _userService.FindOrCreateGoogleUser(googleUserInfo);
+            if (user.IsSuspended)
             {
-                // First time login — create new player with default progression
-                player = await _playerRepository.CreateAsync(new Player
-                {
-                    GoogleId = googleUserInfo.Sub,
-                    Email = googleUserInfo.Email,
-                    Name = googleUserInfo.Name,
-                    AvatarUrl = googleUserInfo.Picture,
-          
-                });
+                throw new GenericException(
+                    message: ErrorMessage.InvalidAccessToken,
+                    statusCode: HttpStatusCode.Forbidden,
+                    errorCode: ErrorCode.Failure);
             }
 
-            // 3. Generate JWT
+            // 3. Find or create Player profile for game login
+            var player = await _playerRepository.GetByUserIdAsync(user.Id);
+            if (player == null)
+            {
+                player = await _playerRepository.GetByGoogleIdAsync(googleUserInfo.Sub);
+                if (player != null)
+                {
+                    if (player.UserId.HasValue && player.UserId.Value != user.Id)
+                    {
+                        throw new GenericException(
+                            message: ErrorMessage.ExistingRecord,
+                            statusCode: HttpStatusCode.Conflict,
+                            errorCode: ErrorCode.Failure);
+                    }
+
+                    player.UserId = user.Id;
+                    player.Email = googleUserInfo.Email;
+                    player.Name = googleUserInfo.Name;
+                    player.AvatarUrl = googleUserInfo.Picture;
+                    player = await _playerRepository.UpdatePlayer(player);
+                }
+                else
+                {
+                    // First time game login creates a player profile with default progression.
+                    player = await _playerRepository.CreateAsync(new Player
+                    {
+                        UserId = user.Id,
+                        GoogleId = googleUserInfo.Sub,
+                        Email = googleUserInfo.Email,
+                        Name = googleUserInfo.Name,
+                        AvatarUrl = googleUserInfo.Picture,
+
+                    });
+                }
+            }
+
+            // 4. Generate JWT
             List<Claim> claims = _googleAuthenticationService.GenerateGoogleClaims(googleUserInfo);
+            claims.Add(new Claim("userId", user.Id.ToString()));
+            claims.Add(new Claim("playerProfileId", player.Id.ToString()));
             var loginResponse = await _userService.Authenticate(claims);
 
-            // 4. Return response
+            // 5. Return response
+            loginResponse.UserId = user.Id;
+            loginResponse.PlayerProfileId = player.Id;
             loginResponse.Email = googleUserInfo.Email;
             loginResponse.Name = googleUserInfo.Name;
             loginResponse.PictureUrl = googleUserInfo.Picture;

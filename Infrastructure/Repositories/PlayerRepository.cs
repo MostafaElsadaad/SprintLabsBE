@@ -22,6 +22,12 @@ public class PlayerRepository : IPlayerRepository
             .FirstOrDefaultAsync(p => p.GoogleId == googleId);
     }
 
+    public async Task<Player?> GetByUserIdAsync(long userId)
+    {
+        return await _context.Players
+            .FirstOrDefaultAsync(p => p.UserId == userId);
+    }
+
     public async Task<Player> CreateAsync(Player player)
     {
         player.CreatedAt = DateTime.UtcNow;
@@ -30,7 +36,7 @@ public class PlayerRepository : IPlayerRepository
         return player;
     }
 
-    public async Task<Player> UpdatePlayer (Player player)
+    public async Task<Player> UpdatePlayer(Player player)
     {
         player.UpdatedAt = DateTime.UtcNow;
         _context.Players.Update(player);
