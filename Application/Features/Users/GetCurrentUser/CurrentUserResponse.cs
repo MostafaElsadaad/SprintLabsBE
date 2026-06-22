@@ -1,14 +1,13 @@
-namespace Shared.Responses
+namespace Application.Features.Users.GetCurrentUser
 {
-    public class UserIdentityResponse
+    public class CurrentUserResponse
     {
-        public long Id { get; set; }
+        public long UserId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public string Status { get; set; } = string.Empty;
         public bool IsPlatformAdmin { get; set; }
-        public bool IsSuspended { get; set; }
         public long? PlayerProfileId { get; set; }
     }
 }

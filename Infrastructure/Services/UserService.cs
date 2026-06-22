@@ -164,7 +164,34 @@ namespace Infrastructure.Services
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
-                IsSuspended = user.Status == UserStatus.Suspended
+                Status = user.Status.ToString(),
+                IsPlatformAdmin = user.IsPlatformAdmin,
+                IsSuspended = user.Status == UserStatus.Suspended,
+                PlayerProfileId = user.Player?.Id
+            };
+        }
+
+        public async Task<UserIdentityResponse?> GetCurrentUser(long userId)
+        {
+            var user = await _userManager.Users
+                .Include(x => x.Player)
+                .FirstOrDefaultAsync(x => x.Id == userId);
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            return new UserIdentityResponse
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status.ToString(),
+                IsPlatformAdmin = user.IsPlatformAdmin,
+                IsSuspended = user.Status == UserStatus.Suspended,
+                PlayerProfileId = user.Player?.Id
             };
         }
 

@@ -72,23 +72,23 @@
 
 **Exit Criteria**: `GET /api/v1/Users/me` and `GET /api/v1/Users/me/player-profile` return only the authenticated user's data, handle missing/suspended users with controlled errors, and the solution builds.
 
-- [ ] T029 Inspect current API controller and CQRS feature conventions before endpoint edits in API/Controllers/QuestionController.cs, API/Controllers/AccountController.cs, Application/Features/Questions/GetQuestionsQuery.cs, Application/Features/Questions/GetQuestionsQueryHandler.cs
-- [ ] T030 [P] Create CurrentUserResponse DTO with UserId, Email, Name, AvatarUrl, Status, IsPlatformAdmin, and PlayerProfileId in Application/Features/Users/GetCurrentUser/CurrentUserResponse.cs
-- [ ] T031 [P] Create GetCurrentUserQuery carrying authenticated UserId in Application/Features/Users/GetCurrentUser/GetCurrentUserQuery.cs
-- [ ] T032 Implement GetCurrentUserQueryHandler to load current User with optional Player and reject missing/suspended users with GenericException in Application/Features/Users/GetCurrentUser/GetCurrentUserQueryHandler.cs
-- [ ] T033 [P] Create GetCurrentPlayerProfileQuery carrying authenticated UserId in Application/Features/Users/GetCurrentPlayerProfile/GetCurrentPlayerProfileQuery.cs
-- [ ] T034 Implement GetCurrentPlayerProfileQueryHandler to load Player by UserId, reject missing/suspended users with GenericException, and map to PlayerProfileResponse in Application/Features/Users/GetCurrentPlayerProfile/GetCurrentPlayerProfileQueryHandler.cs
-- [ ] T035 Add UsersController with api/v{version:apiVersion}/[controller], ApiVersion 1.0, Authorize, IMediator injection, and GET me action in API/Controllers/UsersController.cs
-- [ ] T036 Add GET me/player-profile action to UsersController using MediatR and BaseResponse<PlayerProfileResponse> in API/Controllers/UsersController.cs
-- [ ] T037 Extract UserId claim in UsersController and send current-user queries through MediatR in API/Controllers/UsersController.cs
-- [ ] T038 Verify GET /api/v1/Users/me contract response fields against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
-- [ ] T039 Verify GET /api/v1/Users/me/player-profile contract response fields and 404 behavior against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
+- [X] T029 Inspect current API controller and CQRS feature conventions before endpoint edits in API/Controllers/QuestionController.cs, API/Controllers/AccountController.cs, Application/Features/Questions/GetQuestionsQuery.cs, Application/Features/Questions/GetQuestionsQueryHandler.cs
+- [X] T030 [P] Create CurrentUserResponse DTO with UserId, Email, Name, AvatarUrl, Status, IsPlatformAdmin, and PlayerProfileId in Application/Features/Users/GetCurrentUser/CurrentUserResponse.cs
+- [X] T031 [P] Create GetCurrentUserQuery carrying authenticated UserId in Application/Features/Users/GetCurrentUser/GetCurrentUserQuery.cs
+- [X] T032 Implement GetCurrentUserQueryHandler to load current User with optional Player and reject missing/suspended users with GenericException in Application/Features/Users/GetCurrentUser/GetCurrentUserQueryHandler.cs
+- [X] T033 [P] Create GetCurrentPlayerProfileQuery carrying authenticated UserId in Application/Features/Users/GetCurrentPlayerProfile/GetCurrentPlayerProfileQuery.cs
+- [X] T034 Implement GetCurrentPlayerProfileQueryHandler to load Player by UserId, reject missing/suspended users with GenericException, and map to PlayerProfileResponse in Application/Features/Users/GetCurrentPlayerProfile/GetCurrentPlayerProfileQueryHandler.cs
+- [X] T035 Add UsersController with api/v{version:apiVersion}/[controller], ApiVersion 1.0, Authorize, IMediator injection, and GET me action in API/Controllers/UsersController.cs
+- [X] T036 Add GET me/player-profile action to UsersController using MediatR and BaseResponse<PlayerProfileResponse> in API/Controllers/UsersController.cs
+- [X] T037 Extract UserId claim in UsersController and send current-user queries through MediatR in API/Controllers/UsersController.cs
+- [X] T038 Verify GET /api/v1/Users/me contract response fields against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
+- [X] T039 Verify GET /api/v1/Users/me/player-profile contract response fields and 404 behavior against specs/001-user-identity-foundation/contracts/users-api.openapi.yaml
 - [ ] T040 [P] Add focused tests for Google login user creation/reuse and Player.UserId linking in SprintLabs.Tests/
 - [ ] T041 [P] Add focused tests for GetCurrentUserQueryHandler success, missing user, suspended user, and no-player-profile cases in SprintLabs.Tests/
 - [ ] T042 [P] Add focused tests for GetCurrentPlayerProfileQueryHandler success, no profile, wrong user isolation, and suspended user cases in SprintLabs.Tests/
-- [ ] T043 Review touched files for existing style, thin controllers, CQRS boundaries, BaseResponse usage, GenericException usage, and no unrelated refactors in API/Controllers/AccountController.cs, API/Controllers/UsersController.cs, Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs, Application/Features/Users/, Domain/, Infrastructure/, Shared/Responses/LoginResponse.cs
-- [ ] T044 Verify no communities, CommunityUsers, licenses, teachers, owners, admin community management, grades/classes, or student-license artifacts were added by scanning API/, Application/, Domain/, Infrastructure/, and Shared/
-- [ ] T045 Run dotnet build for the solution in SprintLabs.sln
+- [X] T043 Review touched files for existing style, thin controllers, CQRS boundaries, BaseResponse usage, GenericException usage, and no unrelated refactors in API/Controllers/AccountController.cs, API/Controllers/UsersController.cs, Application/Features/Accounts/GoogleAuthenticate/GoogleAuthenticationCommandHandler.cs, Application/Features/Users/, Domain/, Infrastructure/, Shared/Responses/LoginResponse.cs
+- [X] T044 Verify no communities, CommunityUsers, licenses, teachers, owners, admin community management, grades/classes, or student-license artifacts were added by scanning API/, Application/, Domain/, Infrastructure/, and Shared/
+- [X] T045 Run dotnet build for the solution in SprintLabs.sln
 - [ ] T046 Run dotnet test for the solution in SprintLabs.sln if the existing test project can execute without new external infrastructure
 - [ ] T047 Execute quickstart validation scenarios and record any environment limitations in specs/001-user-identity-foundation/quickstart.md
 
