@@ -1,5 +1,36 @@
 # SprintLabs Agent Instructions
 
+
+## Application feature folder structure
+
+Do not put multiple commands, queries, handlers, requests, responses, and helper classes in one large file.
+
+Follow this structure:
+
+Application/Features/{FeatureName}/{SubFeatureName}/
+
+* {SubFeatureName}Command.cs or {SubFeatureName}Query.cs
+* {SubFeatureName}CommandHandler.cs or {SubFeatureName}QueryHandler.cs
+* {SubFeatureName}Request.cs if needed
+* {SubFeatureName}Response.cs or {SubFeatureName}Dto.cs if needed
+
+For shared DTOs/helpers used by multiple subfeatures, use:
+
+Application/Features/{FeatureName}/Common/
+
+* SharedDto.cs
+* SharedMapper.cs
+* SharedAuthorization.cs
+
+Rules:
+
+* One public class per file unless the existing project clearly does otherwise.
+* Handler files must contain only the handler and private helper methods directly related to that handler.
+* Command/query files must not contain handlers.
+* Request/response DTOs must not be mixed into handler files.
+* Do not create a “god file” containing an entire feature.
+* Match the existing SprintLabs feature folder style.
+
 ## Project context
 SprintLabs is a .NET 8 backend for an education/game SaaS system.
 
@@ -117,5 +148,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/001-user-identity-foundation/plan.md
+specs/002-admin-community-foundation/plan.md
 <!-- SPECKIT END -->

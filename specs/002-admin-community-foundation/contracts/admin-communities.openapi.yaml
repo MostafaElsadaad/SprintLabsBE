@@ -1,0 +1,287 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Admin Community Foundation API
+  version: 1.0.0
+paths:
+  /api/v1/admin/communities:
+    post:
+      summary: Create a community
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommunityRequest"
+      responses:
+        "200":
+          description: Community created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityBaseResponse"
+        "400":
+          description: Invalid request or duplicate slug.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: Authenticated user is not a platform admin.
+    get:
+      summary: List communities
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Communities returned with owner and license summaries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityListBaseResponse"
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: Authenticated user is not a platform admin.
+  /api/v1/admin/communities/{communityId}/owner:
+    post:
+      summary: Assign a community owner
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignOwnerRequest"
+      responses:
+        "200":
+          description: Owner assigned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerBaseResponse"
+        "400":
+          description: Invalid request.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: Authenticated user is not a platform admin.
+        "404":
+          description: Community not found.
+  /api/v1/admin/communities/{communityId}/licenses:
+    patch:
+      summary: Create or update community license limits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCommunityLicenseRequest"
+      responses:
+        "200":
+          description: License limits created or updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseBaseResponse"
+        "400":
+          description: Invalid request or limits lower than current usage.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: Authenticated user is not a platform admin.
+        "404":
+          description: Community not found.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BaseResponseEnvelope:
+      type: object
+      properties:
+        data:
+          nullable: true
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+    CreateCommunityRequest:
+      type: object
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          type: string
+          example: Example School
+        slug:
+          type: string
+          example: example-school
+    AssignOwnerRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: owner@example.com
+        name:
+          type: string
+          example: Owner Name
+    UpsertCommunityLicenseRequest:
+      type: object
+      required:
+        - maxStudents
+        - maxTeachers
+        - studentEmailChangeLimit
+      properties:
+        maxStudents:
+          type: integer
+          minimum: 0
+          example: 100
+        maxTeachers:
+          type: integer
+          minimum: 0
+          example: 10
+        studentEmailChangeLimit:
+          type: integer
+          minimum: 0
+          example: 2
+    CommunityBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/CommunityResponse"
+    CommunityListBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/CommunityListItemResponse"
+    OwnerBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/OwnerResponse"
+    LicenseBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/CommunityLicenseResponse"
+    CommunityResponse:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum:
+            - Active
+            - Suspended
+    CommunityListItemResponse:
+      allOf:
+        - $ref: "#/components/schemas/CommunityResponse"
+        - type: object
+          properties:
+            owner:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/OwnerSummaryResponse"
+            license:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/CommunityLicenseSummaryResponse"
+    OwnerSummaryResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        status:
+          type: string
+    OwnerResponse:
+      allOf:
+        - $ref: "#/components/schemas/OwnerSummaryResponse"
+        - type: object
+          properties:
+            communityUserId:
+              type: integer
+              format: int64
+            communityId:
+              type: integer
+              format: int64
+            role:
+              type: string
+              enum:
+                - Owner
+    CommunityLicenseSummaryResponse:
+      type: object
+      properties:
+        maxStudents:
+          type: integer
+        usedStudents:
+          type: integer
+        maxTeachers:
+          type: integer
+        usedTeachers:
+          type: integer
+        studentEmailChangeLimit:
+          type: integer
+    CommunityLicenseResponse:
+      allOf:
+        - $ref: "#/components/schemas/CommunityLicenseSummaryResponse"
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            communityId:
+              type: integer
+              format: int64
