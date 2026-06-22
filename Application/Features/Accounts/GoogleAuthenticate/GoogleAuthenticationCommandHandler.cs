@@ -10,6 +10,10 @@ using MediatR;
 using Shared.Enums;
 using Shared.Exceptions;
 using Shared.Responses;
+using System;
+using System.Collections.Generic;
+
+
 
 namespace Application.Features.Accounts.GoogleAuthenticate
 {
@@ -17,12 +21,12 @@ namespace Application.Features.Accounts.GoogleAuthenticate
     {
         private readonly IUserService _userService;
         private readonly IGoogleAuthenticationService _googleAuthenticationService;
-        private readonly IPlayerRepository _playerRepository;
+        private readonly IBaseRepository<Player> _playerRepository;
 
         public GoogleAuthenticationCommandHandler(
             IUserService userService,
             IGoogleAuthenticationService googleAuthenticationService,
-            IPlayerRepository playerRepository)
+            IBaseRepository<Player> playerRepository)
         {
             _userService = userService;
             _googleAuthenticationService = googleAuthenticationService;
@@ -42,18 +46,20 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             }
 
             // 2. Find or create Player
-            var player = await _playerRepository.GetByGoogleIdAsync(googleUserInfo.Sub);
+            var player = await _playerRepository.GetByCustomConditionAsync(p => p.GoogleId == googleUserInfo.Sub);
             if (player == null)
             {
                 // First time login — create new player with default progression
-                player = await _playerRepository.CreateAsync(new Player
+                player = new Player
                 {
                     GoogleId = googleUserInfo.Sub,
                     Email = googleUserInfo.Email,
                     Name = googleUserInfo.Name,
                     AvatarUrl = googleUserInfo.Picture,
-          
-                });
+                    CreatedAt = DateTime.UtcNow,
+                };
+                await _playerRepository.AddAsync(player);
+                await _playerRepository.SaveChangesAsync();
             }
 
             // 3. Generate JWT

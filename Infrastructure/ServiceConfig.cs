@@ -23,7 +23,7 @@ namespace Infrastructure
         {
             #region Db Context
             string connectionString = configuration.GetConnectionString("DefaultConnection");
-            services.AddScoped<IPlayerRepository, PlayerRepository>();
+         
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
