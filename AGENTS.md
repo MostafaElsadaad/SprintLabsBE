@@ -113,3 +113,8 @@ When starting execution, build in this order:
 6. Missions.
 7. Shop and inventory.
 8. Admin/configuration and reporting.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
