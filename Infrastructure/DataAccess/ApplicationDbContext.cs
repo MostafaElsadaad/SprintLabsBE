@@ -17,6 +17,9 @@ namespace Infrastructure.DataAccess
 
         public DbSet<QuestionsJson> Questions { get; set; }
         public DbSet<Player> Players { get; set; }   // ✅ INSIDE the class
+        public DbSet<Community> Communities { get; set; }
+        public DbSet<CommunityUser> CommunityUsers { get; set; }
+        public DbSet<CommunityLicense> CommunityLicenses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -112,9 +115,80 @@ namespace Infrastructure.DataAccess
                     .Ignore(u => u.LockoutEnabled);
             });
 
+            modelBuilder.Entity<Community>(e =>
+            {
+                e.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                e.Property(x => x.Slug)
+                    .IsRequired()
+                    .HasMaxLength(120);
+
+                e.Property(x => x.Status)
+                    .IsRequired()
+                    .HasDefaultValue(CommunityStatus.Active);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.Slug).IsUnique();
+
+                e.HasMany(x => x.CommunityUsers)
+                    .WithOne(x => x.Community)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.License)
+                    .WithOne(x => x.Community)
+                    .HasForeignKey<CommunityLicense>(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<CommunityUser>(e =>
+            {
+                e.Property(x => x.Role)
+                    .IsRequired();
+
+                e.Property(x => x.Status)
+                    .IsRequired()
+                    .HasDefaultValue(CommunityUserStatus.Active);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => new { x.CommunityId, x.UserId }).IsUnique();
+
+                e.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CommunityLicense>(e =>
+            {
+                e.Property(x => x.MaxStudents).HasDefaultValue(0);
+                e.Property(x => x.UsedStudents).HasDefaultValue(0);
+                e.Property(x => x.MaxTeachers).HasDefaultValue(0);
+                e.Property(x => x.UsedTeachers).HasDefaultValue(0);
+                e.Property(x => x.StudentEmailChangeLimit).HasDefaultValue(0);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.CommunityId).IsUnique();
+            });
+
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                entityType.SetTableName(entityType.GetTableName().Replace("AspNet", ""));
+                var tableName = entityType.GetTableName();
+                if (tableName != null)
+                {
+                    entityType.SetTableName(tableName.Replace("AspNet", ""));
+                }
             }
         }
     }

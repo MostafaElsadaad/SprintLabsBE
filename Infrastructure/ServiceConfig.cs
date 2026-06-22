@@ -24,6 +24,7 @@ namespace Infrastructure
             #region Db Context
             string connectionString = configuration.GetConnectionString("DefaultConnection");
             services.AddScoped<IPlayerRepository, PlayerRepository>();
+            services.AddScoped<ICommunityRepository, CommunityRepository>();
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {

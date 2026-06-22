@@ -171,6 +171,59 @@ namespace Infrastructure.Services
             };
         }
 
+        public async Task<UserIdentityResponse> FindOrCreateBasicUser(string email, string name)
+        {
+            email = email.Trim();
+            name = name.Trim();
+
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(name))
+            {
+                throw new GenericException(
+                    message: ErrorMessage.InvalidInput,
+                    statusCode: HttpStatusCode.BadRequest,
+                    errorCode: ErrorCode.Failure);
+            }
+
+            var normalizedEmail = _userManager.NormalizeEmail(email);
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail || (x.Email != null && x.Email.ToLower() == email.ToLower()));
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    NormalizedUserName = _userManager.NormalizeName(email),
+                    Email = email,
+                    NormalizedEmail = normalizedEmail,
+                    Name = name,
+                    IsPlatformAdmin = false,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var createdUser = await _userManager.CreateAsync(user);
+                if (!createdUser.Succeeded)
+                {
+                    throw new GenericException(
+                        message: ErrorMessage.UserCreationFailed,
+                        statusCode: HttpStatusCode.BadRequest,
+                        errorCode: ErrorCode.Failure);
+                }
+            }
+            return new UserIdentityResponse
+            {
+                Id = user.Id,
+                Email = user.Email ?? email,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status.ToString(),
+                IsPlatformAdmin = user.IsPlatformAdmin,
+                IsSuspended = user.Status == UserStatus.Suspended,
+                PlayerProfileId = user.Player?.Id
+            };
+        }
+
         public async Task<UserIdentityResponse?> GetCurrentUser(long userId)
         {
             var user = await _userManager.Users
