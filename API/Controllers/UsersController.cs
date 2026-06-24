@@ -2,6 +2,7 @@ using System.Net;
 
 using Application.Features.Users.GetCurrentPlayerProfile;
 using Application.Features.Users.GetCurrentUser;
+using Application.Features.Users.GetCurrentUserCommunities;
 
 using Asp.Versioning;
 
@@ -64,6 +65,27 @@ namespace API.Controllers
             });
 
             return Ok(new BaseResponse<PlayerProfileResponse>(
+                data: result,
+                statusCode: HttpStatusCode.OK,
+                errorCode: ErrorCode.Success,
+                message: ErrorMessage.Success));
+        }
+
+        [HttpGet("me/communities")]
+        public async Task<IActionResult> GetMyCommunities()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _mediator.Send(new GetCurrentUserCommunitiesQuery
+            {
+                UserId = userId.Value
+            });
+
+            return Ok(new BaseResponse<List<UserCommunityResponse>>(
                 data: result,
                 statusCode: HttpStatusCode.OK,
                 errorCode: ErrorCode.Success,

@@ -2,10 +2,13 @@ using System.Net;
 
 using Application.Features.Admin.Communities.Common;
 
+using Domain.Models;
 using Domain.Repositories;
 using Domain.Services;
 
 using MediatR;
+
+using Microsoft.EntityFrameworkCore;
 
 using Shared.Enums;
 using Shared.Exceptions;
@@ -15,14 +18,17 @@ namespace Application.Features.Admin.Communities.UpsertCommunityLicense;
 public class UpsertCommunityLicenseCommandHandler : IRequestHandler<UpsertCommunityLicenseCommand, CommunityLicenseResponse>
 {
     private readonly IUserService _userService;
-    private readonly ICommunityRepository _communityRepository;
+    private readonly IBaseRepository<Community> _communityRepository;
+    private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
 
     public UpsertCommunityLicenseCommandHandler(
         IUserService userService,
-        ICommunityRepository communityRepository)
+        IBaseRepository<Community> communityRepository,
+        IBaseRepository<CommunityLicense> communityLicenseRepository)
     {
         _userService = userService;
         _communityRepository = communityRepository;
+        _communityLicenseRepository = communityLicenseRepository;
     }
 
     public async Task<CommunityLicenseResponse> Handle(UpsertCommunityLicenseCommand request, CancellationToken cancellationToken)
@@ -37,24 +43,44 @@ public class UpsertCommunityLicenseCommandHandler : IRequestHandler<UpsertCommun
             throw InvalidInput();
         }
 
-        if (!await _communityRepository.CommunityExistsAsync(request.CommunityId))
+        if (!await _communityRepository.AsQueryable().AnyAsync(x => x.Id == request.CommunityId, cancellationToken))
         {
             throw NotFound();
         }
 
-        var existingLicense = await _communityRepository.GetLicenseByCommunityIdAsync(request.CommunityId);
-        if (existingLicense != null &&
-            (request.MaxStudents < existingLicense.UsedStudents ||
-             request.MaxTeachers < existingLicense.UsedTeachers))
+        var license = await _communityLicenseRepository.AsQueryable()
+            .FirstOrDefaultAsync(x => x.CommunityId == request.CommunityId, cancellationToken);
+        if (license != null &&
+            (request.MaxStudents < license.UsedStudents ||
+             request.MaxTeachers < license.UsedTeachers))
         {
             throw InvalidInput();
         }
 
-        var license = await _communityRepository.UpsertLicenseAsync(
-            request.CommunityId,
-            request.MaxStudents,
-            request.MaxTeachers,
-            request.StudentEmailChangeLimit);
+        if (license == null)
+        {
+            license = new CommunityLicense
+            {
+                CommunityId = request.CommunityId,
+                MaxStudents = request.MaxStudents,
+                UsedStudents = 0,
+                MaxTeachers = request.MaxTeachers,
+                UsedTeachers = 0,
+                StudentEmailChangeLimit = request.StudentEmailChangeLimit,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _communityLicenseRepository.AddAsync(license);
+        }
+        else
+        {
+            license.MaxStudents = request.MaxStudents;
+            license.MaxTeachers = request.MaxTeachers;
+            license.StudentEmailChangeLimit = request.StudentEmailChangeLimit;
+            license.UpdatedAt = DateTime.UtcNow;
+            await _communityLicenseRepository.UpdateAsync(license);
+        }
+
+        await _communityLicenseRepository.SaveChangesAsync();
 
         return new CommunityLicenseResponse
         {

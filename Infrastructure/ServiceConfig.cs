@@ -24,7 +24,6 @@ namespace Infrastructure
             #region Db Context
             string connectionString = configuration.GetConnectionString("DefaultConnection");
             services.AddScoped<IPlayerRepository, PlayerRepository>();
-            services.AddScoped<ICommunityRepository, CommunityRepository>();
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
@@ -53,6 +52,7 @@ namespace Infrastructure
             services.AddScoped<IFileUploadService, FileUploadService>();
             services.AddScoped<IFileDownloadService, FileDownloadService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICommunityAccessService, CommunityAccessService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
             services.AddSingleton<IGoogleCloudStorageService, GoogleCloudStorageService>();
