@@ -9,6 +9,8 @@ using Domain.Services;
 
 using MediatR;
 
+using Microsoft.EntityFrameworkCore;
+
 using Shared.Enums;
 using Shared.Exceptions;
 
@@ -17,11 +19,11 @@ namespace Application.Features.Admin.Communities.CreateCommunity;
 public class CreateCommunityCommandHandler : IRequestHandler<CreateCommunityCommand, CommunityResponse>
 {
     private readonly IUserService _userService;
-    private readonly ICommunityRepository _communityRepository;
+    private readonly IBaseRepository<Community> _communityRepository;
 
     public CreateCommunityCommandHandler(
         IUserService userService,
-        ICommunityRepository communityRepository)
+        IBaseRepository<Community> communityRepository)
     {
         _userService = userService;
         _communityRepository = communityRepository;
@@ -39,7 +41,7 @@ public class CreateCommunityCommandHandler : IRequestHandler<CreateCommunityComm
             throw InvalidInput();
         }
 
-        if (await _communityRepository.SlugExistsAsync(slug))
+        if (await _communityRepository.AsQueryable().AnyAsync(x => x.Slug == slug))
         {
             throw new GenericException(
                 message: ErrorMessage.ExistingRecord,
@@ -47,13 +49,14 @@ public class CreateCommunityCommandHandler : IRequestHandler<CreateCommunityComm
                 errorCode: ErrorCode.Failure);
         }
 
-        var community = await _communityRepository.CreateCommunityAsync(new Community
+        var community = await _communityRepository.AddAsync(new Community
         {
             Name = name,
             Slug = slug,
             Status = CommunityStatus.Active,
             CreatedAt = DateTime.UtcNow
         });
+        await _communityRepository.SaveChangesAsync();
 
         return MapCommunity(community);
     }

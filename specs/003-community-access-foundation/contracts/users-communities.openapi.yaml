@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Community Access Foundation API
+  version: 1.0.0
+paths:
+  /api/v1/Users/me/communities:
+    get:
+      summary: Get current authenticated user's active communities
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active community memberships for the current user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserCommunitiesBaseResponse"
+        "401":
+          description: Missing or invalid authentication token.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BaseResponseEnvelope:
+      type: object
+      properties:
+        data:
+          nullable: true
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+    UserCommunitiesBaseResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseResponseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserCommunityResponse"
+    UserCommunityResponse:
+      type: object
+      required:
+        - communityId
+        - name
+        - slug
+        - communityStatus
+        - role
+        - membershipStatus
+      properties:
+        communityId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+        communityStatus:
+          type: string
+          enum:
+            - Active
+            - Suspended
+        role:
+          type: string
+          enum:
+            - Owner
+            - Teacher
+            - Student
+        membershipStatus:
+          type: string
+          enum:
+            - Active

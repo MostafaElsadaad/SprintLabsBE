@@ -43,7 +43,7 @@ namespace API.Controllers
         }
 
         [HttpPut]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> UpsertQuestions([FromBody] UpsertQuestionsCommand command)
         {
             var result = await _mediator.Send(command);

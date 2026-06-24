@@ -31,6 +31,26 @@ Rules:
 * Do not create a “god file” containing an entire feature.
 * Match the existing SprintLabs feature folder style.
 
+## Repository usage rule
+
+Use the existing `IBaseRepository<T>` / `BaseRepository<T>` for normal CRUD and simple queries.
+
+Do not create feature-specific repositories unless:
+
+* the query is complex and reused in multiple places
+* the feature needs special persistence behavior
+* the existing base repository cannot support the required operation cleanly
+* the user explicitly asks for a custom repository
+
+For simple checks such as existence, uniqueness, find by email, find by slug, list with includes, or update entity fields, prefer:
+
+* `IBaseRepository<T>.AsQueryable()`
+* `AddAsync`
+* `UpdateAsync`
+* `SaveChangesAsync`
+
+Avoid creating repository classes that only wrap one-line EF Core queries.
+
 ## Project context
 SprintLabs is a .NET 8 backend for an education/game SaaS system.
 
@@ -69,6 +89,54 @@ Do not be lazy about:
 - migrations
 - tests for non-trivial logic
 - error handling that prevents bad data or data loss
+
+
+## API and frontend documentation rule
+
+Every backend feature that adds or changes APIs must include frontend-facing documentation.
+
+For each feature, create or update:
+
+* `specs/{feature-folder}/api.md`
+* `specs/{feature-folder}/frontend.md`
+
+`api.md` must include:
+
+* endpoint
+* method
+* auth/role requirements
+* request body
+* success response
+* common error responses
+* frontend usage notes
+
+`frontend.md` must include:
+
+* required frontend pages/sections
+* user actions
+* forms and fields
+* table columns
+* validation rules
+* loading/empty/error states
+* permissions/visibility rules
+* API calls used by each action
+
+Do not invent frontend behavior that is outside the feature spec. If something is unclear, mark it as an open question.
+
+## Backfilling documentation
+
+When asked to document past features:
+
+* Treat it as a docs-only task.
+* Inspect actual controllers, DTOs, commands, queries, handlers, auth logic, and specs.
+* Do not change implementation code.
+* Do not invent behavior that does not exist.
+* Mark unclear behavior as an open question.
+* Prefer creating:
+
+  * `specs/{feature-folder}/api.md`
+  * `specs/{feature-folder}/frontend.md`
+
 
 ## Response format for implementation tasks
 Before editing, output:
@@ -148,5 +216,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/002-admin-community-foundation/plan.md
+specs/003-community-access-foundation/plan.md
 <!-- SPECKIT END -->
