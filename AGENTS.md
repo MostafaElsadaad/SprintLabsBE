@@ -215,6 +215,6 @@ When starting execution, build in this order:
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-specs/003-community-access-foundation/plan.md
+shell commands, and other important information, read the current plan
+at specs/004-owner-community-profile/plan.md
 <!-- SPECKIT END -->
