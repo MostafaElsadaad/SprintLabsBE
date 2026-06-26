@@ -2,6 +2,10 @@ using System.Net;
 
 using Application.Features.Communities.Common;
 using Application.Features.Communities.GetCommunityProfile;
+using Application.Features.Communities.Teachers.Common;
+using Application.Features.Communities.Teachers.InviteTeacher;
+using Application.Features.Communities.Teachers.ListTeachers;
+using Application.Features.Communities.Teachers.RemoveTeacher;
 using Application.Features.Communities.UpdateCommunityProfile;
 
 using Asp.Versioning;
@@ -71,6 +75,77 @@ public class CommunitiesController : ControllerBase
         });
 
         return Ok(new BaseResponse<CommunityProfileResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpPost("{communityId:long}/teachers/invite")]
+    public async Task<IActionResult> InviteTeacher(
+        long communityId,
+        [FromBody] InviteTeacherRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new InviteTeacherCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            Email = request.Email,
+            Name = request.Name
+        });
+
+        return Ok(new BaseResponse<TeacherResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpGet("{communityId:long}/teachers")]
+    public async Task<IActionResult> ListTeachers(long communityId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new ListTeachersQuery
+        {
+            UserId = userId.Value,
+            CommunityId = communityId
+        });
+
+        return Ok(new BaseResponse<List<TeacherResponse>>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpDelete("{communityId:long}/teachers/{teacherUserId:long}")]
+    public async Task<IActionResult> RemoveTeacher(long communityId, long teacherUserId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new RemoveTeacherCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            TeacherUserId = teacherUserId
+        });
+
+        return Ok(new BaseResponse<TeacherResponse>(
             data: result,
             statusCode: HttpStatusCode.OK,
             errorCode: ErrorCode.Success,
