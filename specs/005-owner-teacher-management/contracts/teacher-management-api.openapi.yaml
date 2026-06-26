@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Owner Teacher Management API
+  version: 1.0.0
+paths:
+  /api/v1/Communities/{communityId}/teachers/invite:
+    post:
+      summary: Invite a teacher to a community
+      description: Creates or restores a Pending Teacher membership when the authenticated user has an Active Owner membership and teacher capacity is available.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteTeacherRequest"
+      responses:
+        "200":
+          description: Teacher invitation created, restored, or returned without duplicate membership.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherBaseResponse"
+        "400":
+          description: Invalid input, missing capacity, or teacher license limit reached.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User is suspended or lacks Active Owner membership.
+        "404":
+          description: Authenticated user or target community context was not found.
+  /api/v1/Communities/{communityId}/teachers:
+    get:
+      summary: List community teachers
+      description: Returns Teacher memberships for the requested community when the authenticated user has an Active Owner membership.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Teacher list returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherListBaseResponse"
+        "400":
+          description: Invalid community identifier.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User is suspended or lacks Active Owner membership.
+        "404":
+          description: Authenticated user or target community context was not found.
+  /api/v1/Communities/{communityId}/teachers/{userId}:
+    delete:
+      summary: Remove a teacher from a community
+      description: Soft-removes a Teacher membership when the authenticated user has an Active Owner membership.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: communityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Teacher membership removed or already removed without hard delete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherBaseResponse"
+        "400":
+          description: Invalid identifiers or target membership is not a removable Teacher membership.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User is suspended or lacks Active Owner membership.
+        "404":
+          description: Authenticated user, community, teacher user, license, or membership context was not found.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    InviteTeacherRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: teacher@example.com
+        name:
+          type: string
+          example: Teacher Name
+    TeacherResponse:
+      type: object
+      required:
+        - userId
+        - name
+        - email
+        - status
+        - createdAt
+      properties:
+        userId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: Teacher Name
+        email:
+          type: string
+          format: email
+          example: teacher@example.com
+        status:
+          type: string
+          enum:
+            - Pending
+            - Active
+            - Removed
+        createdAt:
+          type: string
+          format: date-time
+    TeacherBaseResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/TeacherResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1
+    TeacherListBaseResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeacherResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1
