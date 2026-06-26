@@ -1,0 +1,330 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Community Grades and Classes API
+  version: 1.0.0
+paths:
+  /api/v1/Communities/{communityId}/grades:
+    post:
+      summary: Create a grade
+      description: Creates a grade in the route community when the authenticated user has Active Owner or Teacher membership.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGradeRequest"
+      responses:
+        "200":
+          description: Grade created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GradeBaseResponse"
+        "400":
+          description: Invalid input.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user or community context was not found.
+    get:
+      summary: List grades
+      description: Lists grades for the route community with active class counts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      responses:
+        "200":
+          description: Grades returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GradeListBaseResponse"
+        "400":
+          description: Invalid community identifier.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user or community context was not found.
+  /api/v1/Communities/{communityId}/classes:
+    post:
+      summary: Create a class
+      description: Creates a class under a grade in the route community.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClassRequest"
+      responses:
+        "200":
+          description: Class created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBaseResponse"
+        "400":
+          description: Invalid input or grade does not belong to the community.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user, community, or grade was not found.
+    get:
+      summary: List classes
+      description: Lists non-deleted classes for the route community, optionally filtered by grade.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+        - name: gradeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: Classes returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassListBaseResponse"
+        "400":
+          description: Invalid input or grade filter does not belong to the community.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user, community, or grade was not found.
+  /api/v1/Communities/{communityId}/classes/{classId}:
+    patch:
+      summary: Update a class
+      description: Updates a non-deleted class name and grade within the route community.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClassRequest"
+      responses:
+        "200":
+          description: Class updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBaseResponse"
+        "400":
+          description: Invalid input, deleted class, or grade does not belong to the community.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user, class, community, or grade was not found.
+    delete:
+      summary: Soft delete a class
+      description: Marks a class as Deleted without hard deleting it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+        - $ref: "#/components/parameters/ClassId"
+      responses:
+        "200":
+          description: Class soft deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBaseResponse"
+        "400":
+          description: Invalid input.
+        "401":
+          description: Missing or invalid authentication token.
+        "403":
+          description: User lacks Active Owner or Teacher membership.
+        "404":
+          description: Current user or class was not found.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CommunityId:
+      name: communityId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ClassId:
+      name: classId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  schemas:
+    CreateGradeRequest:
+      type: object
+      required:
+        - name
+        - sortOrder
+      properties:
+        name:
+          type: string
+          example: Grade 5
+        sortOrder:
+          type: integer
+          minimum: 0
+          example: 5
+    CreateClassRequest:
+      type: object
+      required:
+        - gradeId
+        - name
+      properties:
+        gradeId:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          example: Class A
+    UpdateClassRequest:
+      type: object
+      required:
+        - name
+        - gradeId
+      properties:
+        name:
+          type: string
+          example: Updated Class A
+        gradeId:
+          type: integer
+          format: int64
+          minimum: 1
+    GradeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        communityId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        sortOrder:
+          type: integer
+        classCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    ClassResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        communityId:
+          type: integer
+          format: int64
+        gradeId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - Active
+            - Deleted
+        createdAt:
+          type: string
+          format: date-time
+    GradeBaseResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/GradeResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1
+    GradeListBaseResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GradeResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1
+    ClassBaseResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ClassResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1
+    ClassListBaseResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassResponse"
+        message:
+          type: string
+          example: Success
+        statusCode:
+          type: integer
+          example: 200
+        errorCode:
+          type: integer
+          example: 1

@@ -216,5 +216,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/005-owner-teacher-management/plan.md
+at specs/006-community-grades-classes/plan.md
 <!-- SPECKIT END -->
