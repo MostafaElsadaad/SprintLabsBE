@@ -20,6 +20,8 @@ namespace Infrastructure.DataAccess
         public DbSet<Community> Communities { get; set; }
         public DbSet<CommunityUser> CommunityUsers { get; set; }
         public DbSet<CommunityLicense> CommunityLicenses { get; set; }
+        public DbSet<Grade> Grades { get; set; }
+        public DbSet<Class> Classes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -140,6 +142,16 @@ namespace Infrastructure.DataAccess
                     .HasForeignKey(x => x.CommunityId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                e.HasMany(x => x.Grades)
+                    .WithOne(x => x.Community)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasMany(x => x.Classes)
+                    .WithOne(x => x.Community)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 e.HasOne(x => x.License)
                     .WithOne(x => x.Community)
                     .HasForeignKey<CommunityLicense>(x => x.CommunityId)
@@ -180,6 +192,47 @@ namespace Infrastructure.DataAccess
                     .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
                 e.HasIndex(x => x.CommunityId).IsUnique();
+            });
+
+            modelBuilder.Entity<Grade>(e =>
+            {
+                e.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(120);
+
+                e.Property(x => x.SortOrder)
+                    .IsRequired();
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => new { x.CommunityId, x.SortOrder });
+            });
+
+            modelBuilder.Entity<Class>(e =>
+            {
+                e.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(120);
+
+                e.Property(x => x.Status)
+                    .IsRequired()
+                    .HasDefaultValue(ClassStatus.Active);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => x.GradeId);
+                e.HasIndex(x => new { x.CommunityId, x.Status });
+
+                e.HasOne(x => x.Grade)
+                    .WithMany(x => x.Classes)
+                    .HasForeignKey(x => x.GradeId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())

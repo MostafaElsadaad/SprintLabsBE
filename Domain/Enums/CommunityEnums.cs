@@ -19,3 +19,9 @@ public enum CommunityUserStatus
     Pending = 2,
     Removed = 3
 }
+
+public enum ClassStatus
+{
+    Active = 1,
+    Deleted = 2
+}
