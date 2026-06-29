@@ -1,0 +1,285 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Owner Student License Management API
+  version: 1.0.0
+  description: Community Owner endpoints for adding, listing, updating, and revoking student licenses.
+servers:
+  - url: /api/v1
+paths:
+  /Communities/{communityId}/student-licenses:
+    post:
+      summary: Add a pending student license
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddStudentLicenseRequest'
+            example:
+              email: student@example.com
+              gradeId: 1
+              classId: 1
+      responses:
+        '200':
+          description: Student license created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLicenseResponseEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      summary: List student licenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/StudentLicenseStatus'
+        - name: gradeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: classId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching student licenses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLicenseListResponseEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /Communities/{communityId}/student-licenses/{licenseId}:
+    patch:
+      summary: Update a pending student license email or grade/class assignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+        - $ref: '#/components/parameters/LicenseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentLicenseRequest'
+            example:
+              email: new-student@example.com
+              gradeId: 1
+              classId: 1
+      responses:
+        '200':
+          description: Student license updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLicenseResponseEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Revoke a student license
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+        - $ref: '#/components/parameters/LicenseId'
+      responses:
+        '200':
+          description: Student license revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentLicenseResponseEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CommunityId:
+      name: communityId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    LicenseId:
+      name: licenseId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    AddStudentLicenseRequest:
+      type: object
+      required:
+        - email
+        - gradeId
+        - classId
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 256
+        gradeId:
+          type: integer
+          format: int64
+        classId:
+          type: integer
+          format: int64
+    UpdateStudentLicenseRequest:
+      type: object
+      required:
+        - email
+        - gradeId
+        - classId
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 256
+        gradeId:
+          type: integer
+          format: int64
+        classId:
+          type: integer
+          format: int64
+    StudentLicenseStatus:
+      type: string
+      enum:
+        - Pending
+        - Active
+        - Revoked
+    StudentLicenseGrade:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    StudentLicenseClass:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    StudentLicense:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        communityId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        playerProfileId:
+          type: integer
+          format: int64
+          nullable: true
+        status:
+          $ref: '#/components/schemas/StudentLicenseStatus'
+        grade:
+          $ref: '#/components/schemas/StudentLicenseGrade'
+        class:
+          $ref: '#/components/schemas/StudentLicenseClass'
+        emailChangeCount:
+          type: integer
+        assignedByUserId:
+          type: integer
+          format: int64
+        activatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    StudentLicenseResponseEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/StudentLicense'
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+    StudentLicenseListResponseEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentLicense'
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid input, capacity exceeded, duplicate email, email change limit exceeded, or invalid grade/class assignment
+    Unauthorized:
+      description: Missing or invalid bearer token
+    Forbidden:
+      description: Authenticated user is not an Active Owner for the community
+    NotFound:
+      description: Current user, license, grade, class, or capacity record not found
