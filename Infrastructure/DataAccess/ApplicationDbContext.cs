@@ -22,6 +22,7 @@ namespace Infrastructure.DataAccess
         public DbSet<CommunityLicense> CommunityLicenses { get; set; }
         public DbSet<Grade> Grades { get; set; }
         public DbSet<Class> Classes { get; set; }
+        public DbSet<StudentLicense> StudentLicenses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -152,6 +153,11 @@ namespace Infrastructure.DataAccess
                     .HasForeignKey(x => x.CommunityId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                e.HasMany(x => x.StudentLicenses)
+                    .WithOne(x => x.Community)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 e.HasOne(x => x.License)
                     .WithOne(x => x.Community)
                     .HasForeignKey<CommunityLicense>(x => x.CommunityId)
@@ -233,6 +239,57 @@ namespace Infrastructure.DataAccess
                     .WithMany(x => x.Classes)
                     .HasForeignKey(x => x.GradeId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StudentLicense>(e =>
+            {
+                e.Property(x => x.Email)
+                    .IsRequired()
+                    .HasMaxLength(256);
+
+                e.Property(x => x.Status)
+                    .IsRequired()
+                    .HasDefaultValue(StudentLicenseStatus.Pending);
+
+                e.Property(x => x.EmailChangeCount)
+                    .HasDefaultValue(0);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => new { x.CommunityId, x.Email, x.Status });
+                e.HasIndex(x => new { x.CommunityId, x.Status });
+                e.HasIndex(x => new { x.CommunityId, x.GradeId });
+                e.HasIndex(x => new { x.CommunityId, x.ClassId });
+                e.HasIndex(x => x.UserId);
+                e.HasIndex(x => x.PlayerProfileId);
+
+                e.HasOne(x => x.Grade)
+                    .WithMany()
+                    .HasForeignKey(x => x.GradeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Class)
+                    .WithMany()
+                    .HasForeignKey(x => x.ClassId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(x => x.AssignedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasOne<Player>()
+                    .WithMany()
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())

@@ -9,11 +9,18 @@ using Application.Features.Communities.GradesClasses.DeleteClass;
 using Application.Features.Communities.GradesClasses.ListClasses;
 using Application.Features.Communities.GradesClasses.ListGrades;
 using Application.Features.Communities.GradesClasses.UpdateClass;
+using Application.Features.Communities.StudentLicenses.AddStudentLicense;
+using Application.Features.Communities.StudentLicenses.Common;
+using Application.Features.Communities.StudentLicenses.ListStudentLicenses;
+using Application.Features.Communities.StudentLicenses.RevokeStudentLicense;
+using Application.Features.Communities.StudentLicenses.UpdateStudentLicense;
 using Application.Features.Communities.Teachers.Common;
 using Application.Features.Communities.Teachers.InviteTeacher;
 using Application.Features.Communities.Teachers.ListTeachers;
 using Application.Features.Communities.Teachers.RemoveTeacher;
 using Application.Features.Communities.UpdateCommunityProfile;
+
+using Domain.Enums;
 
 using Asp.Versioning;
 
@@ -301,6 +308,116 @@ public class CommunitiesController : ControllerBase
         });
 
         return Ok(new BaseResponse<ClassResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpPost("{communityId:long}/student-licenses")]
+    public async Task<IActionResult> AddStudentLicense(
+        long communityId,
+        [FromBody] AddStudentLicenseRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new AddStudentLicenseCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            Email = request.Email,
+            GradeId = request.GradeId,
+            ClassId = request.ClassId
+        });
+
+        return Ok(new BaseResponse<StudentLicenseResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpGet("{communityId:long}/student-licenses")]
+    public async Task<IActionResult> ListStudentLicenses(
+        long communityId,
+        [FromQuery] StudentLicenseStatus? status,
+        [FromQuery] long? gradeId,
+        [FromQuery] long? classId,
+        [FromQuery] string? search)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new ListStudentLicensesQuery
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            Status = status,
+            GradeId = gradeId,
+            ClassId = classId,
+            Search = search
+        });
+
+        return Ok(new BaseResponse<List<StudentLicenseResponse>>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpPatch("{communityId:long}/student-licenses/{licenseId:long}")]
+    public async Task<IActionResult> UpdateStudentLicense(
+        long communityId,
+        long licenseId,
+        [FromBody] UpdateStudentLicenseRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new UpdateStudentLicenseCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            LicenseId = licenseId,
+            Email = request.Email,
+            GradeId = request.GradeId,
+            ClassId = request.ClassId
+        });
+
+        return Ok(new BaseResponse<StudentLicenseResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpDelete("{communityId:long}/student-licenses/{licenseId:long}")]
+    public async Task<IActionResult> RevokeStudentLicense(long communityId, long licenseId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new RevokeStudentLicenseCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            LicenseId = licenseId
+        });
+
+        return Ok(new BaseResponse<StudentLicenseResponse>(
             data: result,
             statusCode: HttpStatusCode.OK,
             errorCode: ErrorCode.Success,

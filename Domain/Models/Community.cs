@@ -13,6 +13,7 @@ public class Community
     public ICollection<CommunityUser> CommunityUsers { get; set; } = new List<CommunityUser>();
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
     public ICollection<Class> Classes { get; set; } = new List<Class>();
+    public ICollection<StudentLicense> StudentLicenses { get; set; } = new List<StudentLicense>();
     public CommunityLicense? License { get; set; }
 }
 
