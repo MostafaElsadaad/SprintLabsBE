@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Community Student Viewing API
+  version: 1.0.0
+  description: Read-only endpoints for community Owners and Teachers to list and view students.
+servers:
+  - url: /api/v1
+paths:
+  /Communities/{communityId}/students:
+    get:
+      summary: List community students
+      description: Returns a paginated roster sourced from student licenses in the route community.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+        - name: gradeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: classId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/StudentLicenseStatus'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: pageNumber
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated community students
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityStudentListEnvelope'
+              example:
+                data:
+                  pageNumber: 1
+                  pageSize: 10
+                  totalPages: 1
+                  totalRecords: 2
+                  data:
+                    - licenseId: 11
+                      email: pending.student@example.com
+                      status: Pending
+                      userId: null
+                      playerProfileId: null
+                      playerName: null
+                      avatarUrl: null
+                      gradeId: 3
+                      gradeName: Grade 5
+                      classId: 8
+                      className: Class A
+                      activatedAt: null
+                      createdAt: '2026-07-02T10:00:00Z'
+                    - licenseId: 12
+                      email: active.student@example.com
+                      status: Active
+                      userId: 42
+                      playerProfileId: 99
+                      playerName: Active Student
+                      avatarUrl: https://example.com/avatar.png
+                      gradeId: 3
+                      gradeName: Grade 5
+                      classId: 8
+                      className: Class A
+                      activatedAt: '2026-07-02T11:00:00Z'
+                      createdAt: '2026-07-01T10:00:00Z'
+                message: Success
+                statusCode: 200
+                errorCode: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Communities/{communityId}/students/{playerProfileId}:
+    get:
+      summary: Get community student detail
+      description: Returns detail for a player profile only when a non-revoked student license links that profile to the route community.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CommunityId'
+        - $ref: '#/components/parameters/PlayerProfileId'
+      responses:
+        '200':
+          description: Community student detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityStudentDetailEnvelope'
+              example:
+                data:
+                  userId: 42
+                  playerProfileId: 99
+                  name: Active Student
+                  email: active.student@example.com
+                  avatarUrl: https://example.com/avatar.png
+                  gold: 0
+                  experience: 0
+                  level: 1
+                  licenseStatus: Active
+                  gradeId: 3
+                  gradeName: Grade 5
+                  classId: 8
+                  className: Class A
+                  activatedAt: '2026-07-02T11:00:00Z'
+                  createdAt: '2026-07-01T10:00:00Z'
+                  analytics:
+                    completedAssignments: 0
+                    averageScore: null
+                    lastActivityAt: null
+                    matchesPlayed: 0
+                    winRate: null
+                message: Success
+                statusCode: 200
+                errorCode: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CommunityId:
+      name: communityId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PlayerProfileId:
+      name: playerProfileId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    StudentLicenseStatus:
+      type: string
+      enum:
+        - Pending
+        - Active
+        - Revoked
+    CommunityStudentListItem:
+      type: object
+      properties:
+        licenseId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        status:
+          $ref: '#/components/schemas/StudentLicenseStatus'
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        playerProfileId:
+          type: integer
+          format: int64
+          nullable: true
+        playerName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        gradeId:
+          type: integer
+          format: int64
+        gradeName:
+          type: string
+        classId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        activatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    CommunityStudentAnalytics:
+      type: object
+      properties:
+        completedAssignments:
+          type: integer
+          default: 0
+        averageScore:
+          type: number
+          format: double
+          nullable: true
+        lastActivityAt:
+          type: string
+          format: date-time
+          nullable: true
+        matchesPlayed:
+          type: integer
+          default: 0
+        winRate:
+          type: number
+          format: double
+          nullable: true
+    CommunityStudentDetail:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        playerProfileId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        experience:
+          type: integer
+        level:
+          type: integer
+        licenseStatus:
+          $ref: '#/components/schemas/StudentLicenseStatus'
+        gradeId:
+          type: integer
+          format: int64
+        gradeName:
+          type: string
+        classId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        activatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        analytics:
+          $ref: '#/components/schemas/CommunityStudentAnalytics'
+    PagedCommunityStudentList:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+        totalRecords:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunityStudentListItem'
+    CommunityStudentListEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PagedCommunityStudentList'
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+    CommunityStudentDetailEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CommunityStudentDetail'
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid input, invalid pagination, unsupported status, or invalid grade/class filter combination
+    Unauthorized:
+      description: Missing or invalid bearer token
+    Forbidden:
+      description: Authenticated user is not an Active Owner or Active Teacher for the community
+    NotFound:
+      description: Grade, class, student, player profile, or route-scoped student license was not found

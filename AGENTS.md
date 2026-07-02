@@ -216,5 +216,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/008-student-license-activation/plan.md
+at specs/009-community-student-viewing/plan.md
 <!-- SPECKIT END -->
