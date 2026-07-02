@@ -261,6 +261,50 @@ namespace Infrastructure.Services
             };
         }
 
+        public async Task<List<long>> SearchUserIds(string search, CancellationToken cancellationToken)
+        {
+            search = search.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                return new List<long>();
+            }
+
+            return await _userManager.Users
+                .Where(x =>
+                    (x.Email != null && x.Email.ToLower().Contains(search))
+                    || x.Name.ToLower().Contains(search))
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<UserIdentityResponse>> GetUsersByIds(
+            IEnumerable<long> userIds,
+            CancellationToken cancellationToken)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+            {
+                return new List<UserIdentityResponse>();
+            }
+
+            return await _userManager.Users
+                .Where(x => ids.Contains(x.Id))
+                .Select(x => new UserIdentityResponse
+                {
+                    Id = x.Id,
+                    GoogleId = x.GoogleId,
+                    Email = x.Email ?? string.Empty,
+                    Name = x.Name,
+                    AvatarUrl = x.AvatarUrl,
+                    Status = x.Status.ToString(),
+                    IsPlatformAdmin = x.IsPlatformAdmin,
+                    IsSuspended = x.Status == UserStatus.Suspended,
+                    HasGoogleIdentity = !string.IsNullOrWhiteSpace(x.GoogleId),
+                    PlayerProfileId = x.Player != null ? x.Player.Id : null
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<UserIdentityResponse?> GetCurrentUser(long userId)
         {
             var user = await _userManager.Users

@@ -17,6 +17,8 @@ namespace Domain.Services
         public Task<UserIdentityResponse> FindOrCreateGoogleUser(GoogleUserResponse response);
         public Task<UserIdentityResponse> FindOrCreateBasicUser(string email, string name);
         public Task<UserIdentityResponse?> FindByEmail(string email);
+        public Task<List<long>> SearchUserIds(string search, CancellationToken cancellationToken);
+        public Task<List<UserIdentityResponse>> GetUsersByIds(IEnumerable<long> userIds, CancellationToken cancellationToken);
         public Task<UserIdentityResponse?> GetCurrentUser(long userId);
 
     }

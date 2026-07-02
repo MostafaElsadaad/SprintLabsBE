@@ -14,6 +14,9 @@ using Application.Features.Communities.StudentLicenses.Common;
 using Application.Features.Communities.StudentLicenses.ListStudentLicenses;
 using Application.Features.Communities.StudentLicenses.RevokeStudentLicense;
 using Application.Features.Communities.StudentLicenses.UpdateStudentLicense;
+using Application.Features.Communities.Students.Common;
+using Application.Features.Communities.Students.GetStudentDetail;
+using Application.Features.Communities.Students.ListStudents;
 using Application.Features.Communities.Teachers.Common;
 using Application.Features.Communities.Teachers.InviteTeacher;
 using Application.Features.Communities.Teachers.ListTeachers;
@@ -366,6 +369,64 @@ public class CommunitiesController : ControllerBase
         });
 
         return Ok(new BaseResponse<List<StudentLicenseResponse>>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpGet("{communityId:long}/students")]
+    public async Task<IActionResult> ListStudents(
+        long communityId,
+        [FromQuery] StudentLicenseStatus? status,
+        [FromQuery] long? gradeId,
+        [FromQuery] long? classId,
+        [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new ListStudentsQuery
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            Status = status,
+            GradeId = gradeId,
+            ClassId = classId,
+            Search = search,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        });
+
+        return Ok(new BaseResponse<PagedResponse<CommunityStudentListItemResponse>>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpGet("{communityId:long}/students/{playerProfileId:long}")]
+    public async Task<IActionResult> GetStudentDetail(long communityId, long playerProfileId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new GetStudentDetailQuery
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            PlayerProfileId = playerProfileId
+        });
+
+        return Ok(new BaseResponse<CommunityStudentDetailResponse>(
             data: result,
             statusCode: HttpStatusCode.OK,
             errorCode: ErrorCode.Success,

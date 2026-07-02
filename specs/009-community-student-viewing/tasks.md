@@ -18,13 +18,13 @@
 
 **Purpose**: Confirm existing patterns and create the feature shell without changing behavior.
 
-- [ ] T001 Inspect existing controller routing and BaseResponse usage in `API/Controllers/CommunitiesController.cs`
-- [ ] T002 Inspect existing community role authorization patterns in `Application/Features/Communities/GradesClasses/Common/CommunityGradesClassesAuthorization.cs` and `Application/Features/Communities/StudentLicenses/Common/StudentLicenseAuthorization.cs`
-- [ ] T003 Inspect existing student license list/query patterns in `Application/Features/Communities/StudentLicenses/ListStudentLicenses/ListStudentLicensesQueryHandler.cs`
-- [ ] T004 Inspect existing pagination classes and repository paging support in `Shared/Requests/PagedRequest.cs`, `Shared/Responses/PagedResponse.cs`, and `Infrastructure/Repositories/BaseRepository.cs`
-- [ ] T005 Inspect existing test helper patterns in `SprintLabs.Tests/Features/OwnerStudentLicenseManagement/OwnerStudentLicenseManagementTestHelper.cs`
-- [ ] T006 Create feature directories for application code under `Application/Features/Communities/Students/Common/`, `Application/Features/Communities/Students/ListStudents/`, and `Application/Features/Communities/Students/GetStudentDetail/`
-- [ ] T007 [P] Create test directory for this feature in `SprintLabs.Tests/Features/CommunityStudentViewing/`
+- [X] T001 Inspect existing controller routing and BaseResponse usage in `API/Controllers/CommunitiesController.cs`
+- [X] T002 Inspect existing community role authorization patterns in `Application/Features/Communities/GradesClasses/Common/CommunityGradesClassesAuthorization.cs` and `Application/Features/Communities/StudentLicenses/Common/StudentLicenseAuthorization.cs`
+- [X] T003 Inspect existing student license list/query patterns in `Application/Features/Communities/StudentLicenses/ListStudentLicenses/ListStudentLicensesQueryHandler.cs`
+- [X] T004 Inspect existing pagination classes and repository paging support in `Shared/Requests/PagedRequest.cs`, `Shared/Responses/PagedResponse.cs`, and `Infrastructure/Repositories/BaseRepository.cs`
+- [X] T005 Inspect existing test helper patterns in `SprintLabs.Tests/Features/OwnerStudentLicenseManagement/OwnerStudentLicenseManagementTestHelper.cs`
+- [X] T006 Create feature directories for application code under `Application/Features/Communities/Students/Common/`, `Application/Features/Communities/Students/ListStudents/`, and `Application/Features/Communities/Students/GetStudentDetail/`
+- [X] T007 [P] Create test directory for this feature in `SprintLabs.Tests/Features/CommunityStudentViewing/`
 
 ---
 
@@ -34,12 +34,12 @@
 
 **CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T008 Create Owner/Teacher authorization helper using `ICommunityAccessService.HasCommunityRole` in `Application/Features/Communities/Students/Common/CommunityStudentAuthorization.cs`
-- [ ] T009 Create grade/class filter validation helper for route community ownership and class-to-grade matching in `Application/Features/Communities/Students/Common/CommunityStudentValidation.cs`
-- [ ] T010 [P] Create student list item DTO in `Application/Features/Communities/Students/Common/CommunityStudentListItemResponse.cs`
-- [ ] T011 [P] Create student detail DTO in `Application/Features/Communities/Students/Common/CommunityStudentDetailResponse.cs`
-- [ ] T012 [P] Create placeholder analytics DTO in `Application/Features/Communities/Students/Common/CommunityStudentAnalyticsResponse.cs`
-- [ ] T013 Add required using statements for Community Student Viewing features in `API/Controllers/CommunitiesController.cs`
+- [X] T008 Create Owner/Teacher authorization helper using `ICommunityAccessService.HasCommunityRole` in `Application/Features/Communities/Students/Common/CommunityStudentAuthorization.cs`
+- [X] T009 Create grade/class filter validation helper for route community ownership and class-to-grade matching in `Application/Features/Communities/Students/Common/CommunityStudentValidation.cs`
+- [X] T010 [P] Create student list item DTO in `Application/Features/Communities/Students/Common/CommunityStudentListItemResponse.cs`
+- [X] T011 [P] Create student detail DTO in `Application/Features/Communities/Students/Common/CommunityStudentDetailResponse.cs`
+- [X] T012 [P] Create placeholder analytics DTO in `Application/Features/Communities/Students/Common/CommunityStudentAnalyticsResponse.cs`
+- [X] T013 Add required using statements for Community Student Viewing features in `API/Controllers/CommunitiesController.cs`
 
 **Checkpoint**: Shared feature DTOs and authorization/validation helpers exist; user story queries can compile against them.
 
@@ -53,17 +53,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Add owner list success test with paged response and route-community isolation in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T015 [P] [US1] Add teacher list success test in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T016 [P] [US1] Add pending student nullable user/player fields test in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T014 [P] [US1] Add owner list success test with paged response and route-community isolation in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T015 [P] [US1] Add teacher list success test in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T016 [P] [US1] Add pending student nullable user/player fields test in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Create list students query inheriting or carrying `PagedRequest` fields in `Application/Features/Communities/Students/ListStudents/ListStudentsQuery.cs`
-- [ ] T018 [US1] Implement base list query handler authorization and `StudentLicense.CommunityId` scoping in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T019 [US1] Implement projection from student licenses to `CommunityStudentListItemResponse` with nullable user/player fields in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T020 [US1] Implement `PagedResponse<CommunityStudentListItemResponse>` creation using existing page number/page size behavior in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T021 [US1] Add `GET {communityId}/students` controller action returning `BaseResponse<PagedResponse<CommunityStudentListItemResponse>>` in `API/Controllers/CommunitiesController.cs`
+- [X] T017 [US1] Create list students query inheriting or carrying `PagedRequest` fields in `Application/Features/Communities/Students/ListStudents/ListStudentsQuery.cs`
+- [X] T018 [US1] Implement base list query handler authorization and `StudentLicense.CommunityId` scoping in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T019 [US1] Implement projection from student licenses to `CommunityStudentListItemResponse` with nullable user/player fields in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T020 [US1] Implement `PagedResponse<CommunityStudentListItemResponse>` creation using existing page number/page size behavior in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T021 [US1] Add `GET {communityId}/students` controller action returning `BaseResponse<PagedResponse<CommunityStudentListItemResponse>>` in `API/Controllers/CommunitiesController.cs`
 
 **Checkpoint**: User Story 1 is independently testable as the MVP student roster endpoint.
 
@@ -77,19 +77,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Add status filter tests for Pending, Active, and Revoked licenses in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T023 [P] [US2] Add grade and class filter tests including matching grade/class combination in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T024 [P] [US2] Add invalid grade/class ownership and mismatched grade/class rejection tests in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T025 [P] [US2] Add search tests for license email, linked user email/name, linked player name, and other-community exclusion in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T026 [P] [US2] Add pagination metadata and beyond-last-page tests in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T022 [P] [US2] Add status filter tests for Pending, Active, and Revoked licenses in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T023 [P] [US2] Add grade and class filter tests including matching grade/class combination in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T024 [P] [US2] Add invalid grade/class ownership and mismatched grade/class rejection tests in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T025 [P] [US2] Add search tests for license email, linked user email/name, linked player name, and other-community exclusion in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T026 [P] [US2] Add pagination metadata and beyond-last-page tests in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Add optional `GradeId`, `ClassId`, `Status`, and `Search` properties to `Application/Features/Communities/Students/ListStudents/ListStudentsQuery.cs`
-- [ ] T028 [US2] Call grade/class validation before applying list filters in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T029 [US2] Apply status, grade, and class filters to the student license query in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T030 [US2] Apply search across student license email, linked user email/name, and linked player name in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T031 [US2] Bind query parameters for gradeId, classId, status, search, pageNumber, and pageSize in `API/Controllers/CommunitiesController.cs`
+- [X] T027 [US2] Add optional `GradeId`, `ClassId`, `Status`, and `Search` properties to `Application/Features/Communities/Students/ListStudents/ListStudentsQuery.cs`
+- [X] T028 [US2] Call grade/class validation before applying list filters in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T029 [US2] Apply status, grade, and class filters to the student license query in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T030 [US2] Apply search across student license email, linked user email/name, and linked player name in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T031 [US2] Bind query parameters for gradeId, classId, status, search, pageNumber, and pageSize in `API/Controllers/CommunitiesController.cs`
 
 **Checkpoint**: User Stories 1 and 2 both work, and list behavior matches the OpenAPI list contract.
 
@@ -103,17 +103,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T032 [P] [US3] Add owner detail success test with profile, progression, license, grade/class, and analytics placeholder assertions in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
-- [ ] T033 [P] [US3] Add teacher detail success test in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
-- [ ] T034 [P] [US3] Add cross-community player profile not-found test in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
-- [ ] T035 [P] [US3] Add revoked license and missing player profile not-found tests in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
+- [X] T032 [P] [US3] Add owner detail success test with profile, progression, license, grade/class, and analytics placeholder assertions in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
+- [X] T033 [P] [US3] Add teacher detail success test in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
+- [X] T034 [P] [US3] Add cross-community player profile not-found test in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
+- [X] T035 [P] [US3] Add revoked license and missing player profile not-found tests in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Create get student detail query in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQuery.cs`
-- [ ] T037 [US3] Implement detail query handler authorization and non-revoked route-community license lookup by `PlayerProfileId` in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
-- [ ] T038 [US3] Project player, user, license, grade, class, and default analytics fields into `CommunityStudentDetailResponse` in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
-- [ ] T039 [US3] Add `GET {communityId}/students/{playerProfileId}` controller action returning `BaseResponse<CommunityStudentDetailResponse>` in `API/Controllers/CommunitiesController.cs`
+- [X] T036 [US3] Create get student detail query in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQuery.cs`
+- [X] T037 [US3] Implement detail query handler authorization and non-revoked route-community license lookup by `PlayerProfileId` in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
+- [X] T038 [US3] Project player, user, license, grade, class, and default analytics fields into `CommunityStudentDetailResponse` in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
+- [X] T039 [US3] Add `GET {communityId}/students/{playerProfileId}` controller action returning `BaseResponse<CommunityStudentDetailResponse>` in `API/Controllers/CommunitiesController.cs`
 
 **Checkpoint**: User Story 3 works independently and detail never leaks player profiles outside the route community.
 
@@ -127,15 +127,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T040 [P] [US4] Add list denial tests for Student, Pending member, Removed member, no membership, and platform-admin-only user in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
-- [ ] T041 [P] [US4] Add detail denial tests for Student, Pending member, Removed member, no membership, and platform-admin-only user in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
-- [ ] T042 [P] [US4] Add controller authorization smoke tests or documented manual 401 checks for unauthenticated list/detail requests in `SprintLabs.Tests/Features/CommunityStudentViewing/CommunityStudentViewingControllerTests.cs`
+- [X] T040 [P] [US4] Add list denial tests for Student, Pending member, Removed member, no membership, and platform-admin-only user in `SprintLabs.Tests/Features/CommunityStudentViewing/ListStudentsQueryHandlerTests.cs`
+- [X] T041 [P] [US4] Add detail denial tests for Student, Pending member, Removed member, no membership, and platform-admin-only user in `SprintLabs.Tests/Features/CommunityStudentViewing/GetStudentDetailQueryHandlerTests.cs`
+- [X] T042 [P] [US4] Add controller authorization smoke tests or documented manual 401 checks for unauthenticated list/detail requests in `SprintLabs.Tests/Features/CommunityStudentViewing/CommunityStudentViewingControllerTests.cs`
 
 ### Implementation for User Story 4
 
-- [ ] T043 [US4] Ensure list handler uses only the shared Owner/Teacher authorization helper before querying roster data in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T044 [US4] Ensure detail handler uses only the shared Owner/Teacher authorization helper before querying student detail data in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
-- [ ] T045 [US4] Confirm Communities controller actions remain under existing `[Authorize]` controller policy in `API/Controllers/CommunitiesController.cs`
+- [X] T043 [US4] Ensure list handler uses only the shared Owner/Teacher authorization helper before querying roster data in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T044 [US4] Ensure detail handler uses only the shared Owner/Teacher authorization helper before querying student detail data in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
+- [X] T045 [US4] Confirm Communities controller actions remain under existing `[Authorize]` controller policy in `API/Controllers/CommunitiesController.cs`
 
 **Checkpoint**: All user stories are independently functional with access rules enforced consistently.
 
@@ -145,14 +145,14 @@
 
 **Purpose**: Documentation, contract alignment, verification, and cleanup across all stories.
 
-- [ ] T046 [P] Create API documentation for frontend consumers in `specs/009-community-student-viewing/api.md`
-- [ ] T047 [P] Create frontend behavior guide in `specs/009-community-student-viewing/frontend.md`
-- [ ] T048 Review OpenAPI contract against implemented DTO names and routes in `specs/009-community-student-viewing/contracts/community-students-api.openapi.yaml`
-- [ ] T049 Review implementation for accidental student license mutation, new tables, migrations, new pagination models, new permission framework, or auth rewrites in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
-- [ ] T050 Review implementation for accidental student license mutation, cross-community detail leakage, or real analytics calculation in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
-- [ ] T051 Run `dotnet build SprintLabs.sln` from repository root `K:\Projects\DotNet\SprintLabsbkp`
-- [ ] T052 Run `dotnet test SprintLabs.sln` from repository root `K:\Projects\DotNet\SprintLabsbkp`
-- [ ] T053 Validate quickstart scenarios in `specs/009-community-student-viewing/quickstart.md`
+- [X] T046 [P] Create API documentation for frontend consumers in `specs/009-community-student-viewing/api.md`
+- [X] T047 [P] Create frontend behavior guide in `specs/009-community-student-viewing/frontend.md`
+- [X] T048 Review OpenAPI contract against implemented DTO names and routes in `specs/009-community-student-viewing/contracts/community-students-api.openapi.yaml`
+- [X] T049 Review implementation for accidental student license mutation, new tables, migrations, new pagination models, new permission framework, or auth rewrites in `Application/Features/Communities/Students/ListStudents/ListStudentsQueryHandler.cs`
+- [X] T050 Review implementation for accidental student license mutation, cross-community detail leakage, or real analytics calculation in `Application/Features/Communities/Students/GetStudentDetail/GetStudentDetailQueryHandler.cs`
+- [X] T051 Run `dotnet build SprintLabs.sln` from repository root `K:\Projects\DotNet\SprintLabsbkp`
+- [X] T052 Run `dotnet test SprintLabs.sln` from repository root `K:\Projects\DotNet\SprintLabsbkp`
+- [X] T053 Validate quickstart scenarios in `specs/009-community-student-viewing/quickstart.md`
 
 ---
 
