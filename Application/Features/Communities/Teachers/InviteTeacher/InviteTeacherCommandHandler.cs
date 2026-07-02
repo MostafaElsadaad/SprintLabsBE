@@ -83,8 +83,21 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
             throw InvalidInput();
         }
 
-        if (membership is { Status: CommunityUserStatus.Pending or CommunityUserStatus.Active })
+        if (membership is { Status: CommunityUserStatus.Active })
         {
+            return Map(teacherUser, membership);
+        }
+
+        if (membership is { Status: CommunityUserStatus.Pending })
+        {
+            if (teacherUser.HasGoogleIdentity)
+            {
+                membership.Status = CommunityUserStatus.Active;
+                membership.UpdatedAt = DateTime.UtcNow;
+                await _communityUserRepository.UpdateAsync(membership);
+                await _communityUserRepository.SaveChangesAsync();
+            }
+
             return Map(teacherUser, membership);
         }
 
@@ -102,14 +115,14 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
                 CommunityId = request.CommunityId,
                 UserId = teacherUser.Id,
                 Role = CommunityUserRole.Teacher,
-                Status = CommunityUserStatus.Pending,
+                Status = GetInviteStatus(teacherUser),
                 CreatedAt = DateTime.UtcNow
             };
             await _communityUserRepository.AddAsync(membership);
         }
         else
         {
-            membership.Status = CommunityUserStatus.Pending;
+            membership.Status = GetInviteStatus(teacherUser);
             membership.UpdatedAt = DateTime.UtcNow;
             await _communityUserRepository.UpdateAsync(membership);
         }
@@ -120,6 +133,13 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
         await _communityUserRepository.SaveChangesAsync();
 
         return Map(teacherUser, membership);
+    }
+
+    private static CommunityUserStatus GetInviteStatus(UserIdentityResponse teacherUser)
+    {
+        return teacherUser.HasGoogleIdentity
+            ? CommunityUserStatus.Active
+            : CommunityUserStatus.Pending;
     }
 
     private Task<bool> IsActiveOwner(long userId, long communityId)

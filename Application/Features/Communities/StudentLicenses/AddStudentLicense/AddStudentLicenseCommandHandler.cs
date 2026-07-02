@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Shared.Enums;
 using Shared.Exceptions;
+using Shared.Responses;
 
 namespace Application.Features.Communities.StudentLicenses.AddStudentLicense;
 
@@ -27,6 +28,8 @@ public class AddStudentLicenseCommandHandler
     private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
     private readonly IBaseRepository<Grade> _gradeRepository;
     private readonly IBaseRepository<Class> _classRepository;
+    private readonly IBaseRepository<CommunityUser> _communityUserRepository;
+    private readonly IPlayerRepository _playerRepository;
 
     public AddStudentLicenseCommandHandler(
         IUserService userService,
@@ -34,7 +37,9 @@ public class AddStudentLicenseCommandHandler
         IBaseRepository<StudentLicense> studentLicenseRepository,
         IBaseRepository<CommunityLicense> communityLicenseRepository,
         IBaseRepository<Grade> gradeRepository,
-        IBaseRepository<Class> classRepository)
+        IBaseRepository<Class> classRepository,
+        IBaseRepository<CommunityUser> communityUserRepository,
+        IPlayerRepository playerRepository)
     {
         _userService = userService;
         _communityAccessService = communityAccessService;
@@ -42,6 +47,8 @@ public class AddStudentLicenseCommandHandler
         _communityLicenseRepository = communityLicenseRepository;
         _gradeRepository = gradeRepository;
         _classRepository = classRepository;
+        _communityUserRepository = communityUserRepository;
+        _playerRepository = playerRepository;
     }
 
     public async Task<StudentLicenseResponse> Handle(
@@ -91,20 +98,49 @@ public class AddStudentLicenseCommandHandler
             throw InvalidInput();
         }
 
+        var studentUser = await _userService.FindByEmail(email);
+        var shouldActivateImmediately = !string.IsNullOrWhiteSpace(studentUser?.GoogleId);
+        Player? playerProfile = null;
+        CommunityUser? existingMembership = null;
+        var now = DateTime.UtcNow;
+
+        if (shouldActivateImmediately)
+        {
+            existingMembership = await GetExistingCommunityMembership(
+                request.CommunityId,
+                studentUser!.Id,
+                cancellationToken);
+
+            if (existingMembership != null && existingMembership.Role != CommunityUserRole.Student)
+            {
+                throw InvalidInput();
+            }
+
+            playerProfile = await FindOrCreatePlayerProfile(studentUser);
+            await CreateOrRestoreStudentMembership(
+                request.CommunityId,
+                studentUser.Id,
+                existingMembership,
+                now);
+        }
+
         var studentLicense = new StudentLicense
         {
             CommunityId = request.CommunityId,
             Email = email,
+            UserId = shouldActivateImmediately ? studentUser?.Id : null,
+            PlayerProfileId = playerProfile?.Id,
             GradeId = request.GradeId,
             ClassId = request.ClassId,
-            Status = StudentLicenseStatus.Pending,
+            Status = shouldActivateImmediately ? StudentLicenseStatus.Active : StudentLicenseStatus.Pending,
             EmailChangeCount = 0,
             AssignedByUserId = request.UserId,
-            CreatedAt = DateTime.UtcNow
+            ActivatedAt = shouldActivateImmediately ? now : null,
+            CreatedAt = now
         };
 
         communityLicense.UsedStudents++;
-        communityLicense.UpdatedAt = DateTime.UtcNow;
+        communityLicense.UpdatedAt = now;
 
         await _studentLicenseRepository.AddAsync(studentLicense);
         await _communityLicenseRepository.UpdateAsync(communityLicense);
@@ -116,6 +152,87 @@ public class AddStudentLicenseCommandHandler
             .FirstAsync(x => x.Id == studentLicense.Id, cancellationToken);
 
         return await StudentLicenseMapper.Map(studentLicense, _userService);
+    }
+
+    private async Task<CommunityUser?> GetExistingCommunityMembership(
+        long communityId,
+        long userId,
+        CancellationToken cancellationToken)
+    {
+        return await _communityUserRepository.AsQueryable()
+            .FirstOrDefaultAsync(
+                x => x.CommunityId == communityId && x.UserId == userId,
+                cancellationToken);
+    }
+
+    private async Task<Player> FindOrCreatePlayerProfile(UserIdentityResponse user)
+    {
+        var existingByUser = await _playerRepository.GetByUserIdAsync(user.Id);
+        if (existingByUser != null)
+        {
+            return existingByUser;
+        }
+
+        if (string.IsNullOrWhiteSpace(user.GoogleId))
+        {
+            throw InvalidInput();
+        }
+
+        var existingByGoogleId = await _playerRepository.GetByGoogleIdAsync(user.GoogleId);
+        if (existingByGoogleId != null)
+        {
+            if (existingByGoogleId.UserId.HasValue && existingByGoogleId.UserId.Value != user.Id)
+            {
+                throw new GenericException(
+                    message: ErrorMessage.ExistingRecord,
+                    statusCode: HttpStatusCode.Conflict,
+                    errorCode: ErrorCode.Failure);
+            }
+
+            existingByGoogleId.UserId = user.Id;
+            existingByGoogleId.Email = user.Email;
+            existingByGoogleId.Name = user.Name;
+            existingByGoogleId.AvatarUrl = user.AvatarUrl;
+            return await _playerRepository.UpdatePlayer(existingByGoogleId);
+        }
+
+        return await _playerRepository.CreateAsync(new Player
+        {
+            UserId = user.Id,
+            GoogleId = user.GoogleId,
+            Email = user.Email,
+            Name = user.Name,
+            AvatarUrl = user.AvatarUrl
+        });
+    }
+
+    private async Task CreateOrRestoreStudentMembership(
+        long communityId,
+        long userId,
+        CommunityUser? existingMembership,
+        DateTime now)
+    {
+        if (existingMembership == null)
+        {
+            await _communityUserRepository.AddAsync(new CommunityUser
+            {
+                CommunityId = communityId,
+                UserId = userId,
+                Role = CommunityUserRole.Student,
+                Status = CommunityUserStatus.Active,
+                CreatedAt = now
+            });
+            return;
+        }
+
+        if (existingMembership.Status == CommunityUserStatus.Active)
+        {
+            return;
+        }
+
+        existingMembership.Status = CommunityUserStatus.Active;
+        existingMembership.UpdatedAt = now;
+        await _communityUserRepository.UpdateAsync(existingMembership);
     }
 
     private static GenericException InvalidInput()

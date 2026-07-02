@@ -61,8 +61,9 @@ Behavior:
 - Requires grade and class to belong to the route community.
 - Requires class to belong to the selected grade and be Active.
 - Rejects duplicate non-revoked email in the same community.
-- Creates a Pending license and increments `UsedStudents`.
-- Does not create student community access.
+- Creates a Pending license and increments `UsedStudents` when the email does not belong to an existing Google-registered user.
+- If the normalized email belongs to an existing Google-registered user, creates an Active license immediately, links `UserId` and `PlayerProfileId`, sets `activatedAt`, creates or restores Student community access, and still increments `UsedStudents` only once.
+- Does not create student community access for Pending licenses.
 
 ## GET List Student Licenses
 
@@ -132,6 +133,7 @@ Controlled errors use the existing `GenericException` and global error response 
 - Use `/api/v1/Users/me/communities` to determine which communities the user owns.
 - Never send requester user id; the API reads it from JWT.
 - Count Pending plus Active licenses as used seats.
+- The add response may return `status: "Pending"` or `status: "Active"` depending on whether the target email already belongs to a Google-registered user.
 - Treat Revoked licenses as historical records that do not grant access.
 - Refresh license list and any capacity display after add or revoke.
 - Refresh memberships if any endpoint returns 403.
@@ -147,5 +149,5 @@ Follow [quickstart.md](./quickstart.md).
 ## Implementation Notes / Spec Differences
 
 - The implemented route is versioned and controller-based: `/api/v1/Communities/...`.
-- Pending student license creation does not create a User or CommunityUser.
-- Student activation remains planned for a future feature.
+- Pending student license creation does not require a `User` row and does not create active `CommunityUser` access.
+- Existing Google-registered students are activated immediately during add; not-yet-registered students remain Pending and are activated by login.

@@ -1,14 +1,11 @@
 ﻿using System.Net;
 using System.Security.Claims;
 
-using Domain.Enums;
 using Domain.Models;
 using Domain.Repositories;
 using Domain.Services;
 
 using MediatR;
-
-using Microsoft.EntityFrameworkCore;
 
 using Shared.Enums;
 using Shared.Exceptions;
@@ -21,18 +18,18 @@ namespace Application.Features.Accounts.GoogleAuthenticate
         private readonly IUserService _userService;
         private readonly IGoogleAuthenticationService _googleAuthenticationService;
         private readonly IPlayerRepository _playerRepository;
-        private readonly IBaseRepository<CommunityUser> _communityUserRepository;
+        private readonly ICommunityLoginActivationService _communityLoginActivationService;
 
         public GoogleAuthenticationCommandHandler(
             IUserService userService,
             IGoogleAuthenticationService googleAuthenticationService,
             IPlayerRepository playerRepository,
-            IBaseRepository<CommunityUser> communityUserRepository)
+            ICommunityLoginActivationService communityLoginActivationService)
         {
             _userService = userService;
             _googleAuthenticationService = googleAuthenticationService;
             _playerRepository = playerRepository;
-            _communityUserRepository = communityUserRepository;
+            _communityLoginActivationService = communityLoginActivationService;
         }
 
         public async Task<LoginResponse> Handle(GoogleAuthenticationCommand request, CancellationToken cancellationToken)
@@ -58,7 +55,9 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             }
 
             // 3. Activate pending teacher memberships for this verified login identity.
-            await ActivatePendingTeacherMemberships(user.Id, cancellationToken);
+            await _communityLoginActivationService.ActivatePendingTeacherMembershipsAsync(
+                user.Id,
+                cancellationToken);
 
             // 4. Find or create Player profile for game login
             var player = await _playerRepository.GetByUserIdAsync(user.Id);
@@ -96,13 +95,20 @@ namespace Application.Features.Accounts.GoogleAuthenticate
                 }
             }
 
-            // 5. Generate JWT
+            // 5. Activate pending student licenses after the player profile exists.
+            await _communityLoginActivationService.ActivatePendingStudentLicensesAsync(
+                user.Id,
+                player.Id,
+                googleUserInfo.Email,
+                cancellationToken);
+
+            // 6. Generate JWT
             List<Claim> claims = _googleAuthenticationService.GenerateGoogleClaims(googleUserInfo);
             claims.Add(new Claim("userId", user.Id.ToString()));
             claims.Add(new Claim("playerProfileId", player.Id.ToString()));
             var loginResponse = await _userService.Authenticate(claims);
 
-            // 6. Return response
+            // 7. Return response
             loginResponse.UserId = user.Id;
             loginResponse.PlayerProfileId = player.Id;
             loginResponse.Email = googleUserInfo.Email;
@@ -113,32 +119,6 @@ namespace Application.Features.Accounts.GoogleAuthenticate
             loginResponse.Level = player.Level;
 
             return loginResponse;
-        }
-
-        private async Task ActivatePendingTeacherMemberships(
-            long userId,
-            CancellationToken cancellationToken)
-        {
-            var pendingTeacherMemberships = await _communityUserRepository.AsQueryable()
-                .Where(x =>
-                    x.UserId == userId
-                    && x.Role == CommunityUserRole.Teacher
-                    && x.Status == CommunityUserStatus.Pending)
-                .ToListAsync(cancellationToken);
-
-            if (pendingTeacherMemberships.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var membership in pendingTeacherMemberships)
-            {
-                membership.Status = CommunityUserStatus.Active;
-                membership.UpdatedAt = DateTime.UtcNow;
-                await _communityUserRepository.UpdateAsync(membership);
-            }
-
-            await _communityUserRepository.SaveChangesAsync();
         }
 
     }

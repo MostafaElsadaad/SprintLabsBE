@@ -67,6 +67,8 @@ Statuses:
 - `Active`: signed in and activated, has active Teacher access.
 - `Removed`: no active community access.
 
+Inviting an email that already belongs to a logged-in SprintLabs user may return `Active` immediately. Inviting a new placeholder user returns `Pending`.
+
 ## Remove Action
 
 API:
@@ -107,7 +109,7 @@ Behavior:
 
 If the UI shows teacher seats, count Pending plus Active teachers as used. Removed teachers do not count as used seats.
 
-Duplicate invites for an existing Pending or Active Teacher are idempotent from the frontend perspective: show the returned teacher row and refresh the list.
+Duplicate invites for an existing Pending or Active Teacher are idempotent from the frontend perspective: show the returned teacher row and refresh the list. If the user has logged in since becoming Pending, a repeated invite may upgrade the row to `Active` without consuming another seat.
 
 ## Open Questions
 
