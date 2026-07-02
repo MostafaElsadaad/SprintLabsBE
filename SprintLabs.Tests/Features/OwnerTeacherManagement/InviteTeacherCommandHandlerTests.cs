@@ -58,6 +58,33 @@ public class InviteTeacherCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ExistingRegisteredTeacherWithCapacity_CreatesActiveTeacherAndIncrementsUsedTeachers()
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndLicense(context, usedTeachers: 0, maxTeachers: 2);
+        SetupActiveOwner();
+        SetupTeacher("teacher@example.com", 20, hasGoogleIdentity: true);
+        var handler = CreateHandler(context);
+
+        var result = await handler.Handle(new InviteTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            Email = "teacher@example.com",
+            Name = "Teacher Name"
+        }, CancellationToken.None);
+
+        result.Status.Should().Be(CommunityUserStatus.Active.ToString());
+
+        var membership = await context.CommunityUsers.SingleAsync(x => x.UserId == 20);
+        membership.Role.Should().Be(CommunityUserRole.Teacher);
+        membership.Status.Should().Be(CommunityUserStatus.Active);
+
+        var license = await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1);
+        license.UsedTeachers.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Handle_ExistingPendingTeacher_ReturnsMembershipWithoutIncrementingUsedTeachers()
     {
         await using var context = CreateContext();
@@ -84,6 +111,42 @@ public class InviteTeacherCommandHandlerTests
         }, CancellationToken.None);
 
         result.Status.Should().Be(CommunityUserStatus.Pending.ToString());
+        (await context.CommunityUsers.CountAsync(x => x.CommunityId == 1 && x.UserId == 20)).Should().Be(1);
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_ExistingPendingRegisteredTeacher_ActivatesWithoutIncrementingUsedTeachersAgain()
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndLicense(context, usedTeachers: 1, maxTeachers: 2);
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = 1,
+            UserId = 20,
+            Role = CommunityUserRole.Teacher,
+            Status = CommunityUserStatus.Pending,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+        SetupActiveOwner();
+        SetupTeacher("teacher@example.com", 20, hasGoogleIdentity: true);
+        var handler = CreateHandler(context);
+
+        var result = await handler.Handle(new InviteTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            Email = "teacher@example.com",
+            Name = "Teacher Name"
+        }, CancellationToken.None);
+
+        result.Status.Should().Be(CommunityUserStatus.Active.ToString());
+
+        var membership = await context.CommunityUsers.SingleAsync(x => x.UserId == 20);
+        membership.Status.Should().Be(CommunityUserStatus.Active);
+        membership.UpdatedAt.Should().NotBeNull();
+
         (await context.CommunityUsers.CountAsync(x => x.CommunityId == 1 && x.UserId == 20)).Should().Be(1);
         (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(1);
     }
@@ -116,6 +179,38 @@ public class InviteTeacherCommandHandlerTests
 
         var membership = await context.CommunityUsers.SingleAsync(x => x.UserId == 20);
         membership.Status.Should().Be(CommunityUserStatus.Pending);
+        membership.UpdatedAt.Should().NotBeNull();
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_RemovedRegisteredTeacherWithCapacity_RestoresToActiveAndIncrementsUsedTeachers()
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndLicense(context, usedTeachers: 0, maxTeachers: 2);
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = 1,
+            UserId = 20,
+            Role = CommunityUserRole.Teacher,
+            Status = CommunityUserStatus.Removed,
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
+        });
+        await context.SaveChangesAsync();
+        SetupActiveOwner();
+        SetupTeacher("teacher@example.com", 20, hasGoogleIdentity: true);
+        var handler = CreateHandler(context);
+
+        await handler.Handle(new InviteTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            Email = "teacher@example.com",
+            Name = "Teacher Name"
+        }, CancellationToken.None);
+
+        var membership = await context.CommunityUsers.SingleAsync(x => x.UserId == 20);
+        membership.Status.Should().Be(CommunityUserStatus.Active);
         membership.UpdatedAt.Should().NotBeNull();
         (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(1);
     }
@@ -191,7 +286,7 @@ public class InviteTeacherCommandHandlerTests
             });
     }
 
-    private void SetupTeacher(string email, long userId)
+    private void SetupTeacher(string email, long userId, bool hasGoogleIdentity = false)
     {
         _userServiceMock
             .Setup(x => x.FindOrCreateBasicUser(email, "Teacher Name"))
@@ -200,7 +295,8 @@ public class InviteTeacherCommandHandlerTests
                 Id = userId,
                 Email = email,
                 Name = "Teacher Name",
-                Status = "Active"
+                Status = "Active",
+                HasGoogleIdentity = hasGoogleIdentity
             });
     }
 

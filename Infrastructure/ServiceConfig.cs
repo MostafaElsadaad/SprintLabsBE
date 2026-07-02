@@ -53,6 +53,7 @@ namespace Infrastructure
             services.AddScoped<IFileDownloadService, FileDownloadService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICommunityAccessService, CommunityAccessService>();
+            services.AddScoped<ICommunityLoginActivationService, CommunityLoginActivationService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
             services.AddSingleton<IGoogleCloudStorageService, GoogleCloudStorageService>();

@@ -11,6 +11,7 @@ using FluentAssertions;
 
 using Infrastructure.DataAccess;
 using Infrastructure.Repositories;
+using Infrastructure.Services;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -62,11 +63,15 @@ public class PendingTeacherActivationTests
 
     private GoogleAuthenticationCommandHandler CreateHandler(ApplicationDbContext context)
     {
+        var activationService = new CommunityLoginActivationService(
+            new BaseRepository<CommunityUser>(context),
+            new BaseRepository<StudentLicense>(context));
+
         return new GoogleAuthenticationCommandHandler(
             _userServiceMock.Object,
             _googleAuthenticationServiceMock.Object,
             _playerRepositoryMock.Object,
-            new BaseRepository<CommunityUser>(context));
+            activationService);
     }
 
     private void SetupGoogleLogin()

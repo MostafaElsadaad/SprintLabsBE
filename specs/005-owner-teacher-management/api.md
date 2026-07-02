@@ -30,8 +30,10 @@ Request:
 Behavior:
 
 - Finds or creates a User by normalized email.
-- Creates a `CommunityUser` with `Role = Teacher` and `Status = Pending`.
-- Restores a Removed Teacher membership to Pending when license capacity allows.
+- Creates a `CommunityUser` with `Role = Teacher`.
+- Uses `Status = Active` when the invited User already has a Google login identity.
+- Uses `Status = Pending` when the invite creates or reuses a placeholder User without a Google login identity.
+- Restores a Removed Teacher membership to Active or Pending based on the User's Google login identity when license capacity allows.
 - Does not duplicate an existing Pending or Active Teacher membership.
 - Increments `UsedTeachers` only when a new counted seat is created or restored.
 - Rejects invite when `UsedTeachers >= MaxTeachers` or no license exists.
@@ -131,6 +133,7 @@ Controlled errors use the existing `GenericException` and global error response 
 - Show teacher management only for Active Owner memberships.
 - Still handle 403 because ownership can change server-side.
 - Treat duplicate invite success as idempotent.
+- Re-inviting a Pending Teacher who has since logged in may return `Active` without consuming another seat.
 - Treat `Pending` and `Active` teachers as consuming seats.
 - Treat `Removed` teachers as no access.
 

@@ -161,12 +161,14 @@ namespace Infrastructure.Services
             return new UserIdentityResponse
             {
                 Id = user.Id,
+                GoogleId = user.GoogleId,
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
                 Status = user.Status.ToString(),
                 IsPlatformAdmin = user.IsPlatformAdmin,
                 IsSuspended = user.Status == UserStatus.Suspended,
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
         }
@@ -214,12 +216,47 @@ namespace Infrastructure.Services
             return new UserIdentityResponse
             {
                 Id = user.Id,
+                GoogleId = user.GoogleId,
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
                 Status = user.Status.ToString(),
                 IsPlatformAdmin = user.IsPlatformAdmin,
                 IsSuspended = user.Status == UserStatus.Suspended,
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
+                PlayerProfileId = user.Player?.Id
+            };
+        }
+
+        public async Task<UserIdentityResponse?> FindByEmail(string email)
+        {
+            email = email.Trim();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return null;
+            }
+
+            var normalizedEmail = _userManager.NormalizeEmail(email);
+            var user = await _userManager.Users
+                .Include(x => x.Player)
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail || (x.Email != null && x.Email.ToLower() == email.ToLower()));
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            return new UserIdentityResponse
+            {
+                Id = user.Id,
+                GoogleId = user.GoogleId,
+                Email = user.Email ?? email,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status.ToString(),
+                IsPlatformAdmin = user.IsPlatformAdmin,
+                IsSuspended = user.Status == UserStatus.Suspended,
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
         }
@@ -238,12 +275,14 @@ namespace Infrastructure.Services
             return new UserIdentityResponse
             {
                 Id = user.Id,
+                GoogleId = user.GoogleId,
                 Email = user.Email ?? string.Empty,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
                 Status = user.Status.ToString(),
                 IsPlatformAdmin = user.IsPlatformAdmin,
                 IsSuspended = user.Status == UserStatus.Suspended,
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
         }

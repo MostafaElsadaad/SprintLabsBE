@@ -2,7 +2,7 @@
 
 ## Feature Summary
 
-Active community Owners can manage student seats by adding Pending licenses, reviewing and filtering licenses, correcting Pending license emails, changing grade/class assignment, and revoking licenses.
+Active community Owners can manage student seats by adding licenses, reviewing and filtering licenses, correcting Pending license emails, changing grade/class assignment, and revoking licenses. Added licenses are Pending for not-yet-registered students and Active immediately when the email already belongs to a Google-registered user.
 
 ## Required Page or Section
 
@@ -100,6 +100,7 @@ API: `PATCH /api/v1/Communities/{communityId}/student-licenses/{licenseId}`
 - Hide update email controls unless status is Pending.
 - Hide or disable revoke for already Revoked licenses.
 - Re-fetch licenses after add, update, or revoke.
+- After add, render the returned `status` instead of assuming the new row is Pending.
 
 ## API Calls by User Action
 
@@ -117,5 +118,6 @@ API: `PATCH /api/v1/Communities/{communityId}/student-licenses/{licenseId}`
 
 ## Implementation Notes
 
-- Student activation is not implemented here; Pending licenses stay Pending until a future feature activates them.
+- Adding an already Google-registered student activates the license immediately and creates Student community access.
+- Not-yet-registered students remain Pending until login activation.
 - Revoked licenses remain visible in list results for audit/history unless filtered out by the frontend.

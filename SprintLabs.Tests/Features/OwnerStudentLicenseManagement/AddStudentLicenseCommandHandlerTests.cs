@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 
 using Shared.Exceptions;
+using Shared.Responses;
 
 using ClassEntity = Domain.Models.Class;
 
@@ -32,6 +33,7 @@ public class AddStudentLicenseCommandHandlerTests
         await using var context = OwnerStudentLicenseManagementTestHelper.CreateContext();
         await OwnerStudentLicenseManagementTestHelper.SeedBase(context);
         OwnerStudentLicenseManagementTestHelper.SetupUsers(_userServiceMock);
+        SetupMissingTargetStudent("student@example.com");
         var handler = CreateHandler(context);
 
         var result = await handler.Handle(new AddStudentLicenseCommand
@@ -53,6 +55,94 @@ public class AddStudentLicenseCommandHandlerTests
         license.Email.Should().Be("student@example.com");
         (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedStudents.Should().Be(1);
         (await context.CommunityUsers.AnyAsync(x => x.Role == CommunityUserRole.Student)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_LoggedInStudent_CreatesActiveLicensePlayerProfileAndStudentMembership()
+    {
+        await using var context = OwnerStudentLicenseManagementTestHelper.CreateContext();
+        await OwnerStudentLicenseManagementTestHelper.SeedBase(context);
+        OwnerStudentLicenseManagementTestHelper.SetupUsers(_userServiceMock);
+        SetupTargetStudent("student@example.com", userId: 20, googleId: "student-google-id");
+        var handler = CreateHandler(context);
+
+        var result = await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        result.Email.Should().Be("student@example.com");
+        result.Status.Should().Be(StudentLicenseStatus.Active.ToString());
+        result.UserId.Should().Be(20);
+        result.PlayerProfileId.Should().NotBeNull();
+        result.ActivatedAt.Should().NotBeNull();
+
+        var license = await context.StudentLicenses.SingleAsync();
+        license.Status.Should().Be(StudentLicenseStatus.Active);
+        license.UserId.Should().Be(20);
+        license.PlayerProfileId.Should().NotBeNull();
+        license.ActivatedAt.Should().NotBeNull();
+
+        var player = await context.Players.SingleAsync();
+        player.UserId.Should().Be(20);
+        player.GoogleId.Should().Be("student-google-id");
+
+        var membership = await context.CommunityUsers.SingleAsync(
+            x => x.CommunityId == 1 && x.UserId == 20);
+        membership.Role.Should().Be(CommunityUserRole.Student);
+        membership.Status.Should().Be(CommunityUserStatus.Active);
+
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedStudents.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_LoggedInStudentWithRemovedStudentMembership_RestoresMembership()
+    {
+        await using var context = OwnerStudentLicenseManagementTestHelper.CreateContext();
+        await OwnerStudentLicenseManagementTestHelper.SeedBase(context);
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = 1,
+            UserId = 20,
+            Role = CommunityUserRole.Student,
+            Status = CommunityUserStatus.Removed
+        });
+        await context.SaveChangesAsync();
+        OwnerStudentLicenseManagementTestHelper.SetupUsers(_userServiceMock);
+        SetupTargetStudent("student@example.com", userId: 20, googleId: "student-google-id");
+        var handler = CreateHandler(context);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        (await context.CommunityUsers.CountAsync(x => x.CommunityId == 1 && x.UserId == 20)).Should().Be(1);
+        var membership = await context.CommunityUsers.SingleAsync(x => x.CommunityId == 1 && x.UserId == 20);
+        membership.Role.Should().Be(CommunityUserRole.Student);
+        membership.Status.Should().Be(CommunityUserStatus.Active);
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedStudents.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(CommunityUserRole.Owner)]
+    [InlineData(CommunityUserRole.Teacher)]
+    public async Task Handle_LoggedInStudentWithExistingNonStudentMembership_RejectsWithoutCreatingLicense(
+        CommunityUserRole existingRole)
+    {
+        await using var context = OwnerStudentLicenseManagementTestHelper.CreateContext();
+        await OwnerStudentLicenseManagementTestHelper.SeedBase(context);
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = 1,
+            UserId = 20,
+            Role = existingRole,
+            Status = CommunityUserStatus.Active
+        });
+        await context.SaveChangesAsync();
+        OwnerStudentLicenseManagementTestHelper.SetupUsers(_userServiceMock);
+        SetupTargetStudent("student@example.com", userId: 20, googleId: "student-google-id");
+        var handler = CreateHandler(context);
+
+        var act = async () => await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await context.StudentLicenses.AnyAsync()).Should().BeFalse();
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedStudents.Should().Be(0);
     }
 
     [Fact]
@@ -122,6 +212,7 @@ public class AddStudentLicenseCommandHandlerTests
         });
         await context.SaveChangesAsync();
         OwnerStudentLicenseManagementTestHelper.SetupUsers(_userServiceMock);
+        SetupMissingTargetStudent("revoked@example.com");
         var handler = CreateHandler(context);
 
         var duplicate = ValidCommand();
@@ -176,6 +267,33 @@ public class AddStudentLicenseCommandHandlerTests
             new BaseRepository<StudentLicense>(context),
             new BaseRepository<CommunityLicense>(context),
             new BaseRepository<Grade>(context),
-            new BaseRepository<ClassEntity>(context));
+            new BaseRepository<ClassEntity>(context),
+            new BaseRepository<CommunityUser>(context),
+            new PlayerRepository(context));
+    }
+
+    private void SetupTargetStudent(
+        string email,
+        long userId = 20,
+        string? googleId = null)
+    {
+        _userServiceMock
+            .Setup(x => x.FindByEmail(email))
+            .ReturnsAsync(new UserIdentityResponse
+            {
+                Id = userId,
+                GoogleId = googleId,
+                Email = email,
+                Name = "Student Name",
+                Status = "Active",
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(googleId)
+            });
+    }
+
+    private void SetupMissingTargetStudent(string email)
+    {
+        _userServiceMock
+            .Setup(x => x.FindByEmail(email))
+            .ReturnsAsync((UserIdentityResponse?)null);
     }
 }

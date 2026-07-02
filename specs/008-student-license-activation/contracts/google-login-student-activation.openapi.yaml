@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs Google Login Student License Activation
+  version: 1.0.0
+  description: >
+    Documents the existing Google login endpoint side effect for activating
+    pending student licenses. This feature does not add a new endpoint or
+    change the response contract.
+paths:
+  /api/v1/Account/google-login:
+    post:
+      summary: Sign in with Google and activate pending student licenses
+      description: >
+        Validates the Google token, finds or creates the shared user, preserves
+        existing player profile login behavior, activates pending teacher
+        memberships when present, and activates pending student licenses that
+        match the normalized Google email.
+      parameters:
+        - name: googleAccessToken
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Google ID token accepted by the existing login flow.
+      responses:
+        "200":
+          description: Existing login response. Student activation is a side effect and does not require a new response body field.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                    nullable: true
+                  userId:
+                    type: integer
+                    format: int64
+                  playerProfileId:
+                    type: integer
+                    format: int64
+                  email:
+                    type: string
+                    format: email
+                  name:
+                    type: string
+                  pictureUrl:
+                    type: string
+                    nullable: true
+                  gold:
+                    type: integer
+                  experience:
+                    type: integer
+                  level:
+                    type: integer
+              example:
+                accessToken: "eyJhbGciOi..."
+                refreshToken: null
+                userId: 42
+                playerProfileId: 1001
+                email: "student@example.com"
+                name: "Student Name"
+                pictureUrl: "https://example.com/avatar.png"
+                gold: 0
+                experience: 0
+                level: 1
+        "401":
+          description: Google identity cannot be authenticated or required identity data is missing.
+        "403":
+          description: Resolved SprintLabs user is suspended.
+        "409":
+          description: Existing player profile is linked to a different user.
+x-side-effects:
+  studentLicenseActivation:
+    - Finds StudentLicenses where normalized email matches login email and status is Pending.
+    - Ensures a player profile exists for the resolved user.
+    - Sets UserId, PlayerProfileId, Status Active, ActivatedAt, and UpdatedAt.
+    - Creates or restores CommunityUser with Role Student and Status Active.
+    - Does not increment CommunityLicense.UsedStudents.
