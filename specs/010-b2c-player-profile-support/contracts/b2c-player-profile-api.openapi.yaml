@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: SprintLabs B2C Player Profile API
+  version: 1.0.0
+  description: >
+    Current-user player profile endpoints for B2C players who do not need
+    community membership or student licenses.
+servers:
+  - url: /api/v1
+paths:
+  /Users/me/player-profile:
+    get:
+      summary: Get current user's player profile
+      description: Returns the authenticated user's player profile without requiring CommunityUser or StudentLicense records.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current player profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /PlayerProfiles/me:
+    patch:
+      summary: Update current user's editable player profile fields
+      description: Updates only age, grade, and schoolName on the authenticated user's own player profile.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurrentPlayerProfileRequest'
+            example:
+              age: 10
+              grade: 5
+              schoolName: Optional School Name
+      responses:
+        '200':
+          description: Updated current player profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /player-profiles/me:
+    $ref: '#/paths/~1PlayerProfiles~1me'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UpdateCurrentPlayerProfileRequest:
+      type: object
+      properties:
+        age:
+          type: integer
+          nullable: true
+        grade:
+          type: integer
+          nullable: true
+        schoolName:
+          type: string
+          nullable: true
+    PlayerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        pictureUrl:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        experience:
+          type: integer
+        level:
+          type: integer
+        schoolName:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        grade:
+          type: integer
+          nullable: true
+    PlayerProfileEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PlayerProfile'
+        message:
+          type: string
+        statusCode:
+          type: integer
+        errorCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid age, grade, or profile update payload
+    Unauthorized:
+      description: Missing or invalid bearer token
+    Forbidden:
+      description: Authenticated user is suspended
+    NotFound:
+      description: Current user or current user's player profile was not found
+x-analytics-context:
+  b2c:
+    communityId: null
+  b2b:
+    communityId: "communityId"
+  note: Real analytics events and calculations are out of scope for this feature.
