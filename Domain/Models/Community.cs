@@ -14,6 +14,11 @@ public class Community
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
     public ICollection<Class> Classes { get; set; } = new List<Class>();
     public ICollection<StudentLicense> StudentLicenses { get; set; } = new List<StudentLicense>();
+    public ICollection<Match> Matches { get; set; } = new List<Match>();
+    public ICollection<MatchPlayer> MatchPlayers { get; set; } = new List<MatchPlayer>();
+    public ICollection<MatchRewardResult> MatchRewardResults { get; set; } = new List<MatchRewardResult>();
+    public ICollection<PlayerXpLog> PlayerXpLogs { get; set; } = new List<PlayerXpLog>();
+    public ICollection<PlayerRankLog> PlayerRankLogs { get; set; } = new List<PlayerRankLog>();
     public CommunityLicense? License { get; set; }
 }
 

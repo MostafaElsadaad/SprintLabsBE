@@ -23,6 +23,12 @@ namespace Infrastructure.DataAccess
         public DbSet<Grade> Grades { get; set; }
         public DbSet<Class> Classes { get; set; }
         public DbSet<StudentLicense> StudentLicenses { get; set; }
+        public DbSet<Match> Matches { get; set; }
+        public DbSet<MatchPlayer> MatchPlayers { get; set; }
+        public DbSet<MatchQuestionResult> MatchQuestionResults { get; set; }
+        public DbSet<MatchRewardResult> MatchRewardResults { get; set; }
+        public DbSet<PlayerXpLog> PlayerXpLogs { get; set; }
+        public DbSet<PlayerRankLog> PlayerRankLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -71,7 +77,18 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Gold).HasDefaultValue(0);
                 e.Property(x => x.Experience).HasDefaultValue(0);
                 e.Property(x => x.Level).HasDefaultValue(1);
+                e.Property(x => x.Rp).HasDefaultValue(0);
+                e.Property(x => x.RankTier).HasDefaultValue(RankTier.Student);
+                e.Property(x => x.HighestRankTier).HasDefaultValue(RankTier.Student);
+                e.Property(x => x.TotalMatches).HasDefaultValue(0);
+                e.Property(x => x.TotalWins).HasDefaultValue(0);
                 e.Property(x => x.CreatedAt).IsRequired();
+
+                e.HasIndex(x => x.Rp);
+                e.HasIndex(x => x.RankTier);
+                e.HasIndex(x => x.Level);
+                e.HasIndex(x => x.Experience);
+                e.HasIndex(x => x.TotalWins);
             });
 
             modelBuilder.Entity<User>(e =>
@@ -290,6 +307,175 @@ namespace Infrastructure.DataAccess
                     .WithMany()
                     .HasForeignKey(x => x.PlayerProfileId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<Match>(e =>
+            {
+                e.Property(x => x.MatchCode)
+                    .IsRequired()
+                    .HasMaxLength(64);
+
+                e.Property(x => x.MirrorRoomId)
+                    .HasMaxLength(128);
+
+                e.Property(x => x.MatchType)
+                    .IsRequired();
+
+                e.Property(x => x.Status)
+                    .IsRequired()
+                    .HasDefaultValue(MatchStatus.Created);
+
+                e.Property(x => x.StartedAt)
+                    .IsRequired();
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.MatchCode);
+                e.HasIndex(x => x.MirrorRoomId);
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => x.Status);
+                e.HasIndex(x => x.CompletedAt);
+
+                e.HasOne(x => x.Community)
+                    .WithMany(x => x.Matches)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<MatchPlayer>(e =>
+            {
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.MatchId);
+                e.HasIndex(x => x.PlayerProfileId);
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => new { x.MatchId, x.PlayerProfileId }).IsUnique();
+
+                e.HasOne(x => x.Match)
+                    .WithMany(x => x.MatchPlayers)
+                    .HasForeignKey(x => x.MatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.PlayerProfile)
+                    .WithMany(x => x.MatchPlayers)
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Community)
+                    .WithMany(x => x.MatchPlayers)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<MatchQuestionResult>(e =>
+            {
+                e.Property(x => x.QuestionType)
+                    .IsRequired()
+                    .HasMaxLength(64);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.MatchId);
+                e.HasIndex(x => x.PlayerProfileId);
+                e.HasIndex(x => x.QuestionId);
+
+                e.HasOne(x => x.Match)
+                    .WithMany(x => x.MatchQuestionResults)
+                    .HasForeignKey(x => x.MatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.PlayerProfile)
+                    .WithMany(x => x.MatchQuestionResults)
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<MatchRewardResult>(e =>
+            {
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.MatchId);
+                e.HasIndex(x => x.PlayerProfileId);
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => new { x.MatchId, x.PlayerProfileId }).IsUnique();
+
+                e.HasOne(x => x.Match)
+                    .WithMany(x => x.MatchRewardResults)
+                    .HasForeignKey(x => x.MatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.PlayerProfile)
+                    .WithMany(x => x.MatchRewardResults)
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Community)
+                    .WithMany(x => x.MatchRewardResults)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<PlayerXpLog>(e =>
+            {
+                e.Property(x => x.SourceType)
+                    .IsRequired();
+
+                e.Property(x => x.Multiplier)
+                    .HasPrecision(10, 4);
+
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.PlayerProfileId);
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => x.SourceType);
+                e.HasIndex(x => x.CreatedAt);
+
+                e.HasOne(x => x.PlayerProfile)
+                    .WithMany(x => x.PlayerXpLogs)
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Community)
+                    .WithMany(x => x.PlayerXpLogs)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<PlayerRankLog>(e =>
+            {
+                e.Property(x => x.CreatedAt)
+                    .IsRequired()
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                e.HasIndex(x => x.PlayerProfileId);
+                e.HasIndex(x => x.CommunityId);
+                e.HasIndex(x => x.MatchId);
+                e.HasIndex(x => x.CreatedAt);
+
+                e.HasOne(x => x.PlayerProfile)
+                    .WithMany(x => x.PlayerRankLogs)
+                    .HasForeignKey(x => x.PlayerProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Community)
+                    .WithMany(x => x.PlayerRankLogs)
+                    .HasForeignKey(x => x.CommunityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Match)
+                    .WithMany()
+                    .HasForeignKey(x => x.MatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
