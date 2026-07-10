@@ -51,6 +51,34 @@ For simple checks such as existence, uniqueness, find by email, find by slug, li
 
 Avoid creating repository classes that only wrap one-line EF Core queries.
 
+## Layering Rules
+
+Follow the existing SprintLabs dependency direction:
+
+- API -> Application, Infrastructure
+- Application -> Domain
+- Infrastructure -> Domain
+- Domain -> Shared
+- Shared -> nothing
+
+Do not add new project references unless explicitly requested.
+
+Service placement:
+
+- Service interfaces go in `Domain/Services`
+- Service implementations go in `Infrastructure/Services`
+- Shared DTOs/results used by both interface and implementation go in `Shared`
+- DI registration goes in `Infrastructure/ServiceConfig.cs`
+
+Forbidden:
+
+- Infrastructure must not reference Application
+- Domain must not contain service implementations
+- Shared must not reference any other project
+- Application must not reference Infrastructure
+
+Before adding/refactoring a service, inspect similar existing services and follow the same pattern.
+
 ## Project context
 SprintLabs is a .NET 8 backend for an education/game SaaS system.
 
@@ -216,5 +244,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/011-progression-persistence-foundation/plan.md
+at specs/012-xp-calculation-service/plan.md
 <!-- SPECKIT END -->
