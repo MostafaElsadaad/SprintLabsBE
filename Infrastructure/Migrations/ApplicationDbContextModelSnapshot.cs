@@ -727,12 +727,61 @@ namespace Infrastructure.Migrations
                         {
                             Id = 1L,
                             Assignment = 1,
-                            CreatedAt = new DateTime(2026, 7, 5, 18, 17, 8, 44, DateTimeKind.Utc).AddTicks(365),
+                            CreatedAt = new DateTime(2026, 7, 25, 15, 2, 6, 115, DateTimeKind.Utc).AddTicks(5024),
                             Grade = 5,
                             PayloadJson = "{\r\n    \"Questions\": [\r\n        {\r\n            \"Type\": 0,\r\n            \"MCQ\": {\r\n                \"Prompt\": \"What is 2+2?\",\r\n                \"Choices\": [ \"3\", \"4\", \"5\", \"6\" ],\r\n                \"CorrectIndex\": 1,\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 1,\r\n            \"Ordering\": {\r\n                \"Prompt\": \"Arrange numbers\",\r\n                \"Items\": [ \"5\", \"3\", \"2\", \"4\", \"6\" ],\r\n                \"CorrectOrder\": [ 3, 1, 0, 2, 4 ],\r\n                \"Timer\": 10.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 3,\r\n            \"FillBlank\": {\r\n                \"Prompt\": \"What color is an apple?\",\r\n                \"CorrectAnswers\": [ \"red\", \"green\", \"yellow\" ],\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 6,\r\n            \"TrueOrFalse\": {\r\n                \"Prompt\": \"Can birds fly?\",\r\n                \"Answer\": true,\r\n                \"Timer\": 8.0\r\n            }\r\n        },\r\n        {\r\n            \"Type\": 5,\r\n            \"DragAndDrop\": {\r\n                \"Prompt\": \"The lion eats @, and the cow gives us @\",\r\n                \"Spaces\": 2,\r\n                \"Answers\": [ \"milk\", \"apples\", \"meat\", \"cheese\" ],\r\n                \"CorrectAnswers\": [ \"meat\", \"milk\" ],\r\n                \"Timer\": 10.0\r\n            }\r\n        }\r\n    ]\r\n}",
-                            UpdatedAt = new DateTime(2026, 7, 5, 18, 17, 8, 44, DateTimeKind.Utc).AddTicks(365),
+                            UpdatedAt = new DateTime(2026, 7, 25, 15, 2, 6, 115, DateTimeKind.Utc).AddTicks(5024),
                             Version = 1
                         });
+                });
+
+            modelBuilder.Entity("Domain.Models.RefreshToken", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "RevokedAt", "ExpiresAt");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Domain.Models.StudentLicense", b =>
@@ -812,6 +861,59 @@ namespace Infrastructure.Migrations
                     b.ToTable("StudentLicenses");
                 });
 
+            modelBuilder.Entity("Domain.Models.TeacherInvitation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("CommunityUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("InvitedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime?>("LastSentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("CommunityUserId", "RevokedAt", "ExpiresAt");
+
+                    b.ToTable("TeacherInvitations");
+                });
+
             modelBuilder.Entity("Infrastructure.DataAccess.User", b =>
                 {
                     b.Property<long>("Id")
@@ -819,6 +921,11 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AccessFailedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
@@ -838,6 +945,11 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
+                    b.Property<bool>("EmailConfirmed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("GoogleId")
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
@@ -846,6 +958,22 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(false);
+
+                    b.Property<bool>("IsTeacherAccount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastConfirmationEmailSentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -889,6 +1017,7 @@ namespace Infrastructure.Migrations
                     b.HasIndex("GoogleId");
 
                     b.HasIndex("NormalizedEmail")
+                        .IsUnique()
                         .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")
@@ -1221,6 +1350,15 @@ namespace Infrastructure.Migrations
                     b.Navigation("PlayerProfile");
                 });
 
+            modelBuilder.Entity("Domain.Models.RefreshToken", b =>
+                {
+                    b.HasOne("Infrastructure.DataAccess.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Models.StudentLicense", b =>
                 {
                     b.HasOne("Infrastructure.DataAccess.User", null)
@@ -1262,6 +1400,23 @@ namespace Infrastructure.Migrations
                     b.Navigation("Community");
 
                     b.Navigation("Grade");
+                });
+
+            modelBuilder.Entity("Domain.Models.TeacherInvitation", b =>
+                {
+                    b.HasOne("Domain.Models.CommunityUser", "CommunityUser")
+                        .WithMany()
+                        .HasForeignKey("CommunityUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Infrastructure.DataAccess.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CommunityUser");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<long>", b =>

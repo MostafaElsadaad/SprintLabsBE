@@ -9,6 +9,7 @@ using Dsquares.Logging;
 
 using Infrastructure;
 using Infrastructure.DataAccess;
+using Infrastructure.Identity;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -63,9 +64,36 @@ builder.Services.AddSwaggerGen(
 );
 #endregion
 
-builder.Services.AddIdentityCore<User>()
+var teacherAuthenticationSettings = builder.Configuration
+    .GetSection("TeacherAuthentication")
+    .Get<TeacherAuthenticationOptions>() ?? new TeacherAuthenticationOptions();
+
+builder.Services.Configure<EmailConfirmationTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromHours(teacherAuthenticationSettings.ConfirmationTokenLifetimeHours));
+builder.Services.Configure<PasswordResetTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromHours(teacherAuthenticationSettings.PasswordResetTokenLifetimeHours));
+
+builder.Services.AddIdentityCore<User>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedEmail = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireDigit = true;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = teacherAuthenticationSettings.MaxFailedAccessAttempts;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(teacherAuthenticationSettings.LockoutMinutes);
+        options.Tokens.EmailConfirmationTokenProvider = "TeacherEmailConfirmation";
+        options.Tokens.PasswordResetTokenProvider = "TeacherPasswordReset";
+    })
     .AddRoles<IdentityRole<long>>()
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders()
+    .AddTokenProvider<EmailConfirmationTokenProvider>("TeacherEmailConfirmation")
+    .AddTokenProvider<PasswordResetTokenProvider>("TeacherPasswordReset");
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddHttpClient();
@@ -103,13 +131,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
-var jwtSettings = builder.Configuration.GetSection("JWTOptions").Get<JWTOptions>();
-Console.WriteLine($"=== JWT DEBUG ===");
-Console.WriteLine($"Secret: {jwtSettings?.Secret}");
-Console.WriteLine($"Issuer: {jwtSettings?.Issuer}");
-Console.WriteLine($"Audience: {jwtSettings?.Audience}");
-Console.WriteLine($"=================");
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseForwardedHeaders(new ForwardedHeadersOptions

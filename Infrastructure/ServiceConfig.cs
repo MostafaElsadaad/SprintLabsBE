@@ -40,11 +40,16 @@ namespace Infrastructure
             #region Binding
             services.Configure<BitbucketOptions>(configuration.GetSection("Bitbucket"));
             services.Configure<GoogleCloudStorageOptions>(configuration.GetSection("GoogleCloudStorage"));
+            services.Configure<JWTOptions>(configuration.GetSection("JWTOptions"));
+            services.Configure<TeacherAuthenticationOptions>(configuration.GetSection("TeacherAuthentication"));
+            services.Configure<EmailOptions>(configuration.GetSection("Email"));
+            services.Configure<FrontendOptions>(configuration.GetSection("Frontend"));
             #endregion  
 
             #region Repositories
 
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
             #endregion
 
@@ -59,12 +64,16 @@ namespace Infrastructure
             services.AddScoped<IRpRankCalculationService, RpRankCalculationService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
+            services.AddScoped<IAccessTokenService, AccessTokenService>();
+            services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+            services.AddScoped<IEmailService, SmtpEmailService>();
+            services.AddScoped<ITeacherIdentityService, TeacherIdentityService>();
+            services.AddScoped<ITeacherInvitationService, TeacherInvitationService>();
             services.AddSingleton<IGoogleCloudStorageService, GoogleCloudStorageService>();
             #endregion
 
             #region Authentication
             var jwtSettings = configuration.GetSection("JWTOptions").Get<JWTOptions>();
-            var googleSettings = configuration.GetSection("GoogleOptions").Get<GoogleOptions>();
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -74,11 +83,12 @@ namespace Infrastructure
                 )
                 .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateIssuer = false,
+                    ValidateIssuer = true,
 
-                    ValidateAudience = false,
-                    ValidateIssuerSigningKey = false,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
                     ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromSeconds(jwtSettings.ClockSkewSeconds),
 
                     ValidIssuer = jwtSettings.Issuer,
                     ValidAudience = jwtSettings.Audience,

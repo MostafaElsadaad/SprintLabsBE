@@ -29,6 +29,8 @@ namespace Infrastructure.DataAccess
         public DbSet<MatchRewardResult> MatchRewardResults { get; set; }
         public DbSet<PlayerXpLog> PlayerXpLogs { get; set; }
         public DbSet<PlayerRankLog> PlayerRankLogs { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<TeacherInvitation> TeacherInvitations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -110,6 +112,20 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.IsPlatformAdmin)
                     .HasDefaultValue(false);
 
+                e.Property(x => x.IsTeacherAccount)
+                    .HasDefaultValue(false);
+
+                e.Property(x => x.LastConfirmationEmailSentAt);
+
+                e.Property(x => x.EmailConfirmed)
+                    .HasDefaultValue(false);
+
+                e.Property(x => x.LockoutEnabled)
+                    .HasDefaultValue(true);
+
+                e.Property(x => x.AccessFailedCount)
+                    .HasDefaultValue(0);
+
                 e.Property(x => x.Status)
                     .IsRequired()
                     .HasDefaultValue(UserStatus.Active);
@@ -119,6 +135,7 @@ namespace Infrastructure.DataAccess
                     .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
                 e.HasIndex(x => x.Email).IsUnique();
+                e.HasIndex(x => x.NormalizedEmail).IsUnique();
                 e.HasIndex(x => x.GoogleId);
 
                 e.HasOne(x => x.Player)
@@ -128,11 +145,43 @@ namespace Infrastructure.DataAccess
 
                 e.Ignore(u => u.PhoneNumber)
                     .Ignore(u => u.PhoneNumberConfirmed)
-                    .Ignore(u => u.TwoFactorEnabled)
-                    .Ignore(u => u.LockoutEnd)
-                    .Ignore(u => u.AccessFailedCount)
-                    .Ignore(u => u.EmailConfirmed)
-                    .Ignore(u => u.LockoutEnabled);
+                    .Ignore(u => u.TwoFactorEnabled);
+            });
+
+            modelBuilder.Entity<RefreshToken>(e =>
+            {
+                e.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
+                e.Property(x => x.ReplacedByTokenHash).HasMaxLength(64);
+                e.Property(x => x.CreatedByIp).HasMaxLength(64);
+                e.Property(x => x.RevokedByIp).HasMaxLength(64);
+                e.Property(x => x.ExpiresAt).IsRequired();
+                e.Property(x => x.CreatedAt).IsRequired();
+                e.HasIndex(x => x.TokenHash).IsUnique();
+                e.HasIndex(x => x.UserId);
+                e.HasIndex(x => new { x.UserId, x.RevokedAt, x.ExpiresAt });
+                e.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<TeacherInvitation>(e =>
+            {
+                e.Property(x => x.InvitedEmail).IsRequired().HasMaxLength(256);
+                e.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
+                e.Property(x => x.ExpiresAt).IsRequired();
+                e.Property(x => x.CreatedAt).IsRequired();
+                e.HasIndex(x => x.TokenHash).IsUnique();
+                e.HasIndex(x => x.CommunityUserId);
+                e.HasIndex(x => new { x.CommunityUserId, x.RevokedAt, x.ExpiresAt });
+                e.HasOne(x => x.CommunityUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CommunityUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Community>(e =>

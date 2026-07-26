@@ -20,32 +20,6 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
         _studentLicenseRepository = studentLicenseRepository;
     }
 
-    public async Task ActivatePendingTeacherMembershipsAsync(
-        long userId,
-        CancellationToken cancellationToken)
-    {
-        var pendingTeacherMemberships = await _communityUserRepository.AsQueryable()
-            .Where(x =>
-                x.UserId == userId
-                && x.Role == CommunityUserRole.Teacher
-                && x.Status == CommunityUserStatus.Pending)
-            .ToListAsync(cancellationToken);
-
-        if (pendingTeacherMemberships.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var membership in pendingTeacherMemberships)
-        {
-            membership.Status = CommunityUserStatus.Active;
-            membership.UpdatedAt = DateTime.UtcNow;
-            await _communityUserRepository.UpdateAsync(membership);
-        }
-
-        await _communityUserRepository.SaveChangesAsync();
-    }
-
     public async Task ActivatePendingStudentLicensesAsync(
         long userId,
         long playerProfileId,

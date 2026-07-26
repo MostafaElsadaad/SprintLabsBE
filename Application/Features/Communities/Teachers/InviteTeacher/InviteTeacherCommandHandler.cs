@@ -1,16 +1,14 @@
 using System.Net;
-using System.Net.Mail;
+using Application.Features.Accounts.TeacherAuthentication.Common;
 
 using Application.Features.Communities.Teachers.Common;
 
 using Domain.Enums;
-using Domain.Models;
-using Domain.Repositories;
 using Domain.Services;
 
 using MediatR;
 
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Shared.Enums;
 using Shared.Exceptions;
@@ -20,21 +18,21 @@ namespace Application.Features.Communities.Teachers.InviteTeacher;
 
 public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand, TeacherResponse>
 {
-    private readonly IUserService _userService;
     private readonly ICommunityAccessService _communityAccessService;
-    private readonly IBaseRepository<CommunityUser> _communityUserRepository;
-    private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
+    private readonly ITeacherInvitationService _teacherInvitationService;
+    private readonly IEmailService _emailService;
+    private readonly Shared.Options.FrontendOptions _frontendOptions;
 
     public InviteTeacherCommandHandler(
-        IUserService userService,
         ICommunityAccessService communityAccessService,
-        IBaseRepository<CommunityUser> communityUserRepository,
-        IBaseRepository<CommunityLicense> communityLicenseRepository)
+        ITeacherInvitationService teacherInvitationService,
+        IEmailService emailService,
+        IOptions<Shared.Options.FrontendOptions> frontendOptions)
     {
-        _userService = userService;
         _communityAccessService = communityAccessService;
-        _communityUserRepository = communityUserRepository;
-        _communityLicenseRepository = communityLicenseRepository;
+        _teacherInvitationService = teacherInvitationService;
+        _emailService = emailService;
+        _frontendOptions = frontendOptions.Value;
     }
 
     public async Task<TeacherResponse> Handle(
@@ -51,95 +49,18 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
 
         var email = NormalizeEmail(request.Email);
         var name = request.Name.Trim();
-        if (!IsValidEmail(email))
-        {
-            throw InvalidInput();
-        }
-
-        var user = await _userService.GetCurrentUser(request.UserId);
-        if (user == null)
-        {
-            throw NotFound();
-        }
-
-        if (user.IsSuspended)
-        {
-            throw Forbidden();
-        }
-
         if (!await IsActiveOwner(request.UserId, request.CommunityId))
         {
             throw Forbidden();
         }
 
-        var teacherUser = await _userService.FindOrCreateBasicUser(email, name);
-        var membership = await _communityUserRepository.AsQueryable()
-            .FirstOrDefaultAsync(
-                x => x.CommunityId == request.CommunityId && x.UserId == teacherUser.Id,
-                cancellationToken);
-
-        if (membership != null && membership.Role != CommunityUserRole.Teacher)
+        var issue = await _teacherInvitationService.IssueAsync(request.UserId, request.CommunityId, email, name, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(issue.InvitationToken))
         {
-            throw InvalidInput();
+            await _emailService.SendCommunityInvitationEmailAsync(issue.Email, issue.Name, issue.CommunityName,
+                TeacherAuthenticationLinkBuilder.Invitation(_frontendOptions, issue.InvitationToken), cancellationToken);
         }
-
-        if (membership is { Status: CommunityUserStatus.Active })
-        {
-            return Map(teacherUser, membership);
-        }
-
-        if (membership is { Status: CommunityUserStatus.Pending })
-        {
-            if (teacherUser.HasGoogleIdentity)
-            {
-                membership.Status = CommunityUserStatus.Active;
-                membership.UpdatedAt = DateTime.UtcNow;
-                await _communityUserRepository.UpdateAsync(membership);
-                await _communityUserRepository.SaveChangesAsync();
-            }
-
-            return Map(teacherUser, membership);
-        }
-
-        var license = await _communityLicenseRepository.AsQueryable()
-            .FirstOrDefaultAsync(x => x.CommunityId == request.CommunityId, cancellationToken);
-        if (license == null || license.UsedTeachers >= license.MaxTeachers)
-        {
-            throw InvalidInput();
-        }
-
-        if (membership == null)
-        {
-            membership = new CommunityUser
-            {
-                CommunityId = request.CommunityId,
-                UserId = teacherUser.Id,
-                Role = CommunityUserRole.Teacher,
-                Status = GetInviteStatus(teacherUser),
-                CreatedAt = DateTime.UtcNow
-            };
-            await _communityUserRepository.AddAsync(membership);
-        }
-        else
-        {
-            membership.Status = GetInviteStatus(teacherUser);
-            membership.UpdatedAt = DateTime.UtcNow;
-            await _communityUserRepository.UpdateAsync(membership);
-        }
-
-        license.UsedTeachers++;
-        license.UpdatedAt = DateTime.UtcNow;
-        await _communityLicenseRepository.UpdateAsync(license);
-        await _communityUserRepository.SaveChangesAsync();
-
-        return Map(teacherUser, membership);
-    }
-
-    private static CommunityUserStatus GetInviteStatus(UserIdentityResponse teacherUser)
-    {
-        return teacherUser.HasGoogleIdentity
-            ? CommunityUserStatus.Active
-            : CommunityUserStatus.Pending;
+        return new TeacherResponse { UserId = issue.UserId, Name = issue.Name, Email = issue.Email, Status = issue.Status, CreatedAt = DateTime.UtcNow };
     }
 
     private Task<bool> IsActiveOwner(long userId, long communityId)
@@ -150,34 +71,9 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
             new[] { CommunityUserRole.Owner });
     }
 
-    private static TeacherResponse Map(UserIdentityResponse user, CommunityUser membership)
-    {
-        return new TeacherResponse
-        {
-            UserId = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            Status = membership.Status.ToString(),
-            CreatedAt = membership.CreatedAt
-        };
-    }
-
     private static string NormalizeEmail(string email)
     {
         return email.Trim().ToLowerInvariant();
-    }
-
-    private static bool IsValidEmail(string email)
-    {
-        try
-        {
-            var address = new MailAddress(email);
-            return address.Address.Equals(email, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static GenericException InvalidInput()
@@ -196,11 +92,4 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
             errorCode: ErrorCode.Failure);
     }
 
-    private static GenericException NotFound()
-    {
-        return new GenericException(
-            message: ErrorMessage.NotFound,
-            statusCode: HttpStatusCode.NotFound,
-            errorCode: ErrorCode.Failure);
-    }
 }
