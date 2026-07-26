@@ -22,6 +22,21 @@ public class RemoveTeacherCommandHandler : IRequestHandler<RemoveTeacherCommand,
     private readonly ICommunityAccessService _communityAccessService;
     private readonly IBaseRepository<CommunityUser> _communityUserRepository;
     private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
+    private readonly ITeacherInvitationService _teacherInvitationService;
+
+    public RemoveTeacherCommandHandler(
+        IUserService userService,
+        ICommunityAccessService communityAccessService,
+        IBaseRepository<CommunityUser> communityUserRepository,
+        IBaseRepository<CommunityLicense> communityLicenseRepository,
+        ITeacherInvitationService teacherInvitationService)
+    {
+        _userService = userService;
+        _communityAccessService = communityAccessService;
+        _communityUserRepository = communityUserRepository;
+        _communityLicenseRepository = communityLicenseRepository;
+        _teacherInvitationService = teacherInvitationService;
+    }
 
     public RemoveTeacherCommandHandler(
         IUserService userService,
@@ -33,6 +48,7 @@ public class RemoveTeacherCommandHandler : IRequestHandler<RemoveTeacherCommand,
         _communityAccessService = communityAccessService;
         _communityUserRepository = communityUserRepository;
         _communityLicenseRepository = communityLicenseRepository;
+        _teacherInvitationService = null!;
     }
 
     public async Task<TeacherResponse> Handle(
@@ -110,6 +126,7 @@ public class RemoveTeacherCommandHandler : IRequestHandler<RemoveTeacherCommand,
 
         await _communityUserRepository.UpdateAsync(membership);
         await _communityUserRepository.SaveChangesAsync();
+        if (_teacherInvitationService != null) await _teacherInvitationService.RevokeForMembershipAsync(membership.Id, cancellationToken);
 
         return Map(teacher, membership);
     }

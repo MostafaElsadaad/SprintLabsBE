@@ -54,12 +54,7 @@ namespace Application.Features.Accounts.GoogleAuthenticate
                     errorCode: ErrorCode.Failure);
             }
 
-            // 3. Activate pending teacher memberships for this verified login identity.
-            await _communityLoginActivationService.ActivatePendingTeacherMembershipsAsync(
-                user.Id,
-                cancellationToken);
-
-            // 4. Find or create Player profile for game login
+            // 3. Find or create Player profile for game login
             var player = await _playerRepository.GetByUserIdAsync(user.Id);
             if (player == null)
             {
@@ -95,20 +90,20 @@ namespace Application.Features.Accounts.GoogleAuthenticate
                 }
             }
 
-            // 5. Activate pending student licenses after the player profile exists.
+            // 4. Activate pending student licenses after the player profile exists.
             await _communityLoginActivationService.ActivatePendingStudentLicensesAsync(
                 user.Id,
                 player.Id,
                 googleUserInfo.Email,
                 cancellationToken);
 
-            // 6. Generate JWT
+            // 5. Generate JWT
             List<Claim> claims = _googleAuthenticationService.GenerateGoogleClaims(googleUserInfo);
             claims.Add(new Claim("userId", user.Id.ToString()));
             claims.Add(new Claim("playerProfileId", player.Id.ToString()));
             var loginResponse = await _userService.Authenticate(claims);
 
-            // 7. Return response
+            // 6. Return response
             loginResponse.UserId = user.Id;
             loginResponse.PlayerProfileId = player.Id;
             loginResponse.Email = googleUserInfo.Email;

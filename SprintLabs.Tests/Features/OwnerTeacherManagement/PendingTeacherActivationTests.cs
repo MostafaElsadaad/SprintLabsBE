@@ -28,7 +28,7 @@ public class PendingTeacherActivationTests
     private readonly Mock<IPlayerRepository> _playerRepositoryMock = new();
 
     [Fact]
-    public async Task Handle_MatchingPendingTeacherMemberships_ActivatesWithoutChangingLoginResponse()
+    public async Task Handle_MatchingPendingTeacherMemberships_RemainsPendingUntilExplicitAcceptance()
     {
         await using var context = CreateContext();
         await SeedPendingTeacherMemberships(context);
@@ -51,8 +51,8 @@ public class PendingTeacherActivationTests
             .Where(x => x.UserId == 20 && x.Role == CommunityUserRole.Teacher)
             .ToListAsync();
         activated.Should().HaveCount(2);
-        activated.Should().OnlyContain(x => x.Status == CommunityUserStatus.Active);
-        activated.Should().OnlyContain(x => x.UpdatedAt != null);
+        activated.Should().OnlyContain(x => x.Status == CommunityUserStatus.Pending);
+        activated.Should().OnlyContain(x => x.UpdatedAt == null);
 
         var otherUserPending = await context.CommunityUsers.SingleAsync(x => x.UserId == 21);
         otherUserPending.Status.Should().Be(CommunityUserStatus.Pending);

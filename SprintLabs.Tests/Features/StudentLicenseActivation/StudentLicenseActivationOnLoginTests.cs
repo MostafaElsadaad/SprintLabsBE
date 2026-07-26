@@ -143,7 +143,7 @@ public class StudentLicenseActivationOnLoginTests
     }
 
     [Fact]
-    public async Task Handle_PendingTeacherAndStudentRecords_ActivatesBothWithoutChangingUsageCounts()
+    public async Task Handle_PendingTeacherAndStudentRecords_ActivatesOnlyStudentWithoutChangingUsageCounts()
     {
         await using var context = CreateContext();
         await SeedCommunityLicenseGradeClassAndPendingLicense(context, "student@example.com");
@@ -170,7 +170,7 @@ public class StudentLicenseActivationOnLoginTests
             CancellationToken.None);
 
         var teacherMembership = await context.CommunityUsers.SingleAsync(x => x.Role == CommunityUserRole.Teacher);
-        teacherMembership.Status.Should().Be(CommunityUserStatus.Active);
+        teacherMembership.Status.Should().Be(CommunityUserStatus.Pending);
 
         var studentMembership = await context.CommunityUsers.SingleAsync(x => x.Role == CommunityUserRole.Student);
         studentMembership.Status.Should().Be(CommunityUserStatus.Active);

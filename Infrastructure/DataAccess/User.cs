@@ -13,6 +13,8 @@ namespace Infrastructure.DataAccess
         public string Name { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public bool IsPlatformAdmin { get; set; }
+        public bool IsTeacherAccount { get; set; }
+        public DateTime? LastConfirmationEmailSentAt { get; set; }
         public UserStatus Status { get; set; } = UserStatus.Active;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
