@@ -1,0 +1,51 @@
+{
+  "runId": "dsb-sprintlabs-20260731",
+  "fileKey": "Z2qNOXrAL3jFryngJrVPmI",
+  "fileUrl": "https://www.figma.com/design/Z2qNOXrAL3jFryngJrVPmI",
+  "phase": "phase2",
+  "step": "blocked-figma-mcp-monthly-quota",
+  "entities": {
+    "collections": {
+      "primitives": "VariableCollectionId:2:2",
+      "colorDark": "VariableCollectionId:2:3",
+      "colorLight": "VariableCollectionId:2:4",
+      "spacing": "VariableCollectionId:2:5",
+      "radius": "VariableCollectionId:2:6"
+    },
+    "variables": {
+      "total": 92,
+      "primitive": 26,
+      "semanticDark": 24,
+      "semanticLight": 24,
+      "spacing": 10,
+      "radius": 8
+    },
+    "styles": {
+      "text": 12,
+      "effect": 4
+    },
+    "pages": {
+      "cover": "0:1",
+      "foundations": "7:4",
+      "components": "7:5"
+    },
+    "components": {}
+  },
+  "pendingValidations": ["phase2-documentation", "phase2-screenshots", "phase3-components"],
+  "completedSteps": ["phase0", "phase1"],
+  "validation": {
+    "phase1": {
+      "passed": true,
+      "brokenAliases": 0,
+      "missingWebSyntax": 0,
+      "scopeViolations": 0
+    }
+  },
+  "blocker": {
+    "kind": "figma_mcp_rate_limit",
+    "plan": "Starter",
+    "seat": "View",
+    "message": "Figma MCP tool-call quota reached; additional use_figma writes are rejected.",
+    "resumeFrom": "Build Cover documentation frame, then Foundations, then component sets on Components page."
+  }
+}

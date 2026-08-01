@@ -162,6 +162,7 @@ namespace Infrastructure.Services
             {
                 Id = user.Id,
                 GoogleId = user.GoogleId,
+                FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
@@ -171,6 +172,134 @@ namespace Infrastructure.Services
                 HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
+        }
+
+        public async Task<UserIdentityResponse> FindOrCreateFirebaseUser(
+            FirebaseUserResponse response,
+            CancellationToken cancellationToken)
+        {
+            var firebaseUid = response.Uid?.Trim();
+            var email = response.Email?.Trim();
+            if (string.IsNullOrWhiteSpace(firebaseUid) || string.IsNullOrWhiteSpace(email))
+            {
+                throw new GenericException(ErrorCode.Failure, ErrorMessage.InvalidAccessToken, HttpStatusCode.Unauthorized);
+            }
+
+            var googleProviderId = string.IsNullOrWhiteSpace(response.GoogleProviderId)
+                ? null
+                : response.GoogleProviderId.Trim();
+            var normalizedEmail = _userManager.NormalizeEmail(email);
+            var candidates = await _userManager.Users
+                .Where(x => x.FirebaseUid == firebaseUid
+                    || (googleProviderId != null && x.GoogleId == googleProviderId)
+                    || (response.EmailVerified && x.NormalizedEmail == normalizedEmail))
+                .ToListAsync(cancellationToken);
+
+            var firebaseMatches = candidates.Where(x => x.FirebaseUid == firebaseUid).ToList();
+            var googleMatches = googleProviderId == null
+                ? new List<User>()
+                : candidates.Where(x => x.GoogleId == googleProviderId).ToList();
+            var emailMatches = response.EmailVerified
+                ? candidates.Where(x => x.NormalizedEmail == normalizedEmail).ToList()
+                : new List<User>();
+
+            if (firebaseMatches.Count > 1 || googleMatches.Count > 1 || emailMatches.Count > 1)
+            {
+                throw Conflict();
+            }
+
+            var selectedUsers = firebaseMatches.Concat(googleMatches).Concat(emailMatches)
+                .GroupBy(x => x.Id)
+                .Select(x => x.First())
+                .ToList();
+            if (selectedUsers.Count > 1)
+            {
+                throw Conflict();
+            }
+
+            var user = selectedUsers.SingleOrDefault();
+            if (user == null && !response.EmailVerified)
+            {
+                var emailExists = await _userManager.Users
+                    .AnyAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
+                if (emailExists)
+                {
+                    throw Conflict();
+                }
+            }
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    NormalizedUserName = _userManager.NormalizeName(email),
+                    Email = email,
+                    NormalizedEmail = normalizedEmail,
+                    FirebaseUid = firebaseUid,
+                    GoogleId = googleProviderId,
+                    Name = string.IsNullOrWhiteSpace(response.Name) ? email : response.Name.Trim(),
+                    AvatarUrl = response.PictureUrl,
+                    IsPlatformAdmin = false,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var created = await _userManager.CreateAsync(user);
+                if (!created.Succeeded)
+                {
+                    var winner = await _userManager.Users
+                        .FirstOrDefaultAsync(x => x.FirebaseUid == firebaseUid, cancellationToken);
+                    if (winner == null)
+                    {
+                        throw Conflict();
+                    }
+
+                    user = winner;
+                    if (!string.Equals(user.GoogleId, googleProviderId, StringComparison.Ordinal)
+                        && googleProviderId != null)
+                    {
+                        throw Conflict();
+                    }
+                }
+
+                return ToIdentityResponse(user, email);
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.FirebaseUid) && user.FirebaseUid != firebaseUid)
+            {
+                throw Conflict();
+            }
+
+            if (googleProviderId != null && !string.IsNullOrWhiteSpace(user.GoogleId) && user.GoogleId != googleProviderId)
+            {
+                throw Conflict();
+            }
+
+            var hasChanges = false;
+            if (string.IsNullOrWhiteSpace(user.FirebaseUid))
+            {
+                user.FirebaseUid = firebaseUid;
+                hasChanges = true;
+            }
+
+            if (googleProviderId != null && string.IsNullOrWhiteSpace(user.GoogleId))
+            {
+                user.GoogleId = googleProviderId;
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
+                user.UpdatedAt = DateTime.UtcNow;
+                var updated = await _userManager.UpdateAsync(user);
+                if (!updated.Succeeded)
+                {
+                    throw Conflict();
+                }
+            }
+
+            return ToIdentityResponse(user, email);
         }
 
         public async Task<UserIdentityResponse> FindOrCreateBasicUser(string email, string name)
@@ -217,6 +346,7 @@ namespace Infrastructure.Services
             {
                 Id = user.Id,
                 GoogleId = user.GoogleId,
+                FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
@@ -250,6 +380,7 @@ namespace Infrastructure.Services
             {
                 Id = user.Id,
                 GoogleId = user.GoogleId,
+                FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? email,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
@@ -293,6 +424,7 @@ namespace Infrastructure.Services
                 {
                     Id = x.Id,
                     GoogleId = x.GoogleId,
+                    FirebaseUid = x.FirebaseUid,
                     Email = x.Email ?? string.Empty,
                     Name = x.Name,
                     AvatarUrl = x.AvatarUrl,
@@ -320,6 +452,7 @@ namespace Infrastructure.Services
             {
                 Id = user.Id,
                 GoogleId = user.GoogleId,
+                FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? string.Empty,
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
@@ -329,6 +462,29 @@ namespace Infrastructure.Services
                 HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
+        }
+
+        private static UserIdentityResponse ToIdentityResponse(User user, string fallbackEmail)
+        {
+            return new UserIdentityResponse
+            {
+                Id = user.Id,
+                GoogleId = user.GoogleId,
+                FirebaseUid = user.FirebaseUid,
+                Email = user.Email ?? fallbackEmail,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status.ToString(),
+                IsPlatformAdmin = user.IsPlatformAdmin,
+                IsSuspended = user.Status == UserStatus.Suspended,
+                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
+                PlayerProfileId = user.Player?.Id
+            };
+        }
+
+        private static GenericException Conflict()
+        {
+            return new GenericException(ErrorCode.Failure, ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
         }
 
     }

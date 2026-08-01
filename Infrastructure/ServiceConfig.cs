@@ -1,5 +1,9 @@
 ﻿using System.Text;
 
+using FirebaseAdmin;
+
+using Google.Apis.Auth.OAuth2;
+
 using Domain.Repositories;
 using Domain.Services;
 
@@ -11,8 +15,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore.Sqlite;
+using Shared.Enums;
+using Shared.Exceptions;
 using Shared.Options;
 
 namespace Infrastructure
@@ -44,6 +51,9 @@ namespace Infrastructure
             services.Configure<TeacherAuthenticationOptions>(configuration.GetSection("TeacherAuthentication"));
             services.Configure<EmailOptions>(configuration.GetSection("Email"));
             services.Configure<FrontendOptions>(configuration.GetSection("Frontend"));
+            services.AddOptions<FirebaseAuthenticationOptions>()
+                .Bind(configuration.GetSection("Authentication:Firebase"))
+                .Validate(x => !string.IsNullOrWhiteSpace(x.ProjectId), "Authentication:Firebase:ProjectId is required.");
             #endregion  
 
             #region Repositories
@@ -64,6 +74,28 @@ namespace Infrastructure
             services.AddScoped<IRpRankCalculationService, RpRankCalculationService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
+            services.AddSingleton<FirebaseApp>(serviceProvider =>
+            {
+                var firebaseOptions = serviceProvider.GetRequiredService<IOptions<FirebaseAuthenticationOptions>>().Value;
+                if (string.IsNullOrWhiteSpace(firebaseOptions.ProjectId))
+                {
+                    throw new InvalidOperationException("Firebase project ID is not configured.");
+                }
+
+                try
+                {
+                    return FirebaseApp.Create(new AppOptions
+                    {
+                        Credential = GoogleCredential.GetApplicationDefault(),
+                        ProjectId = firebaseOptions.ProjectId
+                    });
+                }
+                catch (Exception)
+                {
+                    throw new GenericException(Shared.Enums.ErrorCode.Failure, ErrorMessage.InvalidAccessToken, System.Net.HttpStatusCode.Unauthorized);
+                }
+            });
+            services.AddSingleton<IFirebaseAuthenticationService, FirebaseAuthenticationService>();
             services.AddScoped<IAccessTokenService, AccessTokenService>();
             services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             services.AddScoped<IEmailService, SmtpEmailService>();

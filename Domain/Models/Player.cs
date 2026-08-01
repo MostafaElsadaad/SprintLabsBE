@@ -12,7 +12,7 @@ public class Player
 {
     public long Id { get; set; }
     public long? UserId { get; set; }
-    public string GoogleId { get; set; } = default!;
+    public string? GoogleId { get; set; }
     public string Email { get; set; } = default!;
     public string Name { get; set; } = default!;
     public string? AvatarUrl { get; set; }

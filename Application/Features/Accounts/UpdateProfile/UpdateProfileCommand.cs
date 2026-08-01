@@ -21,6 +21,6 @@ namespace Application.Features.Accounts.UpdateProfile
 
 
         [JsonIgnore]
-        public string? GoogleId { get; set; } = default!;
+        public long UserId { get; set; }
     }
 }

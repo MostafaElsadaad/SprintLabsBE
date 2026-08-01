@@ -10,6 +10,7 @@ namespace Infrastructure.DataAccess
     {
         public int? UserProfileId { get; set; }
         public string? GoogleId { get; set; }
+        public string? FirebaseUid { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public bool IsPlatformAdmin { get; set; }

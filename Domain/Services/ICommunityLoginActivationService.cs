@@ -7,4 +7,9 @@ public interface ICommunityLoginActivationService
         long playerProfileId,
         string email,
         CancellationToken cancellationToken);
+
+    Task ActivateEligiblePendingTeacherMembershipsAsync(
+        long userId,
+        string verifiedEmail,
+        CancellationToken cancellationToken);
 }

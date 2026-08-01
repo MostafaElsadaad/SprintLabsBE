@@ -1,6 +1,7 @@
 using System.Security.Claims;
 
 using Application.Features.Accounts.GoogleAuthenticate;
+using Application.Features.Accounts.Common;
 
 using Domain.Enums;
 using Domain.Models;
@@ -70,8 +71,7 @@ public class PendingTeacherActivationTests
         return new GoogleAuthenticationCommandHandler(
             _userServiceMock.Object,
             _googleAuthenticationServiceMock.Object,
-            _playerRepositoryMock.Object,
-            activationService);
+            new ExternalPlayerLoginWorkflow(_userServiceMock.Object, _playerRepositoryMock.Object, activationService));
     }
 
     private void SetupGoogleLogin()

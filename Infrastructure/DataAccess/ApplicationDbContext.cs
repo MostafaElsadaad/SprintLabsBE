@@ -52,7 +52,6 @@ namespace Infrastructure.DataAccess
             modelBuilder.Entity<Player>(e =>
             {
                 e.Property(x => x.GoogleId)
-                    .IsRequired()
                     .HasMaxLength(128);
 
                 e.Property(x => x.Email)
@@ -98,6 +97,9 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.GoogleId)
                     .HasMaxLength(128);
 
+                e.Property(x => x.FirebaseUid)
+                    .HasMaxLength(128);
+
                 e.Property(x => x.Email)
                     .IsRequired()
                     .HasMaxLength(256);
@@ -137,6 +139,7 @@ namespace Infrastructure.DataAccess
                 e.HasIndex(x => x.Email).IsUnique();
                 e.HasIndex(x => x.NormalizedEmail).IsUnique();
                 e.HasIndex(x => x.GoogleId);
+                e.HasIndex(x => x.FirebaseUid).IsUnique();
 
                 e.HasOne(x => x.Player)
                     .WithOne()
