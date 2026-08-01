@@ -6,7 +6,8 @@ namespace Infrastructure.Seed
     {
         public static List<QuestionsJson> Seed()
         {
-            var now = DateTime.UtcNow;
+            // EF Core seed values must be deterministic so unrelated migrations do not update this record.
+            var now = new DateTime(2026, 7, 25, 15, 2, 6, 115, DateTimeKind.Utc).AddTicks(5024);
 
             var payload =
                 """

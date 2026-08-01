@@ -1,6 +1,7 @@
 using System.Security.Claims;
 
 using Application.Features.Accounts.GoogleAuthenticate;
+using Application.Features.Accounts.Common;
 
 using Domain.Models;
 using Domain.Repositories;
@@ -64,8 +65,7 @@ public class B2CLoginCompatibilityTests
         return new GoogleAuthenticationCommandHandler(
             _userServiceMock.Object,
             _googleAuthenticationServiceMock.Object,
-            new PlayerRepository(context),
-            activationService);
+            new ExternalPlayerLoginWorkflow(_userServiceMock.Object, new PlayerRepository(context), activationService));
     }
 
     private void SetupGoogleLogin()

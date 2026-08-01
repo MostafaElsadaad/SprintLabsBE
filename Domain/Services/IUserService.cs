@@ -15,6 +15,7 @@ namespace Domain.Services
         public Task<bool> EnsureUserExists(string email);
         public Task<long> CreateAccount(GoogleUserResponse response, int userProfileId);
         public Task<UserIdentityResponse> FindOrCreateGoogleUser(GoogleUserResponse response);
+        public Task<UserIdentityResponse> FindOrCreateFirebaseUser(FirebaseUserResponse response, CancellationToken cancellationToken);
         public Task<UserIdentityResponse> FindOrCreateBasicUser(string email, string name);
         public Task<UserIdentityResponse?> FindByEmail(string email);
         public Task<List<long>> SearchUserIds(string search, CancellationToken cancellationToken);

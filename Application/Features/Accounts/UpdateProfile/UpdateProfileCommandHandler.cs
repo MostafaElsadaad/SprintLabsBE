@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Domain.Models;
 using Domain.Repositories;
+using Domain.Services;
 
 using MediatR;
 
@@ -20,10 +21,12 @@ namespace Application.Features.Accounts.UpdateProfile
     public class UpdateProfileCommandHandler: IRequestHandler<UpdateProfileCommand, BaseResponse<PlayerProfileResponse>>
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly IUserService _userService;
 
-        public UpdateProfileCommandHandler(IPlayerRepository playerRepository)
+        public UpdateProfileCommandHandler(IPlayerRepository playerRepository, IUserService userService)
         {
             _playerRepository = playerRepository;
+            _userService = userService;
         }
 
         public async Task<BaseResponse<PlayerProfileResponse>> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
@@ -47,8 +50,24 @@ namespace Application.Features.Accounts.UpdateProfile
 
 
 
-            //Find the player by GoogleId
-            var player = await _playerRepository.GetByGoogleIdAsync(request.GoogleId);
+            var user = await _userService.GetCurrentUser(request.UserId);
+            if (user == null)
+            {
+                throw new GenericException(
+                    message: ErrorMessage.NotFound,
+                    statusCode: HttpStatusCode.NotFound,
+                    errorCode: ErrorCode.Failure);
+            }
+
+            if (user.IsSuspended)
+            {
+                throw new GenericException(
+                    message: ErrorMessage.InvalidAccessToken,
+                    statusCode: HttpStatusCode.Forbidden,
+                    errorCode: ErrorCode.Failure);
+            }
+
+            var player = await _playerRepository.GetByUserIdAsync(request.UserId);
 
             // If no player was found
 

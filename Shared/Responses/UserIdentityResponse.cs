@@ -4,6 +4,7 @@ namespace Shared.Responses
     {
         public long Id { get; set; }
         public string? GoogleId { get; set; }
+        public string? FirebaseUid { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }

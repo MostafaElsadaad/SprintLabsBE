@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Claims;
 
 using Application.Features.Accounts.GoogleAuthenticate;
+using Application.Features.Accounts.FirebaseAuthenticate;
 using Application.Features.Accounts.UpdateProfile;
 using Application.Features.Accounts.TeacherAuthentication.RegisterTeacher;
 using Application.Features.Accounts.TeacherAuthentication.ConfirmEmail;
@@ -53,6 +54,18 @@ namespace API.Controllers
                  statusCode: HttpStatusCode.OK,
                  errorCode: ErrorCode.Success,
                  message: ErrorMessage.Success));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("firebase-login")]
+        public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseAuthenticationRequest request)
+        {
+            var loginResponse = await _mediator.Send(new FirebaseAuthenticationCommand { IdToken = request.IdToken });
+            return Ok(new BaseResponse<LoginResponse>(
+                data: loginResponse,
+                statusCode: HttpStatusCode.OK,
+                errorCode: ErrorCode.Success,
+                message: ErrorMessage.Success));
         }
 
         [AllowAnonymous]
@@ -124,15 +137,15 @@ namespace API.Controllers
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileCommand command)
         {
             
-            var googleId = HttpContext.User.Claims
-                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var userIdValue = HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == "userId")?.Value;
 
-            if (string.IsNullOrEmpty(googleId))
+            if (!long.TryParse(userIdValue, out var userId))
             {
                 return Unauthorized();
             }
 
-            command.GoogleId = googleId;
+            command.UserId = userId;
             
 
             var result = await _mediator.Send(command);

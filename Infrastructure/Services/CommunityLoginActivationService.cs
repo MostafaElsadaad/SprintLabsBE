@@ -11,13 +11,77 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
 {
     private readonly IBaseRepository<CommunityUser> _communityUserRepository;
     private readonly IBaseRepository<StudentLicense> _studentLicenseRepository;
+    private readonly IBaseRepository<TeacherInvitation>? _teacherInvitationRepository;
 
     public CommunityLoginActivationService(
         IBaseRepository<CommunityUser> communityUserRepository,
-        IBaseRepository<StudentLicense> studentLicenseRepository)
+        IBaseRepository<StudentLicense> studentLicenseRepository,
+        IBaseRepository<TeacherInvitation>? teacherInvitationRepository = null)
     {
         _communityUserRepository = communityUserRepository;
         _studentLicenseRepository = studentLicenseRepository;
+        _teacherInvitationRepository = teacherInvitationRepository;
+    }
+
+    public async Task ActivateEligiblePendingTeacherMembershipsAsync(
+        long userId,
+        string verifiedEmail,
+        CancellationToken cancellationToken)
+    {
+        var normalizedEmail = NormalizeEmail(verifiedEmail);
+        if (_teacherInvitationRepository == null)
+        {
+            return;
+        }
+        var memberships = await _communityUserRepository.AsQueryable()
+            .Where(x => x.UserId == userId
+                && x.Role == CommunityUserRole.Teacher
+                && x.Status == CommunityUserStatus.Pending)
+            .ToListAsync(cancellationToken);
+        if (memberships.Count == 0)
+        {
+            return;
+        }
+
+        var membershipIds = memberships.Select(x => x.Id).ToList();
+        var invitations = await _teacherInvitationRepository.AsQueryable()
+            .Where(x => membershipIds.Contains(x.CommunityUserId))
+            .ToListAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        var changed = false;
+
+        foreach (var membership in memberships)
+        {
+            var membershipInvitations = invitations.Where(x => x.CommunityUserId == membership.Id).ToList();
+            var activeInvitation = membershipInvitations
+                .Where(x => x.RevokedAt == null
+                    && x.AcceptedAt == null
+                    && x.ExpiresAt > now
+                    && NormalizeEmail(x.InvitedEmail) == normalizedEmail)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefault();
+
+            if (activeInvitation == null && membershipInvitations.Count != 0)
+            {
+                continue;
+            }
+
+            membership.Status = CommunityUserStatus.Active;
+            membership.UpdatedAt = now;
+            await _communityUserRepository.UpdateAsync(membership);
+            if (activeInvitation != null)
+            {
+                activeInvitation.AcceptedAt = now;
+                await _teacherInvitationRepository.UpdateAsync(activeInvitation);
+            }
+
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _communityUserRepository.SaveChangesAsync();
+        }
     }
 
     public async Task ActivatePendingStudentLicensesAsync(

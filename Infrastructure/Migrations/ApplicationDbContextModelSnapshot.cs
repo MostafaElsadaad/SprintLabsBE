@@ -505,7 +505,6 @@ namespace Infrastructure.Migrations
                         .HasDefaultValue(0);
 
                     b.Property<string>("GoogleId")
-                        .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
@@ -950,6 +949,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("FirebaseUid")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
                     b.Property<string>("GoogleId")
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
@@ -1012,6 +1015,9 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("FirebaseUid")
                         .IsUnique();
 
                     b.HasIndex("GoogleId");
