@@ -6,5 +6,5 @@ public class TeacherLoginResponse : TeacherTokenResponse
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string AccountType { get; set; } = "Teacher";
-    public List<TeacherCommunityResponse> Communities { get; set; } = [];
+    public TeacherCommunityResponse Community { get; set; } = new();
 }

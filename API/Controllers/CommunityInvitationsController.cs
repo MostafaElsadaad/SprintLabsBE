@@ -1,7 +1,7 @@
 using System.Net;
-using System.Security.Claims;
 
-using Application.Features.CommunityInvitations.AcceptInvitation;
+using Application.Features.CommunityInvitations.CompleteTeacherInvitation;
+using Application.Features.CommunityInvitations.ValidateTeacherInvitation;
 
 using Asp.Versioning;
 
@@ -15,21 +15,38 @@ using Shared.Responses;
 
 namespace API.Controllers;
 
-[Route("api/v{version:apiVersion}/[controller]")]
+[Route("api/v{version:apiVersion}/community-invitations")]
 [ApiController]
 [ApiVersion("1.0")]
-[Authorize]
 public class CommunityInvitationsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public CommunityInvitationsController(IMediator mediator) => _mediator = mediator;
 
-    [HttpPost("accept")]
-    public async Task<IActionResult> Accept([FromBody] AcceptInvitationRequest request)
+    public CommunityInvitationsController(IMediator mediator)
     {
-        var claim = User.FindFirstValue("userId");
-        if (!long.TryParse(claim, out var userId)) return Unauthorized();
-        var result = await _mediator.Send(new AcceptInvitationCommand { UserId = userId, Token = request.Token });
-        return Ok(new BaseResponse<TeacherInvitationAcceptanceResponse>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+        _mediator = mediator;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("teacher/validate")]
+    [ProducesResponseType(typeof(BaseResponse<TeacherInvitationValidationResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ValidateTeacherInvitation([FromQuery] string token)
+    {
+        var result = await _mediator.Send(new ValidateTeacherInvitationQuery { Token = token });
+        return Ok(new BaseResponse<TeacherInvitationValidationResult>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("teacher/complete")]
+    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CompleteTeacherInvitation([FromBody] CompleteTeacherInvitationRequest request)
+    {
+        await _mediator.Send(new CompleteTeacherInvitationCommand
+        {
+            Token = request.Token,
+            Name = request.Name,
+            Password = request.Password
+        });
+        return Ok(new BaseResponse<object>(null!, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
     }
 }

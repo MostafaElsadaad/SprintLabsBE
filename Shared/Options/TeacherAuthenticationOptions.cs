@@ -4,6 +4,7 @@ public class TeacherAuthenticationOptions
 {
     public int ConfirmationTokenLifetimeHours { get; set; } = 24;
     public int PasswordResetTokenLifetimeHours { get; set; } = 1;
+    public int PasswordResetResendCooldownSeconds { get; set; } = 60;
     public int ConfirmationResendCooldownSeconds { get; set; } = 60;
     public int InvitationLifetimeDays { get; set; } = 7;
     public int MaxFailedAccessAttempts { get; set; } = 5;

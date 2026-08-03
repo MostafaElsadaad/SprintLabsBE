@@ -188,10 +188,12 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.HasIndex("CommunityId", "UserId")
                         .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Role", "Status", "CommunityId");
 
                     b.ToTable("CommunityUsers");
                 });
@@ -910,6 +912,8 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("CommunityUserId", "RevokedAt", "ExpiresAt");
 
+                    b.HasIndex("CommunityUserId", "AcceptedAt", "RevokedAt", "ExpiresAt");
+
                     b.ToTable("TeacherInvitations");
                 });
 
@@ -968,6 +972,9 @@ namespace Infrastructure.Migrations
                         .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastConfirmationEmailSentAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastPasswordResetEmailSentAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<bool>("LockoutEnabled")

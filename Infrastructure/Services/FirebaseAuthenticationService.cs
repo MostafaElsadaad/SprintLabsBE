@@ -5,6 +5,8 @@ using Domain.Services;
 using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 
+using Microsoft.Extensions.Logging;
+
 using Shared.Enums;
 using Shared.Exceptions;
 using Shared.Responses;
@@ -14,10 +16,12 @@ namespace Infrastructure.Services;
 public class FirebaseAuthenticationService : IFirebaseAuthenticationService
 {
     private readonly FirebaseAuth _firebaseAuth;
+    private readonly ILogger<FirebaseAuthenticationService> _logger;
 
-    public FirebaseAuthenticationService(FirebaseApp firebaseApp)
+    public FirebaseAuthenticationService(FirebaseApp firebaseApp, ILogger<FirebaseAuthenticationService> logger)
     {
         _firebaseAuth = FirebaseAuth.GetAuth(firebaseApp);
+        _logger = logger;
     }
 
     public async Task<FirebaseUserResponse> VerifyIdTokenAsync(string idToken, CancellationToken cancellationToken)
@@ -56,24 +60,32 @@ public class FirebaseAuthenticationService : IFirebaseAuthenticationService
         {
             throw;
         }
-        catch (FirebaseAuthException)
+        catch (FirebaseAuthException exception)
         {
+            _logger.LogWarning(
+                exception,
+                "Firebase ID token verification failed. FirebaseAuthErrorCode: {FirebaseAuthErrorCode}.",
+                exception.AuthErrorCode);
             throw InvalidToken();
         }
-        catch (FirebaseException)
+        catch (FirebaseException exception)
         {
+            _logger.LogWarning(exception, "Firebase ID token verification failed with a Firebase SDK exception.");
             throw InvalidToken();
         }
-        catch (ArgumentException)
+        catch (ArgumentException exception)
         {
+            _logger.LogWarning(exception, "Firebase ID token verification received an invalid argument.");
             throw InvalidToken();
         }
-        catch (FormatException)
+        catch (FormatException exception)
         {
+            _logger.LogWarning(exception, "Firebase ID token verification received a malformed token.");
             throw InvalidToken();
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
+            _logger.LogWarning(exception, "Firebase ID token claims could not be parsed.");
             throw InvalidToken();
         }
     }

@@ -23,6 +23,9 @@ namespace Shared.Enums
         public const string ExistingRecord = "Record Already Exists";
         public const string NotModified = "Record is Not Modified";
         public const string InvalidInput = "Invalid Data";
+        public const string TeacherAlreadyBelongsToAnotherCommunity = "TeacherAlreadyBelongsToAnotherCommunity";
+        public const string InvalidTeacherInvitation = "InvalidTeacherInvitation";
+        public const string InvalidOrExpiredPasswordResetToken = "InvalidOrExpiredPasswordResetToken";
 
 
 
