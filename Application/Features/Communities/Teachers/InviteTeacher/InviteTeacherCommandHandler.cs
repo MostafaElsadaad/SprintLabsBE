@@ -1,4 +1,5 @@
 using System.Net;
+
 using Application.Features.Accounts.TeacherAuthentication.Common;
 
 using Application.Features.Communities.Teachers.Common;
@@ -41,20 +42,18 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
     {
         if (request.UserId <= 0 ||
             request.CommunityId <= 0 ||
-            string.IsNullOrWhiteSpace(request.Email) ||
-            string.IsNullOrWhiteSpace(request.Name))
+            string.IsNullOrWhiteSpace(request.Email))
         {
             throw InvalidInput();
         }
 
         var email = NormalizeEmail(request.Email);
-        var name = request.Name.Trim();
         if (!await IsActiveOwner(request.UserId, request.CommunityId))
         {
             throw Forbidden();
         }
 
-        var issue = await _teacherInvitationService.IssueAsync(request.UserId, request.CommunityId, email, name, cancellationToken);
+        var issue = await _teacherInvitationService.IssueAsync(request.UserId, request.CommunityId, email, cancellationToken);
         if (!string.IsNullOrWhiteSpace(issue.InvitationToken))
         {
             await _emailService.SendCommunityInvitationEmailAsync(issue.Email, issue.Name, issue.CommunityName,

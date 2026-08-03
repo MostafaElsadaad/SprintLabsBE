@@ -113,8 +113,7 @@ public class CommunitiesController : ControllerBase
         {
             UserId = userId.Value,
             CommunityId = communityId,
-            Email = request.Email,
-            Name = request.Name
+            Email = request.Email
         });
 
         return Ok(new BaseResponse<TeacherResponse>(

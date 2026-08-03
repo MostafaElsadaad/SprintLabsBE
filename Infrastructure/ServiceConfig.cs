@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore.Sqlite;
@@ -77,6 +78,7 @@ namespace Infrastructure
             services.AddSingleton<FirebaseApp>(serviceProvider =>
             {
                 var firebaseOptions = serviceProvider.GetRequiredService<IOptions<FirebaseAuthenticationOptions>>().Value;
+                var logger = serviceProvider.GetRequiredService<ILogger<FirebaseAuthenticationService>>();
                 if (string.IsNullOrWhiteSpace(firebaseOptions.ProjectId))
                 {
                     throw new InvalidOperationException("Firebase project ID is not configured.");
@@ -90,8 +92,12 @@ namespace Infrastructure
                         ProjectId = firebaseOptions.ProjectId
                     });
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
+                    logger.LogError(
+                        exception,
+                        "Firebase Admin initialization failed for configured project {FirebaseProjectId}.",
+                        firebaseOptions.ProjectId);
                     throw new GenericException(Shared.Enums.ErrorCode.Failure, ErrorMessage.InvalidAccessToken, System.Net.HttpStatusCode.Unauthorized);
                 }
             });

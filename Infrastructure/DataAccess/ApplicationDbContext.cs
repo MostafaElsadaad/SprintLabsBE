@@ -118,6 +118,7 @@ namespace Infrastructure.DataAccess
                     .HasDefaultValue(false);
 
                 e.Property(x => x.LastConfirmationEmailSentAt);
+                e.Property(x => x.LastPasswordResetEmailSentAt);
 
                 e.Property(x => x.EmailConfirmed)
                     .HasDefaultValue(false);
@@ -177,6 +178,7 @@ namespace Infrastructure.DataAccess
                 e.HasIndex(x => x.TokenHash).IsUnique();
                 e.HasIndex(x => x.CommunityUserId);
                 e.HasIndex(x => new { x.CommunityUserId, x.RevokedAt, x.ExpiresAt });
+                e.HasIndex(x => new { x.CommunityUserId, x.AcceptedAt, x.RevokedAt, x.ExpiresAt });
                 e.HasOne(x => x.CommunityUser)
                     .WithMany()
                     .HasForeignKey(x => x.CommunityUserId)
@@ -247,6 +249,8 @@ namespace Infrastructure.DataAccess
                     .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
                 e.HasIndex(x => new { x.CommunityId, x.UserId }).IsUnique();
+                e.HasIndex(x => x.UserId);
+                e.HasIndex(x => new { x.UserId, x.Role, x.Status, x.CommunityId });
 
                 e.HasOne<User>()
                     .WithMany()

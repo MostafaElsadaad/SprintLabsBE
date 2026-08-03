@@ -244,5 +244,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/016-firebase-player-auth/plan.md
+at specs/016-invite-only-teacher-authentication/plan.md
 <!-- SPECKIT END -->

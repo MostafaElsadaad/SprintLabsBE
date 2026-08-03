@@ -21,12 +21,6 @@ public class SmtpEmailService : IEmailService
         _logger = logger;
     }
 
-    public Task SendConfirmationEmailAsync(string email, string name, string confirmationUrl, CancellationToken cancellationToken)
-    {
-        var body = $"<p>Hello {WebUtility.HtmlEncode(name)},</p><p>Please confirm your SprintLabs teacher account.</p><p><a href=\"{WebUtility.HtmlEncode(confirmationUrl)}\">Confirm email</a></p>";
-        return SendAsync(email, "Confirm your SprintLabs email", body, cancellationToken);
-    }
-
     public Task SendPasswordResetEmailAsync(string email, string name, string resetUrl, CancellationToken cancellationToken)
     {
         var body = $"<p>Hello {WebUtility.HtmlEncode(name)},</p><p>Use this link to reset your SprintLabs password.</p><p><a href=\"{WebUtility.HtmlEncode(resetUrl)}\">Reset password</a></p>";
@@ -35,7 +29,7 @@ public class SmtpEmailService : IEmailService
 
     public Task SendCommunityInvitationEmailAsync(string email, string name, string communityName, string invitationUrl, CancellationToken cancellationToken)
     {
-        var body = $"<p>Hello {WebUtility.HtmlEncode(name)},</p><p>You were invited to join {WebUtility.HtmlEncode(communityName)} as a teacher.</p><p><a href=\"{WebUtility.HtmlEncode(invitationUrl)}\">Accept invitation</a></p>";
+        var body = $"<p>Hello,</p><p>You were invited to join {WebUtility.HtmlEncode(communityName)} as a teacher.</p><p><a href=\"{WebUtility.HtmlEncode(invitationUrl)}\">Set up your teacher account</a></p>";
         return SendAsync(email, $"Invitation to {communityName}", body, cancellationToken);
     }
 
