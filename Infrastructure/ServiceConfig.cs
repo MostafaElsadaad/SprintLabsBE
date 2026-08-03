@@ -96,8 +96,11 @@ namespace Infrastructure
                 {
                     logger.LogError(
                         exception,
-                        "Firebase Admin initialization failed for configured project {FirebaseProjectId}.",
-                        firebaseOptions.ProjectId);
+                        "Firebase Admin initialization failed for configured project {FirebaseProjectId}. FailureType: {FailureType}. FailureMessage: {FailureMessage}. GoogleApplicationCredentialsConfigured: {GoogleApplicationCredentialsConfigured}.",
+                        firebaseOptions.ProjectId,
+                        exception.GetBaseException().GetType().Name,
+                        exception.GetBaseException().Message,
+                        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")));
                     throw new GenericException(Shared.Enums.ErrorCode.Failure, ErrorMessage.InvalidAccessToken, System.Net.HttpStatusCode.Unauthorized);
                 }
             });
