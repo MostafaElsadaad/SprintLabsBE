@@ -10,6 +10,7 @@ using Dsquares.Logging;
 using Infrastructure;
 using Infrastructure.DataAccess;
 using Infrastructure.Identity;
+using Infrastructure.Seed;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -162,6 +163,7 @@ using (var scope = app.Services.CreateScope())
         {
             dbContext.Database.Migrate();
         }
+
     }
     catch (Exception ex)
     {
@@ -171,6 +173,12 @@ using (var scope = app.Services.CreateScope())
     }
 }
 #endregion
+
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    await PlatformAdminSeeder.SeedAsync(userManager, builder.Configuration);
+}
 
 
 app.UseHttpsRedirection();

@@ -33,6 +33,12 @@ public class SmtpEmailService : IEmailService
         return SendAsync(email, $"Invitation to {communityName}", body, cancellationToken);
     }
 
+    public Task SendCommunityAdminSetupEmailAsync(string email, string name, string communityName, string setupUrl, CancellationToken cancellationToken)
+    {
+        var body = $"<p>Hello,</p><p>You were selected as the Community Admin for {WebUtility.HtmlEncode(communityName)}.</p><p><a href=\"{WebUtility.HtmlEncode(setupUrl)}\">Set up your account</a></p>";
+        return SendAsync(email, $"Set up your {communityName} administrator account", body, cancellationToken);
+    }
+
     private async Task SendAsync(string email, string subject, string htmlBody, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.Host) || string.IsNullOrWhiteSpace(_options.SenderEmail))

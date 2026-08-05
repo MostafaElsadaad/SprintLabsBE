@@ -5,7 +5,8 @@ using System.Security.Claims;
 using Application.Features.Accounts.GoogleAuthenticate;
 using Application.Features.Accounts.FirebaseAuthenticate;
 using Application.Features.Accounts.UpdateProfile;
-using Application.Features.Accounts.TeacherAuthentication.TeacherLogin;
+using Application.Features.Accounts.CommunityAuthentication.CommunityLogin;
+using Application.Features.Accounts.CommunityAuthentication.RegisterCommunity;
 using Application.Features.Accounts.TeacherAuthentication.RefreshToken;
 using Application.Features.Accounts.TeacherAuthentication.Logout;
 using Application.Features.Accounts.TeacherAuthentication.ForgotPassword;
@@ -66,11 +67,31 @@ namespace API.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost("teachers/login")]
-        public async Task<IActionResult> TeacherLogin([FromBody] TeacherLoginRequest request)
+        [HttpPost("community-login")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(BaseResponse<CommunityLoginResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status423Locked)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> CommunityLogin([FromBody] CommunityLoginRequest request)
         {
-            var result = await _mediator.Send(new TeacherLoginCommand { Identifier = request.Identifier, Password = request.Password, CreatedByIp = HttpContext.Connection.RemoteIpAddress?.ToString() });
-            return Ok(new BaseResponse<Shared.Responses.TeacherLoginResponse>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+            var result = await _mediator.Send(new CommunityLoginCommand { Identifier = request.Identifier, Password = request.Password, CreatedByIp = HttpContext.Connection.RemoteIpAddress?.ToString() });
+            return Ok(new BaseResponse<CommunityLoginResponse>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("community-register")]
+        [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RegisterCommunity([FromBody] RegisterCommunityRequest request)
+        {
+            await _mediator.Send(new RegisterCommunityCommand
+            {
+                Token = request.Token,
+                Name = request.Name,
+                Password = request.Password
+            });
+            return Ok(new BaseResponse<object>(null!, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
         }
 
         [AllowAnonymous]

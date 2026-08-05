@@ -2,7 +2,7 @@
 
 ## Feature Summary
 
-This feature supports an internal platform-admin workspace for community setup. Admins can create communities, inspect setup summaries, assign owners, and configure license limits. It is not a community-owner dashboard.
+This feature supports an internal platform-admin workspace for community setup. Admins can create communities, inspect setup summaries, assign owners, and configure license limits. Creating a community sends the initial Community Admin a password-setup link. It is not a community-owner dashboard.
 
 ## Required Frontend Page
 
@@ -42,7 +42,7 @@ Recommended columns based only on returned data:
 | Student licenses | `license.usedStudents` / `license.maxStudents` |
 | Teacher licenses | `license.usedTeachers` / `license.maxTeachers` |
 | Email change limit | `license.studentEmailChangeLimit` |
-| Actions | Assign owner, configure licenses |
+| Actions | Configure licenses |
 
 The list is already sorted by name by the backend.
 
@@ -53,7 +53,23 @@ The list is already sorted by name by the backend.
 | Field | Type | Rules |
 |---|---|---|
 | Name | Text | Required; trim; backend DB maximum is 200 characters |
-| Slug | Text | Required; trim; show lowercase preview; backend DB maximum is 120 characters |
+| Community Admin email | Email | Required; trim; use normal email-format validation |
+
+The backend derives the slug. Do not send a password, role, community ID, or admin flag. On success, show that the Community Admin has been emailed a one-time setup link; they remain pending until completion.
+
+### Community Admin password setup
+
+The emailed `/invitations/community-admin/setup?token=...` page contains Name, Password, and Confirm Password fields. Use the token from the URL only with `POST /api/v1/Account/community-register`:
+
+```json
+{
+  "token": "...",
+  "name": "Community Administrator",
+  "password": "..."
+}
+```
+
+On success, clear the password fields and send the user to community login. For HTTP 400, show a safe invalid/expired-link or password-policy message without exposing community, role, or account details. Do not include a role, email, community ID, or `IsPlatformAdmin` field in the request.
 
 ### Assign Owner
 
@@ -78,7 +94,7 @@ Show `usedStudents` and `usedTeachers` as read-only context, not editable inputs
 
 | Button/action | API call | After success |
 |---|---|---|
-| Create community | `POST /api/v1/admin/communities` | Close/reset form and add or reload row |
+| Create community | `POST /api/v1/admin/communities` | Close/reset form and add or reload row; confirm setup email sent |
 | Refresh | `GET /api/v1/admin/communities` | Replace table data |
 | Assign owner | `POST /api/v1/admin/communities/{id}/owner` | Update/reload owner summary |
 | Save license limits | `PATCH /api/v1/admin/communities/{id}/licenses` | Update/reload license summary |
@@ -88,8 +104,6 @@ There are no suspend, delete, invite, billing, teacher, or student actions in th
 ## Validation Rules
 
 - Trim all text before submit.
-- Convert or preview slug in lowercase because the backend normalizes it.
-- Do not promise that spaces or punctuation are rejected; the backend currently accepts them.
 - Require whole numbers at or above zero for license inputs.
 - Prevent maximum values below displayed used counts.
 - Keep server-side duplicate-slug and permission errors authoritative.
@@ -140,7 +154,7 @@ Authentication middleware 401 responses may have no JSON body, so status-code ha
 ### Create Community
 
 1. Submit create form to `POST /api/v1/admin/communities`.
-2. On success, insert the returned community with null owner/license or reload the list.
+2. On success, show that the initial Community Admin must complete the emailed password setup, then reload the list to show the active owner after completion.
 
 ### Assign Owner
 
@@ -158,7 +172,7 @@ Authentication middleware 401 responses may have no JSON body, so status-code ha
 
 - Mutations return 200 rather than 201.
 - Duplicate slug is a 400 response.
-- The backend only lowercases/trims slugs; it does not enforce URL-safe characters.
+- The backend derives a URL-safe slug from the community name.
 - Multiple active owners for different users are technically possible.
 - Existing users' names are not changed during owner assignment.
 

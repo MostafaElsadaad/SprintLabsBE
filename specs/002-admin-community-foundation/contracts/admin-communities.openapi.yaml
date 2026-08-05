@@ -5,7 +5,7 @@ info:
 paths:
   /api/v1/admin/communities:
     post:
-      summary: Create a community
+      summary: Create a community and email its initial Community Admin setup link
       security:
         - bearerAuth: []
       requestBody:
@@ -130,14 +130,15 @@ components:
       type: object
       required:
         - name
-        - slug
+        - adminEmail
       properties:
         name:
           type: string
           example: Example School
-        slug:
+        adminEmail:
           type: string
-          example: example-school
+          format: email
+          example: owner@example.com
     AssignOwnerRequest:
       type: object
       required:

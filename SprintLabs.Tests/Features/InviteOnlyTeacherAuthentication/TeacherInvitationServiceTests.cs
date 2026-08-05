@@ -103,6 +103,39 @@ public class TeacherInvitationServiceTests
         exception.Which.ErrorCode.Should().Be(ErrorCode.InvalidTeacherInvitation);
     }
 
+    [Fact]
+    public async Task IssueCommunityAdminSetupAsync_creates_a_pending_owner_that_can_set_a_password()
+    {
+        await using var context = CreateContext();
+        context.Users.Add(new User
+        {
+            Id = 99,
+            UserName = "platform.admin",
+            NormalizedUserName = "PLATFORM.ADMIN",
+            Email = "platform.admin@example.com",
+            NormalizedEmail = "PLATFORM.ADMIN@EXAMPLE.COM",
+            Name = "Platform Admin",
+            IsPlatformAdmin = true,
+            Status = UserStatus.Active
+        });
+        context.Communities.Add(new Community { Id = 1, Name = "Community 1", Slug = "community-1", Status = CommunityStatus.Active });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var issue = await service.IssueCommunityAdminSetupAsync(99, 1, "owner@example.com", CancellationToken.None);
+
+        (await context.CommunityUsers.SingleAsync(x => x.UserId == issue.UserId)).Role.Should().Be(CommunityUserRole.Owner);
+        (await context.CommunityUsers.SingleAsync(x => x.UserId == issue.UserId)).Status.Should().Be(CommunityUserStatus.Pending);
+
+        await service.CompleteAsync(issue.InvitationToken!, "Community Owner", "StrongPassword123!", CancellationToken.None);
+
+        var owner = await context.Users.SingleAsync(x => x.Id == issue.UserId);
+        owner.IsTeacherAccount.Should().BeFalse();
+        owner.EmailConfirmed.Should().BeTrue();
+        (await CreateUserManager(context).HasPasswordAsync(owner)).Should().BeTrue();
+        (await context.CommunityUsers.SingleAsync(x => x.UserId == issue.UserId)).Status.Should().Be(CommunityUserStatus.Active);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         return new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()

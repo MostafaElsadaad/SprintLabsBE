@@ -8,5 +8,5 @@ public class CreateCommunityCommand : IRequest<CommunityResponse>
 {
     public long AuthenticatedUserId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Slug { get; set; } = string.Empty;
+    public string AdminEmail { get; set; } = string.Empty;
 }

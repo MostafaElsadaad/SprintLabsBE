@@ -44,7 +44,7 @@ namespace API.Controllers
             {
                 AuthenticatedUserId = userId.Value,
                 Name = request.Name,
-                Slug = request.Slug
+                AdminEmail = request.AdminEmail
             });
 
             return Ok(new BaseResponse<CommunityResponse>(

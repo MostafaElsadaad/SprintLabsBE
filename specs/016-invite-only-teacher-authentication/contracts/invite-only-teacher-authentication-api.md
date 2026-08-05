@@ -15,7 +15,7 @@ These routes must not resolve and must not appear in Swagger:
 
 No replacement public account-creation or confirmation API is introduced.
 
-## POST `/api/v1/Account/teachers/login`
+## POST `/api/v1/Account/community-login`
 
 **Authentication**: Anonymous
 
@@ -26,7 +26,7 @@ No replacement public account-creation or confirmation API is introduced.
 }
 ```
 
-Identifier matches normalized email or normalized username. Success requires teacher account status, completed setup, password, confirmed email, no suspension/lockout, exactly one Active Teacher membership, no Pending Teacher membership, and an active linked community. Lockout-on-failure remains enabled.
+Identifier matches normalized email or normalized username. Platform admins return from persisted `IsPlatformAdmin` without a community. Community members require password, confirmed email, no suspension/lockout, exactly one Active Owner or Teacher membership, no Pending membership, and an active linked community. Lockout-on-failure remains enabled.
 
 **Success data**:
 
@@ -35,7 +35,7 @@ Identifier matches normalized email or normalized username. Success requires tea
   "userId": "uuid",
   "name": "Teacher Name",
   "email": "teacher@example.com",
-  "accountType": "Teacher",
+  "role": "Teacher",
   "community": {
     "id": "uuid",
     "name": "Community Name"
@@ -102,7 +102,7 @@ Validation is read-only and never returns the token, full email, user ID, passwo
 
 - `400` with stable `InvalidTeacherInvitation` for missing, invalid, expired, revoked, used, inconsistent, or otherwise unusable invitations. Detailed token state is not exposed.
 
-## POST `/api/v1/community-invitations/teacher/complete`
+## POST `/api/v1/Account/community-register`
 
 **Authentication**: Anonymous
 
@@ -114,7 +114,7 @@ Validation is read-only and never returns the token, full email, user ID, passwo
 }
 ```
 
-Email and community are derived from the invitation and cannot be submitted or changed.
+Email, community, and Owner/Teacher role are derived from the invitation and cannot be submitted or changed. The same endpoint completes Owner and Teacher invitations.
 
 **Success**: Existing `BaseResponse` success contract. Sets trimmed name, sets deterministic email username if absent, sets password through Identity, confirms email, activates the existing Pending membership, and marks the invitation used. It does not log in or return tokens.
 

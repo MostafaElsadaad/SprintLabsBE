@@ -15,6 +15,11 @@ public static class TeacherAuthenticationLinkBuilder
         return $"{BaseUrl(options)}/invitations/teacher/setup?token={Uri.EscapeDataString(token)}";
     }
 
+    public static string CommunityAdminSetup(FrontendOptions options, string token)
+    {
+        return $"{BaseUrl(options)}/invitations/community-admin/setup?token={Uri.EscapeDataString(token)}";
+    }
+
     private static string BaseUrl(FrontendOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.BaseUrl)) throw new InvalidOperationException("Frontend base URL is not configured.");

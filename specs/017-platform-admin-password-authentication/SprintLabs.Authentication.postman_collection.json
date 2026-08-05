@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "SprintLabs Authentication and Invitations",
+    "description": "Authentication-only test flow. Set secret collection variables locally; do not commit credential or emailed-token values.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://localhost:7264" },
+    { "key": "platformAdminUsername", "value": "PlatformAdmin" },
+    { "key": "platformAdminPassword", "value": "", "type": "secret" },
+    { "key": "platformAdminAccessToken", "value": "", "type": "secret" },
+    { "key": "communityName", "value": "Postman Test Community" },
+    { "key": "communityId", "value": "" },
+    { "key": "communityAdminEmail", "value": "community.admin@example.test" },
+    { "key": "communityAdminName", "value": "Community Administrator" },
+    { "key": "communityAdminPassword", "value": "", "type": "secret" },
+    { "key": "communityAdminInvitationToken", "value": "", "type": "secret" },
+    { "key": "communityAdminAccessToken", "value": "", "type": "secret" },
+    { "key": "teacherEmail", "value": "teacher@example.test" },
+    { "key": "teacherName", "value": "Teacher Example" },
+    { "key": "teacherPassword", "value": "", "type": "secret" },
+    { "key": "teacherInvitationToken", "value": "", "type": "secret" }
+  ],
+  "item": [
+    {
+      "name": "1. Platform Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"{{platformAdminUsername}}\",\n  \"password\": \"{{platformAdminPassword}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/Account/community-login"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { pm.collectionVariables.set('platformAdminAccessToken', pm.response.json().data.accessToken); }"] } }]
+    },
+    {
+      "name": "2. Create a New Community",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{platformAdminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{communityName}}\",\n  \"adminEmail\": \"{{communityAdminEmail}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/admin/communities"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { pm.collectionVariables.set('communityId', String(pm.response.json().data.id)); }"] } }]
+    },
+    {
+      "name": "3. Register Community Admin",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{communityAdminInvitationToken}}\",\n  \"name\": \"{{communityAdminName}}\",\n  \"password\": \"{{communityAdminPassword}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/Account/community-register"
+      }
+    },
+    {
+      "name": "4. Configure Community Licenses",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{platformAdminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"maxStudents\": 120,\n  \"maxTeachers\": 5,\n  \"studentEmailChangeLimit\": 10\n}" },
+        "url": "{{baseUrl}}/api/v1/admin/communities/{{communityId}}/licenses"
+      }
+    },
+    {
+      "name": "5. Community Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"{{communityAdminEmail}}\",\n  \"password\": \"{{communityAdminPassword}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/Account/community-login"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { pm.collectionVariables.set('communityAdminAccessToken', pm.response.json().data.accessToken); }"] } }]
+    },
+    {
+      "name": "6. Invite Teacher",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{communityAdminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{teacherEmail}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/Communities/{{communityId}}/teachers/invite"
+      }
+    },
+    {
+      "name": "7. Complete Teacher Registration",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{teacherInvitationToken}}\",\n  \"name\": \"{{teacherName}}\",\n  \"password\": \"{{teacherPassword}}\"\n}" },
+        "url": "{{baseUrl}}/api/v1/Account/community-register"
+      }
+    }
+  ]
+}

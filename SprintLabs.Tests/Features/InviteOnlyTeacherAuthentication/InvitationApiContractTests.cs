@@ -2,9 +2,10 @@ using API.Controllers;
 
 using Application.Features.Accounts.TeacherAuthentication.ForgotPassword;
 using Application.Features.Accounts.TeacherAuthentication.ResetPassword;
-using Application.Features.Accounts.TeacherAuthentication.TeacherLogin;
+using Application.Features.Accounts.CommunityAuthentication.CommunityLogin;
+using Application.Features.Accounts.CommunityAuthentication.RegisterCommunity;
+using Application.Features.Admin.Communities.CreateCommunity;
 using Application.Features.Communities.Teachers.InviteTeacher;
-using Application.Features.CommunityInvitations.CompleteTeacherInvitation;
 
 using FluentAssertions;
 
@@ -23,20 +24,22 @@ public class InvitationApiContractTests
         var actions = typeof(AccountController).GetMethods().Select(x => x.Name).ToList();
 
         actions.Should().NotContain(new[] { "RegisterTeacher", "ConfirmEmail", "ResendConfirmation" });
-        actions.Should().Contain(new[] { "TeacherLogin", "ForgotPassword", "ResetPassword" });
+        actions.Should().Contain(new[] { "CommunityLogin", "ForgotPassword", "ResetPassword" });
+        actions.Should().NotContain("TeacherLogin");
     }
 
     [Fact]
-    public void CommunityInvitationController_exposes_anonymous_validate_and_complete_actions_only()
+    public void CommunityInvitationController_keeps_only_teacher_invitation_validation()
     {
         var controllerRoute = typeof(CommunityInvitationsController).GetCustomAttributes(typeof(RouteAttribute), false)
             .Cast<RouteAttribute>().Single();
         controllerRoute.Template.Should().Be("api/v{version:apiVersion}/community-invitations");
 
         var validate = typeof(CommunityInvitationsController).GetMethod("ValidateTeacherInvitation")!;
-        var complete = typeof(CommunityInvitationsController).GetMethod("CompleteTeacherInvitation")!;
         validate.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Should().ContainSingle();
-        complete.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Should().ContainSingle();
+        typeof(CommunityInvitationsController).GetMethod("CompleteTeacherInvitation").Should().BeNull();
+        typeof(CommunityInvitationsController).GetMethod("ValidateCommunityInvitation").Should().BeNull();
+        typeof(CommunityInvitationsController).GetMethod("CompleteCommunityInvitation").Should().BeNull();
         typeof(CommunityInvitationsController).GetMethod("Accept").Should().BeNull();
     }
 
@@ -44,18 +47,20 @@ public class InvitationApiContractTests
     public void Public_requests_match_invitation_only_contract()
     {
         typeof(InviteTeacherRequest).GetProperty("Name").Should().BeNull();
-        typeof(CompleteTeacherInvitationRequest).GetProperties().Select(x => x.Name)
+        typeof(RegisterCommunityRequest).GetProperties().Select(x => x.Name)
             .Should().BeEquivalentTo(new[] { "Token", "Name", "Password" });
-        typeof(TeacherLoginRequest).GetProperty(nameof(TeacherLoginRequest.Identifier)).Should().NotBeNull();
+        typeof(CommunityLoginRequest).GetProperty(nameof(CommunityLoginRequest.Identifier)).Should().NotBeNull();
         typeof(ForgotPasswordRequest).GetProperty(nameof(ForgotPasswordRequest.Identifier)).Should().NotBeNull();
         typeof(ResetPasswordRequest).GetProperty(nameof(ResetPasswordRequest.UserId)).Should().NotBeNull();
+        typeof(CreateCommunityRequest).GetProperties().Select(x => x.Name)
+            .Should().BeEquivalentTo(new[] { "Name", "AdminEmail" });
     }
 
     [Fact]
-    public void Teacher_login_response_returns_one_community()
+    public void Community_login_response_returns_one_community()
     {
-        typeof(TeacherLoginResponse).GetProperty(nameof(TeacherLoginResponse.Community)).Should().NotBeNull();
-        typeof(TeacherLoginResponse).GetProperty("Communities").Should().BeNull();
+        typeof(CommunityLoginResponse).GetProperty(nameof(CommunityLoginResponse.Community)).Should().NotBeNull();
+        typeof(CommunityLoginResponse).GetProperty("Communities").Should().BeNull();
         typeof(TeacherCommunityResponse).GetProperties().Select(x => x.Name)
             .Should().BeEquivalentTo(new[] { "Id", "Name" });
     }
