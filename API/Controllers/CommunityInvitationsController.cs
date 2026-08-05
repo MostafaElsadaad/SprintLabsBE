@@ -1,6 +1,5 @@
 using System.Net;
 
-using Application.Features.CommunityInvitations.CompleteTeacherInvitation;
 using Application.Features.CommunityInvitations.ValidateTeacherInvitation;
 
 using Asp.Versioning;
@@ -34,19 +33,5 @@ public class CommunityInvitationsController : ControllerBase
     {
         var result = await _mediator.Send(new ValidateTeacherInvitationQuery { Token = token });
         return Ok(new BaseResponse<TeacherInvitationValidationResult>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
-    }
-
-    [AllowAnonymous]
-    [HttpPost("teacher/complete")]
-    [ProducesResponseType(typeof(BaseResponse<object>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> CompleteTeacherInvitation([FromBody] CompleteTeacherInvitationRequest request)
-    {
-        await _mediator.Send(new CompleteTeacherInvitationCommand
-        {
-            Token = request.Token,
-            Name = request.Name,
-            Password = request.Password
-        });
-        return Ok(new BaseResponse<object>(null!, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
     }
 }

@@ -1,10 +1,8 @@
 using MediatR;
 
-using Shared.Responses;
+namespace Application.Features.Accounts.CommunityAuthentication.CommunityLogin;
 
-namespace Application.Features.Accounts.TeacherAuthentication.TeacherLogin;
-
-public class TeacherLoginCommand : IRequest<TeacherLoginResponse>
+public class CommunityLoginCommand : IRequest<CommunityLoginResponse>
 {
     public string Identifier { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;

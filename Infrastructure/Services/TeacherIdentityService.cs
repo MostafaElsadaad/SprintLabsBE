@@ -1,4 +1,5 @@
 using System.Net;
+using System.Data;
 
 using Domain.Enums;
 using Domain.Models;
@@ -43,7 +44,6 @@ public class TeacherIdentityService : ITeacherIdentityService
     {
         var user = await FindByIdentifierAsync(identifier, cancellationToken);
         if (user == null ||
-            !user.IsTeacherAccount ||
             user.Status != UserStatus.Active ||
             !user.EmailConfirmed ||
             !await _userManager.HasPasswordAsync(user))
@@ -67,11 +67,11 @@ public class TeacherIdentityService : ITeacherIdentityService
     {
         var user = await FindByIdentifierAsync(identifier, cancellationToken);
         if (user == null ||
-            !user.IsTeacherAccount ||
             user.Status != UserStatus.Active ||
             !user.EmailConfirmed ||
             !await _userManager.HasPasswordAsync(user) ||
-            !await HasExactlyOneActiveTeacherCommunityAsync(user.Id, cancellationToken))
+            string.IsNullOrWhiteSpace(user.Email) ||
+            (!user.IsPlatformAdmin && !await HasExactlyOneActiveCommunityPasswordMembershipAsync(user.Id, cancellationToken)))
         {
             return new PasswordResetDispatchResult();
         }
@@ -102,18 +102,28 @@ public class TeacherIdentityService : ITeacherIdentityService
 
     public async Task ResetPasswordAsync(long userId, string token, string newPassword, CancellationToken cancellationToken)
     {
+        await using var transaction = _context.Database.IsRelational()
+            ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
         var user = await _userManager.FindByIdAsync(userId.ToString());
-        if (user == null || !user.IsTeacherAccount || !await _userManager.HasPasswordAsync(user))
+        if (user == null ||
+            !await _userManager.HasPasswordAsync(user) ||
+            (!user.IsPlatformAdmin && !await HasExactlyOneActiveCommunityPasswordMembershipAsync(user.Id, cancellationToken)) ||
+            (user.IsPlatformAdmin && (user.Status != UserStatus.Active || !user.EmailConfirmed)))
         {
             throw InvalidResetToken();
         }
 
-        await using var transaction = _context.Database.IsRelational()
-            ? await _context.Database.BeginTransactionAsync(cancellationToken)
-            : null;
         var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded)
         {
+            if (result.Errors.Any(x => x.Code.StartsWith("Password", StringComparison.Ordinal)))
+            {
+                throw new GenericException(
+                    ErrorCode.ValidationError,
+                    string.Join(" ", result.Errors.Select(x => x.Description)),
+                    HttpStatusCode.BadRequest);
+            }
             throw InvalidResetToken();
         }
 
@@ -163,10 +173,11 @@ public class TeacherIdentityService : ITeacherIdentityService
         return 1;
     }
 
-    private async Task<bool> HasExactlyOneActiveTeacherCommunityAsync(long userId, CancellationToken cancellationToken)
+    private async Task<bool> HasExactlyOneActiveCommunityPasswordMembershipAsync(long userId, CancellationToken cancellationToken)
     {
         var memberships = await _context.CommunityUsers
-            .Where(x => x.UserId == userId && x.Role == CommunityUserRole.Teacher)
+            .Where(x => x.UserId == userId &&
+                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher))
             .Select(x => new { x.Status, CommunityStatus = x.Community.Status })
             .ToListAsync(cancellationToken);
 
@@ -177,7 +188,9 @@ public class TeacherIdentityService : ITeacherIdentityService
     private static TeacherIdentityResult Map(User user) => new()
     {
         UserId = user.Id,
+        IsPlatformAdmin = user.IsPlatformAdmin,
         Name = user.Name,
+        Username = user.UserName ?? string.Empty,
         Email = user.Email ?? string.Empty
     };
 

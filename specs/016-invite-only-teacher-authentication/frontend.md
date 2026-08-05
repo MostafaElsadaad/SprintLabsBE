@@ -42,7 +42,7 @@ On load, call `GET /api/v1/community-invitations/teacher/validate?token={encoded
 - Confirm password: frontend-only equality validation; omit it from the API request.
 - Email: never editable and never sent in the completion body.
 
-**Submit**: `POST /api/v1/community-invitations/teacher/complete` with `token`, `name`, and `password` only.
+**Submit**: `POST /api/v1/Account/community-register` with `token`, `name`, and `password` only. The same endpoint is used by Community Admin setup; the token determines the role.
 
 **States**:
 
@@ -62,7 +62,7 @@ Never send the raw token to telemetry, crash reports, analytics, or logs.
 - Identifier: username or email.
 - Password.
 
-**Action**: `POST /api/v1/Account/teachers/login`.
+**Action**: `POST /api/v1/Account/community-login`. The persisted Teacher membership is returned publicly as `Teacher`; Community Owners use the same endpoint and are returned as `CommunityAdmin`.
 
 **Success handling**:
 

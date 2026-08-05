@@ -3,6 +3,8 @@ using Application.Features.Accounts.TeacherAuthentication.RefreshToken;
 
 using Domain.Services;
 
+using Shared.Enums;
+
 using FluentAssertions;
 
 using Moq;
@@ -18,15 +20,20 @@ public class RefreshLogoutRegressionTests
     {
         var refresh = new Mock<IRefreshTokenService>();
         refresh.Setup(x => x.RotateAsync("raw", "127.0.0.1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RefreshTokenResult { UserId = 42, RefreshToken = "replacement", RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(1) });
-        var identity = new Mock<ITeacherIdentityService>();
-        identity.Setup(x => x.GetTeacherAsync(42, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TeacherIdentityResult { UserId = 42, Email = "teacher@example.com", Name = "Teacher" });
+            .ReturnsAsync(new RefreshTokenResult
+            {
+                UserId = 42,
+                Email = "teacher@example.com",
+                Name = "Teacher",
+                AccountType = AuthenticatedAccountType.Teacher,
+                RefreshToken = "replacement",
+                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(1)
+            });
         var access = new Mock<IAccessTokenService>();
-        access.Setup(x => x.Create(42, "teacher@example.com", "Teacher"))
+        access.Setup(x => x.Create(42, "teacher@example.com", "Teacher", AuthenticatedAccountType.Teacher))
             .Returns(new AccessTokenResult { AccessToken = "access", AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(15) });
 
-        var result = await new RefreshTokenCommandHandler(refresh.Object, identity.Object, access.Object)
+        var result = await new RefreshTokenCommandHandler(refresh.Object, access.Object)
             .Handle(new RefreshTokenCommand { RefreshToken = "raw", RevokedByIp = "127.0.0.1" }, CancellationToken.None);
 
         result.AccessToken.Should().Be("access");

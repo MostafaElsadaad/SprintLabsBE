@@ -7,6 +7,7 @@ using Domain.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
+using Shared.Enums;
 using Shared.Options;
 using Shared.Responses;
 
@@ -23,6 +24,11 @@ public class AccessTokenService : IAccessTokenService
 
     public AccessTokenResult Create(long userId, string email, string name)
     {
+        return Create(userId, email, name, AuthenticatedAccountType.Teacher);
+    }
+
+    public AccessTokenResult Create(long userId, string email, string name, AuthenticatedAccountType accountType)
+    {
         var now = DateTime.UtcNow;
         var expiresAt = now.AddMinutes(_options.AccessTokenLifetimeMinutes);
         var claims = new[]
@@ -32,7 +38,7 @@ public class AccessTokenService : IAccessTokenService
             new Claim("userId", userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim("name", name),
-            new Claim("accountType", "Teacher")
+            new Claim("accountType", accountType.ToString())
         };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
         var token = new JwtSecurityToken(

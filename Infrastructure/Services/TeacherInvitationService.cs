@@ -45,6 +45,25 @@ public class TeacherInvitationService : ITeacherInvitationService
         string email,
         CancellationToken cancellationToken)
     {
+        return await IssueAsync(invitedByUserId, communityId, email, CommunityUserRole.Teacher, cancellationToken);
+    }
+
+    public async Task<TeacherInvitationIssueResult> IssueCommunityAdminSetupAsync(
+        long invitedByUserId,
+        long communityId,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        return await IssueAsync(invitedByUserId, communityId, email, CommunityUserRole.Owner, cancellationToken);
+    }
+
+    private async Task<TeacherInvitationIssueResult> IssueAsync(
+        long invitedByUserId,
+        long communityId,
+        string email,
+        CommunityUserRole role,
+        CancellationToken cancellationToken)
+    {
         var trimmedEmail = email.Trim();
         var normalizedEmail = _userManager.NormalizeEmail(trimmedEmail);
         var now = DateTime.UtcNow;
@@ -54,13 +73,12 @@ public class TeacherInvitationService : ITeacherInvitationService
             .FirstOrDefaultAsync(x => x.Id == communityId && x.Status == CommunityStatus.Active, cancellationToken)
             ?? throw Error(ErrorMessage.NotFound, HttpStatusCode.NotFound);
 
-        var activeOwner = await _context.CommunityUsers.AnyAsync(
-            x => x.UserId == invitedByUserId &&
-                 x.CommunityId == communityId &&
-                 x.Role == CommunityUserRole.Owner &&
-                 x.Status == CommunityUserStatus.Active,
-            cancellationToken);
-        if (!activeOwner)
+        if (role == CommunityUserRole.Teacher && !await HasActiveOwnerAsync(invitedByUserId, communityId, cancellationToken))
+        {
+            throw Error(ErrorMessage.InvalidAccessToken, HttpStatusCode.Forbidden);
+        }
+
+        if (role == CommunityUserRole.Owner && !await IsPlatformAdminAsync(invitedByUserId, cancellationToken))
         {
             throw Error(ErrorMessage.InvalidAccessToken, HttpStatusCode.Forbidden);
         }
@@ -74,8 +92,8 @@ public class TeacherInvitationService : ITeacherInvitationService
                 NormalizedUserName = _userManager.NormalizeName(trimmedEmail),
                 Email = trimmedEmail,
                 NormalizedEmail = normalizedEmail,
-                Name = "Invited Teacher",
-                IsTeacherAccount = true,
+                Name = role == CommunityUserRole.Teacher ? "Invited Teacher" : trimmedEmail,
+                IsTeacherAccount = role == CommunityUserRole.Teacher,
                 LockoutEnabled = true,
                 Status = UserStatus.Active,
                 CreatedAt = now
@@ -85,29 +103,35 @@ public class TeacherInvitationService : ITeacherInvitationService
         else
         {
             var hasPlayer = await _context.Players.AnyAsync(x => x.UserId == user.Id, cancellationToken);
-            if ((!user.IsTeacherAccount && hasPlayer) || !string.IsNullOrWhiteSpace(user.GoogleId))
+            if (user.Status != UserStatus.Active ||
+                (role == CommunityUserRole.Teacher && ((!user.IsTeacherAccount && hasPlayer) || !string.IsNullOrWhiteSpace(user.GoogleId))))
             {
                 throw Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
             }
 
-            user.IsTeacherAccount = true;
+            if (role == CommunityUserRole.Teacher)
+            {
+                user.IsTeacherAccount = true;
+            }
             user.UpdatedAt = now;
             Ensure(await _userManager.UpdateAsync(user));
         }
 
-        var currentTeacherMemberships = await _context.CommunityUsers
+        var currentRoleMemberships = await _context.CommunityUsers
             .Where(x => x.UserId == user.Id &&
-                        x.Role == CommunityUserRole.Teacher &&
+                        x.Role == role &&
                         (x.Status == CommunityUserStatus.Active || x.Status == CommunityUserStatus.Pending))
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        if (currentTeacherMemberships.Any(x => x.CommunityId != communityId))
+        if (currentRoleMemberships.Any(x => x.CommunityId != communityId))
         {
-            throw TeacherCommunityConflict();
+            throw role == CommunityUserRole.Teacher
+                ? TeacherCommunityConflict()
+                : Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
         }
 
-        var membership = currentTeacherMemberships.SingleOrDefault();
+        var membership = currentRoleMemberships.SingleOrDefault();
         if (membership?.Status == CommunityUserStatus.Active)
         {
             if (transaction != null)
@@ -123,17 +147,21 @@ public class TeacherInvitationService : ITeacherInvitationService
                 x => x.CommunityId == communityId && x.UserId == user.Id,
                 cancellationToken);
 
-            if (membership != null && membership.Role != CommunityUserRole.Teacher)
+            if (membership != null && membership.Role != role)
             {
                 throw Error(ErrorMessage.InvalidInput, HttpStatusCode.BadRequest);
             }
 
             if (membership == null || membership.Status == CommunityUserStatus.Removed)
             {
-                var license = await _context.CommunityLicenses.FirstOrDefaultAsync(x => x.CommunityId == communityId, cancellationToken);
-                if (license == null || license.UsedTeachers >= license.MaxTeachers)
+                CommunityLicense? license = null;
+                if (role == CommunityUserRole.Teacher)
                 {
-                    throw Error(ErrorMessage.InvalidInput, HttpStatusCode.BadRequest);
+                    license = await _context.CommunityLicenses.FirstOrDefaultAsync(x => x.CommunityId == communityId, cancellationToken);
+                    if (license == null || license.UsedTeachers >= license.MaxTeachers)
+                    {
+                        throw Error(ErrorMessage.InvalidInput, HttpStatusCode.BadRequest);
+                    }
                 }
 
                 if (membership == null)
@@ -142,7 +170,7 @@ public class TeacherInvitationService : ITeacherInvitationService
                     {
                         CommunityId = communityId,
                         UserId = user.Id,
-                        Role = CommunityUserRole.Teacher,
+                        Role = role,
                         Status = CommunityUserStatus.Pending,
                         CreatedAt = now
                     };
@@ -150,13 +178,16 @@ public class TeacherInvitationService : ITeacherInvitationService
                 }
                 else
                 {
-                    membership.Role = CommunityUserRole.Teacher;
+                    membership.Role = role;
                     membership.Status = CommunityUserStatus.Pending;
                     membership.UpdatedAt = now;
                 }
 
-                license.UsedTeachers++;
-                license.UpdatedAt = now;
+                if (license != null)
+                {
+                    license.UsedTeachers++;
+                    license.UpdatedAt = now;
+                }
             }
         }
 
@@ -231,24 +262,33 @@ public class TeacherInvitationService : ITeacherInvitationService
 
         var membership = invitation!.CommunityUser;
         var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == membership.UserId, cancellationToken);
-        if (user == null || !user.IsTeacherAccount || user.Status != UserStatus.Active || user.NormalizedEmail != invitation.InvitedEmail)
+        if (user == null ||
+            user.Status != UserStatus.Active ||
+            user.NormalizedEmail != invitation.InvitedEmail ||
+            (membership.Role == CommunityUserRole.Teacher && !user.IsTeacherAccount) ||
+            (membership.Role != CommunityUserRole.Teacher && membership.Role != CommunityUserRole.Owner))
         {
             throw InvalidInvitation();
         }
 
         var otherCurrentRelationships = await _context.CommunityUsers
             .Where(x => x.UserId == user.Id &&
-                        x.Role == CommunityUserRole.Teacher &&
+                        x.Role == membership.Role &&
                         (x.Status == CommunityUserStatus.Active || x.Status == CommunityUserStatus.Pending) &&
                         x.Id != membership.Id)
             .AnyAsync(cancellationToken);
         if (otherCurrentRelationships)
         {
-            throw TeacherCommunityConflict();
+            throw membership.Role == CommunityUserRole.Teacher
+                ? TeacherCommunityConflict()
+                : Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
         }
 
         user.Name = trimmedName;
-        user.IsTeacherAccount = true;
+        if (membership.Role == CommunityUserRole.Teacher)
+        {
+            user.IsTeacherAccount = true;
+        }
         user.EmailConfirmed = true;
         user.UpdatedAt = now;
         if (string.IsNullOrWhiteSpace(user.UserName))
@@ -290,13 +330,14 @@ public class TeacherInvitationService : ITeacherInvitationService
         return RevokeCurrentInvitationsAsync(communityUserId, DateTime.UtcNow, cancellationToken);
     }
 
-    private static bool IsUsable(TeacherInvitation? invitation, DateTime now)
+    private static bool IsUsable(TeacherInvitation? invitation, DateTime now, CommunityUserRole? expectedRole = null)
     {
         return invitation != null &&
                invitation.AcceptedAt == null &&
                invitation.RevokedAt == null &&
                invitation.ExpiresAt > now &&
-               invitation.CommunityUser.Role == CommunityUserRole.Teacher &&
+               (invitation.CommunityUser.Role == CommunityUserRole.Teacher || invitation.CommunityUser.Role == CommunityUserRole.Owner) &&
+               (!expectedRole.HasValue || invitation.CommunityUser.Role == expectedRole.Value) &&
                invitation.CommunityUser.Status == CommunityUserStatus.Pending &&
                invitation.CommunityUser.Community.Status == CommunityStatus.Active;
     }
@@ -327,6 +368,23 @@ public class TeacherInvitationService : ITeacherInvitationService
             invitation.RevokedAt = now;
         }
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private Task<bool> HasActiveOwnerAsync(long userId, long communityId, CancellationToken cancellationToken)
+    {
+        return _context.CommunityUsers.AnyAsync(
+            x => x.UserId == userId &&
+                 x.CommunityId == communityId &&
+                 x.Role == CommunityUserRole.Owner &&
+                 x.Status == CommunityUserStatus.Active,
+            cancellationToken);
+    }
+
+    private Task<bool> IsPlatformAdminAsync(long userId, CancellationToken cancellationToken)
+    {
+        return _context.Users.AnyAsync(
+            x => x.Id == userId && x.IsPlatformAdmin && x.Status == UserStatus.Active,
+            cancellationToken);
     }
 
     private static TeacherInvitationIssueResult IssueResult(User user, Community community, CommunityUser membership, string? rawToken)

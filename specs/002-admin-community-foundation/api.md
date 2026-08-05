@@ -2,7 +2,7 @@
 
 ## Feature Summary
 
-This feature lets authenticated platform admins create and list communities, assign community owners, and create or update license limits. It does not provide owner self-service, teacher/student management, invitations, billing, or analytics.
+This feature lets authenticated platform admins create and list communities, assign community owners, and create or update license limits. Creating a community also sends its initial Community Admin a one-time password-setup invitation.
 
 All endpoints require:
 
@@ -39,17 +39,18 @@ Successful responses use:
 ```json
 {
   "name": "Example School",
-  "slug": "example-school"
+  "adminEmail": "owner@example.com"
 }
 ```
 
 Implemented validation:
 
-- `name` and `slug` must contain non-whitespace text.
+- `name` and `adminEmail` must contain non-whitespace text.
 - Both values are trimmed.
-- `slug` is converted to lowercase.
+- The backend derives a lowercase URL-safe slug from the name.
 - The normalized slug must be unique.
 - Database limits are 200 characters for name and 120 for slug, but the handler does not prevalidate lengths.
+- The backend creates a Pending Owner membership and emails a hashed-token setup link. The owner chooses their name and Identity password through the existing anonymous community-invitation completion endpoint; no password is accepted by this request.
 
 ### Success Response
 
@@ -71,10 +72,40 @@ Implemented validation:
 
 | HTTP | Condition | Typical message |
 |---|---|---|
-| 400 | Empty name/slug | `Invalid Data` |
+| 400 | Empty name/admin email or name that cannot produce a slug | `Invalid Data` |
 | 400 | Duplicate normalized slug | `Record Already Exists` |
 | 401 | Missing/invalid bearer token or `userId` claim | Authentication response may be empty |
 | 403 | Missing, suspended, or non-platform-admin user | `InvalidAccessToken` |
+
+The setup link points to `/invitations/community-admin/setup?token=...`. That page completes setup through the shared `POST /api/v1/Account/community-register` endpoint.
+
+## POST /api/v1/Account/community-register
+
+Completes the initial Community Admin setup from the emailed link. This is not public administrator creation: the token must identify an unexpired, unrevoked Pending Owner invitation created during trusted community provisioning.
+
+### Request Body
+
+```json
+{
+  "token": "invitation-token-from-link",
+  "name": "Community Administrator",
+  "password": "StrongPassword123!"
+}
+```
+
+The request accepts no community ID, email, role, or administrator flag. The backend resolves the user and community exclusively from the hashed invitation token, validates the configured Identity password policy, creates the password through Identity, confirms the email, and activates the Owner membership.
+
+### Success Response
+
+Returns the standard HTTP 200 `BaseResponse` success envelope without a token. The user must then sign in through `POST /api/v1/Account/community-login`.
+
+### Common Errors
+
+| HTTP | Condition |
+|---|---|
+| 400 | Invalid, expired, revoked, used, or non-Owner invitation token; invalid password policy; invalid input. |
+
+The same endpoint also completes Teacher invitations; the server resolves the role from the invitation token.
 
 ## GET /api/v1/admin/communities
 

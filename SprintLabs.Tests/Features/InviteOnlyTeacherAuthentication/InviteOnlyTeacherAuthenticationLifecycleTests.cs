@@ -1,4 +1,4 @@
-using Application.Features.Accounts.TeacherAuthentication.TeacherLogin;
+using Application.Features.Accounts.CommunityAuthentication.CommunityLogin;
 
 using Domain.Enums;
 using Domain.Models;
@@ -23,6 +23,7 @@ using Moq;
 
 using Shared.Options;
 using Shared.Responses;
+using Shared.Enums;
 
 namespace Compass.Tests.Features.InviteOnlyTeacherAuthentication;
 
@@ -56,18 +57,18 @@ public class InviteOnlyTeacherAuthenticationLifecycleTests
             context,
             Options.Create(new TeacherAuthenticationOptions()));
         var access = new Mock<IAccessTokenService>();
-        access.Setup(x => x.Create(It.IsAny<long>(), "teacher@example.com", "Teacher"))
+        access.Setup(x => x.Create(It.IsAny<long>(), "teacher@example.com", "Teacher", AuthenticatedAccountType.Teacher))
             .Returns(new AccessTokenResult { AccessToken = "access", AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(5) });
         refresh.Setup(x => x.IssueAsync(It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RefreshTokenResult { RefreshToken = "refresh", RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(1) });
-        var loginHandler = new TeacherLoginCommandHandler(
+        var loginHandler = new CommunityLoginCommandHandler(
             identityService,
             access.Object,
             refresh.Object,
             new BaseRepository<CommunityUser>(context),
-            NullLogger<TeacherLoginCommandHandler>.Instance);
+            NullLogger<CommunityLoginCommandHandler>.Instance);
 
-        var login = await loginHandler.Handle(new TeacherLoginCommand
+        var login = await loginHandler.Handle(new CommunityLoginCommand
         {
             Identifier = "teacher@example.com",
             Password = "StrongPassword123!"

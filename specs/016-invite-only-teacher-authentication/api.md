@@ -17,8 +17,8 @@ This feature changes the existing teacher password lifecycle; it does not add a 
 |---|---|---|---|
 | POST | `/api/v1/Communities/{communityId}/teachers/invite` | Bearer; Active Owner of route community | Create or resend the one-community teacher invitation. |
 | GET | `/api/v1/community-invitations/teacher/validate?token=...` | Anonymous | Load safe setup-page context without activating membership. |
-| POST | `/api/v1/community-invitations/teacher/complete` | Anonymous | Set name/password and activate the existing pending membership once. |
-| POST | `/api/v1/Account/teachers/login` | Anonymous | Password login by normalized username or email. |
+| POST | `/api/v1/Account/community-register` | Anonymous | Set name/password and activate an existing pending Owner or Teacher membership once. |
+| POST | `/api/v1/Account/community-login` | Anonymous | Shared password login for a Platform Admin, Community Admin, or Teacher by normalized username or email. |
 | POST | `/api/v1/Account/forgot-password` | Anonymous | Enumeration-safe reset-email request. |
 | POST | `/api/v1/Account/reset-password` | Anonymous | Reset password with Identity token and revoke refresh sessions. |
 | POST | Existing refresh endpoint | Existing contract | Preserve token rotation. |
@@ -37,7 +37,7 @@ They must return no mapped application action and must be absent from Swagger. I
 
 - The invite route uses the route community ID but accepts no role or owner identity from the request body. The backend derives the caller from bearer claims and transactionally rechecks an Active Owner membership and active community.
 - Validation and completion derive user, email, membership, and community entirely from the token hash and database state.
-- Login derives community from persisted Teacher memberships and fails when there is zero or more than one current valid relationship.
+- Community login derives the role and community from persisted Owner/Teacher memberships and fails when there is zero or more than one current valid relationship. The public role values are `CommunityAdmin` for stored Owner and `Teacher` for stored Teacher; the client supplies neither a role nor a community.
 - Google, player, admin, and owner authentication behavior is unchanged.
 
 ## Common errors

@@ -1,4 +1,5 @@
 using Domain.Enums;
+using System.Data;
 using Domain.Models;
 using Domain.Repositories;
 using Domain.Services;
@@ -10,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using Shared.Options;
+using Shared.Enums;
 using Shared.Responses;
 
 namespace Infrastructure.Services;
@@ -54,15 +56,33 @@ public class RefreshTokenService : IRefreshTokenService
     public async Task<RefreshTokenResult?> RotateAsync(string rawToken, string? revokedByIp, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(rawToken)) return null;
+        await using var transaction = _context.Database.IsRelational()
+            ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
         var hash = SecureTokenGenerator.Hash(rawToken);
         var current = await _repository.GetByHashAsync(hash, cancellationToken);
         var now = DateTime.UtcNow;
         if (current == null || current.RevokedAt != null || current.ExpiresAt <= now) return null;
 
-        var eligible = await _context.Users
+        var user = await _context.Users
             .AsNoTracking()
-            .AnyAsync(x => x.Id == current.UserId && x.IsTeacherAccount && x.EmailConfirmed && x.Status == UserStatus.Active, cancellationToken);
-        if (!eligible) return null;
+            .FirstOrDefaultAsync(x => x.Id == current.UserId && x.Status == UserStatus.Active && x.EmailConfirmed, cancellationToken);
+        if (user == null) return null;
+
+        var memberships = await _context.CommunityUsers
+            .AsNoTracking()
+            .Where(x => x.UserId == user.Id &&
+                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher))
+            .Select(x => new { x.Role, x.Status, CommunityStatus = x.Community.Status })
+            .ToListAsync(cancellationToken);
+        var activeMemberships = memberships
+            .Where(x => x.Status == CommunityUserStatus.Active && x.CommunityStatus == CommunityStatus.Active)
+            .ToList();
+        if (!user.IsPlatformAdmin &&
+            (activeMemberships.Count != 1 || memberships.Any(x => x.Status == CommunityUserStatus.Pending)))
+        {
+            return null;
+        }
 
         var rawReplacement = SecureTokenGenerator.Generate();
         var replacementHash = SecureTokenGenerator.Hash(rawReplacement);
@@ -71,6 +91,13 @@ public class RefreshTokenService : IRefreshTokenService
         var result = new RefreshTokenResult
         {
             UserId = current.UserId,
+            Email = user.Email ?? string.Empty,
+            Name = user.Name,
+            AccountType = user.IsPlatformAdmin
+                ? AuthenticatedAccountType.PlatformAdmin
+                : activeMemberships[0].Role == CommunityUserRole.Owner
+                    ? AuthenticatedAccountType.CommunityAdmin
+                    : AuthenticatedAccountType.Teacher,
             RefreshToken = rawReplacement,
             RefreshTokenExpiresAt = now.AddDays(_options.RefreshTokenLifetimeDays)
         };
@@ -82,6 +109,10 @@ public class RefreshTokenService : IRefreshTokenService
             ExpiresAt = result.RefreshTokenExpiresAt,
             CreatedByIp = revokedByIp
         }, cancellationToken);
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
         return result;
     }
 
