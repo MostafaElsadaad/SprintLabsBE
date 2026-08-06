@@ -41,33 +41,27 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
         CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 ||
-            request.CommunityId <= 0 ||
             string.IsNullOrWhiteSpace(request.Email))
         {
             throw InvalidInput();
         }
 
         var email = NormalizeEmail(request.Email);
-        if (!await IsActiveOwner(request.UserId, request.CommunityId))
+        var communityId = await _communityAccessService.GetSingleActiveCommunityIdForRole(
+            request.UserId,
+            CommunityUserRole.Owner);
+        if (!communityId.HasValue)
         {
             throw Forbidden();
         }
 
-        var issue = await _teacherInvitationService.IssueAsync(request.UserId, request.CommunityId, email, cancellationToken);
+        var issue = await _teacherInvitationService.IssueAsync(request.UserId, communityId.Value, email, cancellationToken);
         if (!string.IsNullOrWhiteSpace(issue.InvitationToken))
         {
             await _emailService.SendCommunityInvitationEmailAsync(issue.Email, issue.Name, issue.CommunityName,
                 TeacherAuthenticationLinkBuilder.Invitation(_frontendOptions, issue.InvitationToken), cancellationToken);
         }
         return new TeacherResponse { UserId = issue.UserId, Name = issue.Name, Email = issue.Email, Status = issue.Status, CreatedAt = DateTime.UtcNow };
-    }
-
-    private Task<bool> IsActiveOwner(long userId, long communityId)
-    {
-        return _communityAccessService.HasCommunityRole(
-            userId,
-            communityId,
-            new[] { CommunityUserRole.Owner });
     }
 
     private static string NormalizeEmail(string email)

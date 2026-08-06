@@ -54,9 +54,9 @@ Identifier matches normalized email or normalized username. Platform admins retu
 
 No player profile, student license, or community selection is created.
 
-## POST `/api/v1/Communities/{communityId}/teachers/invite`
+## POST `/api/v1/Communities/teachers/invite`
 
-**Authentication**: Bearer; caller must be an Active Owner of the active route community.
+**Authentication**: Bearer; caller must have exactly one Active Owner membership in an active community.
 
 ```json
 {
@@ -64,7 +64,7 @@ No player profile, student license, or community selection is created.
 }
 ```
 
-Email is trimmed/normalized by the backend. Name is not accepted because the invited teacher supplies it during completion.
+Email is trimmed/normalized by the backend. The route and request contain no community ID; the backend resolves the caller's persisted active Owner community. Name is not accepted because the invited teacher supplies it during completion.
 
 **Success**: Existing `BaseResponse` success contract. For a new invite, creates/reuses the eligible teacher user, one Pending Teacher membership, one seat reservation, and one usable invitation. For a same-community resend, reuses the membership/reservation and invalidates the prior token before issuing a new one.
 

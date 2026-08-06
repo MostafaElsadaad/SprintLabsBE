@@ -98,10 +98,8 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPost("{communityId:long}/teachers/invite")]
-    public async Task<IActionResult> InviteTeacher(
-        long communityId,
-        [FromBody] InviteTeacherRequest request)
+    [HttpPost("teachers/invite")]
+    public async Task<IActionResult> InviteTeacher([FromBody] InviteTeacherRequest request)
     {
         var userId = GetUserId();
         if (userId == null)
@@ -112,7 +110,6 @@ public class CommunitiesController : ControllerBase
         var result = await _mediator.Send(new InviteTeacherCommand
         {
             UserId = userId.Value,
-            CommunityId = communityId,
             Email = request.Email
         });
 

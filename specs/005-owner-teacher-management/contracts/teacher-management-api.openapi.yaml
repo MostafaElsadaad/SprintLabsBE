@@ -3,20 +3,12 @@ info:
   title: SprintLabs Owner Teacher Management API
   version: 1.0.0
 paths:
-  /api/v1/Communities/{communityId}/teachers/invite:
+  /api/v1/Communities/teachers/invite:
     post:
       summary: Invite a teacher to a community
       description: Creates or restores a Pending Teacher membership when the authenticated user has an Active Owner membership and teacher capacity is available.
       security:
         - bearerAuth: []
-      parameters:
-        - name: communityId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
       requestBody:
         required: true
         content:

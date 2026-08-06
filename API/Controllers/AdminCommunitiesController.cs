@@ -11,6 +11,7 @@ using Asp.Versioning;
 using MediatR;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 
 using Shared.Enums;
@@ -22,6 +23,7 @@ namespace API.Controllers
     [ApiController]
     [ApiVersion("1.0")]
     [Authorize]
+    [Tags("Super Admin Control")]
     public class AdminCommunitiesController : ControllerBase
     {
         private readonly IMediator _mediator;

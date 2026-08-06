@@ -11,7 +11,7 @@ Frontend implementation is out of scope for this backend feature. This document 
 - Email: required, valid email shape, trimmed before submission.
 - No teacher name field.
 
-**Action**: `POST /api/v1/Communities/{communityId}/teachers/invite`.
+**Action**: `POST /api/v1/Communities/teachers/invite`. Do not send a community ID: the backend resolves the caller's one active Owner community from the authenticated user.
 
 **States**:
 

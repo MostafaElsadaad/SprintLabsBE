@@ -31,7 +31,7 @@ If local NuGet or MySQL configuration prevents tests, record the limitation and 
 ## Scenario 1: Owner Invites Teacher With Capacity
 
 ```http
-POST /api/v1/Communities/{communityId}/teachers/invite
+POST /api/v1/Communities/teachers/invite
 Authorization: Bearer OWNER_TOKEN
 Content-Type: application/json
 

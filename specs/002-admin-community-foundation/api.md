@@ -1,5 +1,7 @@
 # Admin Community Foundation API
 
+Swagger groups these platform-admin endpoints under **Super Admin Control**. Their URLs remain `/api/v1/admin/communities`.
+
 ## Feature Summary
 
 This feature lets authenticated platform admins create and list communities, assign community owners, and create or update license limits. Creating a community also sends its initial Community Admin a one-time password-setup invitation.

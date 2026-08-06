@@ -40,4 +40,18 @@ public class CommunityAccessService : ICommunityAccessService
                 && x.Status == CommunityUserStatus.Active
                 && requiredRoles.Contains(x.Role));
     }
+
+    public async Task<long?> GetSingleActiveCommunityIdForRole(long userId, CommunityUserRole role)
+    {
+        var communityIds = await _communityUserRepository.AsQueryable()
+            .Where(x => x.UserId == userId &&
+                        x.Role == role &&
+                        x.Status == CommunityUserStatus.Active &&
+                        x.Community.Status == CommunityStatus.Active)
+            .Select(x => x.CommunityId)
+            .Take(2)
+            .ToListAsync();
+
+        return communityIds.Count == 1 ? communityIds[0] : null;
+    }
 }
