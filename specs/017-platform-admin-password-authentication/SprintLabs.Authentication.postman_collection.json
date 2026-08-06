@@ -76,7 +76,7 @@
         "method": "POST",
         "header": [{ "key": "Authorization", "value": "Bearer {{communityAdminAccessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
         "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{teacherEmail}}\"\n}" },
-        "url": "{{baseUrl}}/api/v1/Communities/{{communityId}}/teachers/invite"
+        "url": "{{baseUrl}}/api/v1/Communities/teachers/invite"
       }
     },
     {

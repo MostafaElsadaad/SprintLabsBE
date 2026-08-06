@@ -15,7 +15,7 @@ This feature changes the existing teacher password lifecycle; it does not add a 
 
 | Method | Endpoint | Auth/role | Purpose |
 |---|---|---|---|
-| POST | `/api/v1/Communities/{communityId}/teachers/invite` | Bearer; Active Owner of route community | Create or resend the one-community teacher invitation. |
+| POST | `/api/v1/Communities/teachers/invite` | Bearer; exactly one Active Owner community | Create or resend the teacher invitation for the caller's persisted community. |
 | GET | `/api/v1/community-invitations/teacher/validate?token=...` | Anonymous | Load safe setup-page context without activating membership. |
 | POST | `/api/v1/Account/community-register` | Anonymous | Set name/password and activate an existing pending Owner or Teacher membership once. |
 | POST | `/api/v1/Account/community-login` | Anonymous | Shared password login for a Platform Admin, Community Admin, or Teacher by normalized username or email. |
@@ -35,7 +35,7 @@ They must return no mapped application action and must be absent from Swagger. I
 
 ## Authorization and backend trust
 
-- The invite route uses the route community ID but accepts no role or owner identity from the request body. The backend derives the caller from bearer claims and transactionally rechecks an Active Owner membership and active community.
+- The invite route accepts no community ID, role, or owner identity. The backend derives the caller from the bearer `userId` claim and resolves exactly one active Owner membership and active community from persisted data.
 - Validation and completion derive user, email, membership, and community entirely from the token hash and database state.
 - Community login derives the role and community from persisted Owner/Teacher memberships and fails when there is zero or more than one current valid relationship. The public role values are `CommunityAdmin` for stored Owner and `Teacher` for stored Teacher; the client supplies neither a role nor a community.
 - Google, player, admin, and owner authentication behavior is unchanged.

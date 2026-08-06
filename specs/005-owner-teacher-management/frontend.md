@@ -40,7 +40,7 @@ Buttons/actions:
 
 | Action | API |
 |---|---|
-| Invite teacher | `POST /api/v1/Communities/{communityId}/teachers/invite` |
+| Invite teacher | `POST /api/v1/Communities/teachers/invite` |
 | Reset form | Frontend-only |
 
 After success:
@@ -101,7 +101,7 @@ Behavior:
 |---|---|
 | Load owner memberships | `GET /api/v1/Users/me/communities` |
 | Load teachers | `GET /api/v1/Communities/{communityId}/teachers` |
-| Invite teacher | `POST /api/v1/Communities/{communityId}/teachers/invite` |
+| Invite teacher | `POST /api/v1/Communities/teachers/invite` |
 | Remove teacher | `DELETE /api/v1/Communities/{communityId}/teachers/{userId}` |
 | Teacher accepts by login | Existing Google login flow; no separate frontend acceptance endpoint |
 

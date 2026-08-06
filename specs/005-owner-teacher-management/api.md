@@ -10,7 +10,7 @@ No email delivery, teacher dashboard, student management, grades, classes, analy
 
 | Method | Route | Required access |
 |---|---|---|
-| POST | `/api/v1/Communities/{communityId}/teachers/invite` | Authenticated user with Active Owner membership |
+| POST | `/api/v1/Communities/teachers/invite` | Authenticated user with exactly one Active Owner membership |
 | GET | `/api/v1/Communities/{communityId}/teachers` | Authenticated user with Active Owner membership |
 | DELETE | `/api/v1/Communities/{communityId}/teachers/{userId}` | Authenticated user with Active Owner membership |
 
@@ -22,8 +22,7 @@ Request:
 
 ```json
 {
-  "email": "teacher@example.com",
-  "name": "Teacher Name"
+  "email": "teacher@example.com"
 }
 ```
 
@@ -129,7 +128,7 @@ Controlled errors use the existing `GenericException` and global error response 
 
 ## Frontend Usage Notes
 
-- Use the current membership's `communityId`; never send requester user id.
+- Do not send a community ID or requester user ID; the backend resolves the caller's one active Owner community from the bearer token.
 - Show teacher management only for Active Owner memberships.
 - Still handle 403 because ownership can change server-side.
 - Treat duplicate invite success as idempotent.
