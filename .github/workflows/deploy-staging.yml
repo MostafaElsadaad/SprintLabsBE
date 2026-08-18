@@ -1,0 +1,75 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: staging-deployment
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore SprintLabs.sln
+
+      - name: Build
+        run: dotnet build SprintLabs.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test SprintLabs.Tests/Compass.Tests.csproj --configuration Release --no-build
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload application
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/sprintlabs/"
+
+      - name: Deploy Docker container
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
+
+          set -e
+
+          cd /opt/sprintlabs
+
+          docker build -t sprintlabs-api:latest .
+
+          docker stop sprintlabs-api || true
+          docker rm sprintlabs-api || true
+
+          docker run -d \
+            --name sprintlabs-api \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            sprintlabs-api:latest
+
+          docker image prune -f
+
+          EOF
