@@ -6,21 +6,21 @@ on:
       - main
 
 concurrency:
-  group: staging-deployment
+  group: staging
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build-test-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
@@ -29,47 +29,58 @@ jobs:
         run: dotnet restore SprintLabs.sln
 
       - name: Build
-        run: dotnet build SprintLabs.sln --configuration Release --no-restore
+        run: dotnet build SprintLabs.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test SprintLabs.Tests/Compass.Tests.csproj --configuration Release --no-build
+        run: dotnet test SprintLabs.sln -c Release --no-build
 
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
+
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Upload application
+      - name: Upload source
         run: |
           rsync -az --delete \
-            --exclude '.git' \
-            --exclude '.github' \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude ".env" \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./ \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/sprintlabs/"
 
-      - name: Deploy Docker container
+      - name: Build and deploy on Oracle VM
         run: |
           ssh -i ~/.ssh/deploy_key \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
+          "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
 
           set -e
 
           cd /opt/sprintlabs
 
-          docker build -t sprintlabs-api:latest .
+          docker build \
+            -t sprintlabs-api:latest \
+            .
 
-          docker stop sprintlabs-api || true
-          docker rm sprintlabs-api || true
+          docker stop sprintlabs-api 2>/dev/null || true
+          docker rm sprintlabs-api 2>/dev/null || true
 
           docker run -d \
             --name sprintlabs-api \
             --restart unless-stopped \
+            --network sprintlabs-net \
+            --add-host=host.docker.internal:host-gateway \
+            --env-file /opt/sprintlabs/.env \
+            -v /var/secrets/firebase:/var/secrets/firebase:ro \
             -p 8080:8080 \
             sprintlabs-api:latest
 
           docker image prune -f
+
+          docker ps
 
           EOF
