@@ -25,6 +25,19 @@ namespace Compass.Tests.Features.InviteOnlyTeacherAuthentication;
 
 public class TeacherInvitationServiceTests
 {
+    public static TheoryData<CommunityUserRole, CommunityUserRole, CommunityUserStatus>
+        CrossCommunityStaffIssueConflicts => new()
+        {
+            { CommunityUserRole.Teacher, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Teacher, CommunityUserRole.Owner, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserRole.Owner, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Owner, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserRole.Owner, CommunityUserStatus.Pending },
+            { CommunityUserRole.Owner, CommunityUserRole.Owner, CommunityUserStatus.Active }
+        };
+
     [Fact]
     public async Task IssueAsync_same_community_reissue_reuses_the_pending_membership_and_revokes_the_prior_token()
     {
@@ -65,6 +78,65 @@ public class TeacherInvitationServiceTests
     }
 
     [Fact]
+    public async Task IssueAsync_removed_staff_membership_in_another_community_is_reassignable()
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndCommunityAsync(context);
+        await SeedCurrentStaffMembershipAsync(context, 2, 20, CommunityUserRole.Owner, CommunityUserStatus.Removed);
+        var service = CreateService(context);
+
+        var result = await service.IssueAsync(10, 1, "teacher@example.com", CancellationToken.None);
+
+        result.CommunityId.Should().Be(1);
+        (await context.CommunityUsers.SingleAsync(x => x.CommunityId == 1 && x.UserId == 20)).Status
+            .Should().Be(CommunityUserStatus.Pending);
+        (await context.CommunityUsers.SingleAsync(x => x.CommunityId == 2 && x.UserId == 20)).Status
+            .Should().Be(CommunityUserStatus.Removed);
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(1);
+    }
+
+    [Theory]
+    [MemberData(nameof(CrossCommunityStaffIssueConflicts))]
+    public async Task IssueAsync_rejects_every_other_community_current_staff_role_without_partial_mutation(
+        CommunityUserRole issuedRole,
+        CommunityUserRole existingRole,
+        CommunityUserStatus existingStatus)
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndCommunityAsync(context);
+        await SeedCurrentStaffMembershipAsync(context, 2, 20, existingRole, existingStatus);
+        if (issuedRole == CommunityUserRole.Owner)
+        {
+            context.Users.Add(new User
+            {
+                Id = 99,
+                UserName = "platform.admin",
+                NormalizedUserName = "PLATFORM.ADMIN",
+                Email = "platform.admin@example.com",
+                NormalizedEmail = "PLATFORM.ADMIN@EXAMPLE.COM",
+                Name = "Platform Admin",
+                IsPlatformAdmin = true,
+                Status = UserStatus.Active
+            });
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(context);
+        Func<Task> action = issuedRole == CommunityUserRole.Teacher
+            ? () => service.IssueAsync(10, 1, "teacher@example.com", CancellationToken.None)
+            : () => service.IssueCommunityAdminSetupAsync(99, 1, "teacher@example.com", CancellationToken.None);
+
+        var exception = await action.Should().ThrowAsync<GenericException>();
+        exception.Which.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await context.CommunityUsers.AnyAsync(x => x.CommunityId == 1 && x.UserId == 20)).Should().BeFalse();
+        (await context.TeacherInvitations.AnyAsync()).Should().BeFalse();
+        (await context.CommunityLicenses.SingleAsync(x => x.CommunityId == 1)).UsedTeachers.Should().Be(0);
+        var target = await context.Users.SingleAsync(x => x.Id == 20);
+        target.IsTeacherAccount.Should().BeFalse();
+        target.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ValidateAsync_returns_only_safe_setup_context_without_activating_membership()
     {
         await using var context = CreateContext();
@@ -101,6 +173,42 @@ public class TeacherInvitationServiceTests
         var replay = async () => await service.CompleteAsync(issue.InvitationToken!, "Teacher Name", "StrongPassword123!", CancellationToken.None);
         var exception = await replay.Should().ThrowAsync<GenericException>();
         exception.Which.ErrorCode.Should().Be(ErrorCode.InvalidTeacherInvitation);
+    }
+
+    [Theory]
+    [InlineData(CommunityUserRole.Owner, CommunityUserStatus.Pending)]
+    [InlineData(CommunityUserRole.Owner, CommunityUserStatus.Active)]
+    [InlineData(CommunityUserRole.Teacher, CommunityUserStatus.Pending)]
+    [InlineData(CommunityUserRole.Teacher, CommunityUserStatus.Active)]
+    public async Task CompleteAsync_rejects_cross_community_current_staff_conflict_without_side_effects(
+        CommunityUserRole conflictingRole,
+        CommunityUserStatus conflictingStatus)
+    {
+        await using var context = CreateContext();
+        await SeedOwnerAndCommunityAsync(context);
+        var refreshTokens = new Mock<IRefreshTokenService>();
+        var service = CreateService(context, refreshTokens.Object);
+        var issue = await service.IssueAsync(10, 1, "teacher@example.com", CancellationToken.None);
+        await SeedCurrentStaffMembershipAsync(context, 2, issue.UserId, conflictingRole, conflictingStatus, createUser: false);
+
+        var action = async () => await service.CompleteAsync(
+            issue.InvitationToken!,
+            "Changed Name",
+            "StrongPassword123!",
+            CancellationToken.None);
+
+        var exception = await action.Should().ThrowAsync<GenericException>();
+        exception.Which.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        exception.Which.ErrorCode.Should().Be(ErrorCode.TeacherAlreadyBelongsToAnotherCommunity);
+        var target = await context.Users.SingleAsync(x => x.Id == issue.UserId);
+        target.Name.Should().Be("Invited Teacher");
+        target.EmailConfirmed.Should().BeFalse();
+        (await CreateUserManager(context).HasPasswordAsync(target)).Should().BeFalse();
+        (await context.CommunityUsers.SingleAsync(x => x.CommunityId == 1 && x.UserId == issue.UserId)).Status
+            .Should().Be(CommunityUserStatus.Pending);
+        (await context.TeacherInvitations.SingleAsync()).AcceptedAt.Should().BeNull();
+        (await context.CommunityLicenses.SingleAsync()).UsedTeachers.Should().Be(1);
+        refreshTokens.Verify(x => x.RevokeAllForUserAsync(It.IsAny<long>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -161,14 +269,56 @@ public class TeacherInvitationServiceTests
         await context.SaveChangesAsync();
     }
 
-    private static TeacherInvitationService CreateService(ApplicationDbContext context)
+    private static TeacherInvitationService CreateService(
+        ApplicationDbContext context,
+        IRefreshTokenService? refreshTokenService = null)
     {
         var manager = CreateUserManager(context);
         return new TeacherInvitationService(
             context,
             manager,
-            Mock.Of<IRefreshTokenService>(),
+            refreshTokenService ?? Mock.Of<IRefreshTokenService>(),
             Options.Create(new TeacherAuthenticationOptions { InvitationLifetimeDays = 7 }));
+    }
+
+    private static async Task SeedCurrentStaffMembershipAsync(
+        ApplicationDbContext context,
+        long communityId,
+        long userId,
+        CommunityUserRole role,
+        CommunityUserStatus status,
+        bool createUser = true)
+    {
+        if (createUser)
+        {
+            context.Users.Add(new User
+            {
+                Id = userId,
+                UserName = "teacher@example.com",
+                NormalizedUserName = "TEACHER@EXAMPLE.COM",
+                Email = "teacher@example.com",
+                NormalizedEmail = "TEACHER@EXAMPLE.COM",
+                Name = "Existing Staff",
+                SecurityStamp = Guid.NewGuid().ToString(),
+                Status = UserStatus.Active
+            });
+        }
+
+        context.Communities.Add(new Community
+        {
+            Id = communityId,
+            Name = $"Community {communityId}",
+            Slug = $"community-{communityId}",
+            Status = CommunityStatus.Active
+        });
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = communityId,
+            UserId = userId,
+            Role = role,
+            Status = status
+        });
+        await context.SaveChangesAsync();
     }
 
     private static UserManager<User> CreateUserManager(ApplicationDbContext context)

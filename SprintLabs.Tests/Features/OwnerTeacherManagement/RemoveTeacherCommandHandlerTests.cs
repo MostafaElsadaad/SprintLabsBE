@@ -115,6 +115,29 @@ public class RemoveTeacherCommandHandlerTests
         exception.Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Handle_PlatformAdminWithoutOwnerMembership_ThrowsForbiddenWithoutRemovingTeacher()
+    {
+        await using var context = CreateContext();
+        await SeedMemberships(
+            context,
+            CommunityUserStatus.Active,
+            usedTeachers: 1,
+            ownerRole: CommunityUserRole.Teacher);
+        SetupUsers(isPlatformAdmin: true);
+        var handler = CreateHandler(context);
+
+        var action = async () => await handler.Handle(new RemoveTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            TeacherUserId = 20
+        }, CancellationToken.None);
+
+        (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await context.CommunityUsers.SingleAsync(x => x.UserId == 20)).Status.Should().Be(CommunityUserStatus.Active);
+    }
+
     private RemoveTeacherCommandHandler CreateHandler(ApplicationDbContext context)
     {
         return new RemoveTeacherCommandHandler(
@@ -124,7 +147,7 @@ public class RemoveTeacherCommandHandlerTests
             new BaseRepository<CommunityLicense>(context));
     }
 
-    private void SetupUsers()
+    private void SetupUsers(bool isPlatformAdmin = false)
     {
         _userServiceMock
             .Setup(x => x.GetCurrentUser(It.IsAny<long>()))
@@ -133,7 +156,8 @@ public class RemoveTeacherCommandHandlerTests
                 Id = userId,
                 Email = $"user{userId}@example.com",
                 Name = $"User {userId}",
-                Status = "Active"
+                Status = "Active",
+                IsPlatformAdmin = isPlatformAdmin
             });
     }
 

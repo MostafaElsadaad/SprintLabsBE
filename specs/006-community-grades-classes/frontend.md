@@ -131,3 +131,7 @@ The class list endpoint already excludes deleted classes, so active class tables
 - The API route is versioned as `/api/v1/Communities/...`.
 - Class deletion is soft delete; no undo endpoint is implemented.
 - Grade update and delete are intentionally not implemented.
+
+## Superseded Staff Contract
+
+Use the community-ID-free grade and class calls from [feature 018 frontend handoff](../018-current-community-resolution/frontend.md); `gradeId` remains a resource filter, not a tenant selector.

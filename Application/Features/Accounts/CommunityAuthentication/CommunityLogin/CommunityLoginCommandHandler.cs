@@ -41,16 +41,23 @@ public class CommunityLoginCommandHandler : IRequestHandler<CommunityLoginComman
     public async Task<CommunityLoginResponse> Handle(CommunityLoginCommand request, CancellationToken cancellationToken)
     {
         var user = await _identityService.AuthenticateAsync(request.Identifier, request.Password, cancellationToken);
+        var memberships = await _communityUserRepository.AsQueryable()
+            .Where(x => x.UserId == user.UserId &&
+                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher) &&
+                        (x.Status == CommunityUserStatus.Pending || x.Status == CommunityUserStatus.Active))
+            .Select(x => new { x.CommunityId, x.Role, x.Status, CommunityName = x.Community.Name, CommunityStatus = x.Community.Status })
+            .ToListAsync(cancellationToken);
+        if (memberships.Select(x => x.CommunityId).Distinct().Count() > 1)
+        {
+            _logger.LogError("Community login data conflict for user {CommunityUserId}.", user.UserId);
+            throw new GenericException(ErrorCode.Failure, ErrorMessage.InvalidAccessToken, HttpStatusCode.Conflict);
+        }
+
         if (user.IsPlatformAdmin)
         {
             return await CreateResponseAsync(user, AuthenticatedAccountType.PlatformAdmin, null, request.CreatedByIp, cancellationToken);
         }
 
-        var memberships = await _communityUserRepository.AsQueryable()
-            .Where(x => x.UserId == user.UserId &&
-                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher))
-            .Select(x => new { x.CommunityId, x.Role, x.Status, CommunityName = x.Community.Name, CommunityStatus = x.Community.Status })
-            .ToListAsync(cancellationToken);
         var activeMemberships = memberships
             .Where(x => x.Status == CommunityUserStatus.Active && x.CommunityStatus == CommunityStatus.Active)
             .ToList();

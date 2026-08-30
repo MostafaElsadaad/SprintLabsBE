@@ -82,6 +82,23 @@ public class ListTeachersQueryHandlerTests
         exception.Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Handle_PlatformAdminWithoutOwnerMembership_ThrowsForbidden()
+    {
+        await using var context = CreateContext();
+        await SeedOwner(context, CommunityUserRole.Teacher);
+        SetupUsers(isPlatformAdmin: true);
+        var handler = CreateHandler(context);
+
+        var action = async () => await handler.Handle(new ListTeachersQuery
+        {
+            UserId = 10,
+            CommunityId = 1
+        }, CancellationToken.None);
+
+        (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private ListTeachersQueryHandler CreateHandler(ApplicationDbContext context)
     {
         return new ListTeachersQueryHandler(
@@ -90,7 +107,7 @@ public class ListTeachersQueryHandlerTests
             new BaseRepository<CommunityUser>(context));
     }
 
-    private void SetupUsers()
+    private void SetupUsers(bool isPlatformAdmin = false)
     {
         _userServiceMock
             .Setup(x => x.GetCurrentUser(It.IsAny<long>()))
@@ -99,7 +116,8 @@ public class ListTeachersQueryHandlerTests
                 Id = userId,
                 Email = $"user{userId}@example.com",
                 Name = $"User {userId}",
-                Status = "Active"
+                Status = "Active",
+                IsPlatformAdmin = isPlatformAdmin
             });
     }
 

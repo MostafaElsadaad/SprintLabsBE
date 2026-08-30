@@ -72,9 +72,15 @@ public class RefreshTokenService : IRefreshTokenService
         var memberships = await _context.CommunityUsers
             .AsNoTracking()
             .Where(x => x.UserId == user.Id &&
-                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher))
-            .Select(x => new { x.Role, x.Status, CommunityStatus = x.Community.Status })
+                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher) &&
+                        (x.Status == CommunityUserStatus.Pending || x.Status == CommunityUserStatus.Active))
+            .Select(x => new { x.CommunityId, x.Role, x.Status, CommunityStatus = x.Community.Status })
             .ToListAsync(cancellationToken);
+        if (memberships.Select(x => x.CommunityId).Distinct().Count() > 1)
+        {
+            return null;
+        }
+
         var activeMemberships = memberships
             .Where(x => x.Status == CommunityUserStatus.Active && x.CommunityStatus == CommunityStatus.Active)
             .ToList();

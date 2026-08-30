@@ -2,7 +2,6 @@ using System.Net;
 
 using Application.Features.Admin.Communities.Common;
 
-using Domain.Enums;
 using Domain.Models;
 using Domain.Repositories;
 using Domain.Services;
@@ -20,16 +19,16 @@ public class AssignOwnerCommandHandler : IRequestHandler<AssignOwnerCommand, Own
 {
     private readonly IUserService _userService;
     private readonly IBaseRepository<Community> _communityRepository;
-    private readonly IBaseRepository<CommunityUser> _communityUserRepository;
+    private readonly IStaffCommunityMembershipService _staffCommunityMembershipService;
 
     public AssignOwnerCommandHandler(
         IUserService userService,
         IBaseRepository<Community> communityRepository,
-        IBaseRepository<CommunityUser> communityUserRepository)
+        IStaffCommunityMembershipService staffCommunityMembershipService)
     {
         _userService = userService;
         _communityRepository = communityRepository;
-        _communityUserRepository = communityUserRepository;
+        _staffCommunityMembershipService = staffCommunityMembershipService;
     }
 
     public async Task<OwnerResponse> Handle(AssignOwnerCommand request, CancellationToken cancellationToken)
@@ -49,32 +48,10 @@ public class AssignOwnerCommandHandler : IRequestHandler<AssignOwnerCommand, Own
         }
 
         var ownerUser = await _userService.FindOrCreateBasicUser(request.Email, request.Name);
-        var owner = await _communityUserRepository.AsQueryable()
-            .FirstOrDefaultAsync(
-                x => x.CommunityId == request.CommunityId && x.UserId == ownerUser.Id,
-                cancellationToken);
-
-        if (owner == null)
-        {
-            owner = new CommunityUser
-            {
-                CommunityId = request.CommunityId,
-                UserId = ownerUser.Id,
-                Role = CommunityUserRole.Owner,
-                Status = CommunityUserStatus.Active,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _communityUserRepository.AddAsync(owner);
-        }
-        else
-        {
-            owner.Role = CommunityUserRole.Owner;
-            owner.Status = CommunityUserStatus.Active;
-            owner.UpdatedAt = DateTime.UtcNow;
-            await _communityUserRepository.UpdateAsync(owner);
-        }
-
-        await _communityUserRepository.SaveChangesAsync();
+        var owner = await _staffCommunityMembershipService.AssignOwnerAsync(
+            ownerUser.Id,
+            request.CommunityId,
+            cancellationToken);
 
         return new OwnerResponse
         {

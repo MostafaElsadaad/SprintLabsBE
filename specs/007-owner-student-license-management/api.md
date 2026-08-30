@@ -151,3 +151,7 @@ Follow [quickstart.md](./quickstart.md).
 - The implemented route is versioned and controller-based: `/api/v1/Communities/...`.
 - Pending student license creation does not require a `User` row and does not create active `CommunityUser` access.
 - Existing Google-registered students are activated immediately during add; not-yet-registered students remain Pending and are activated by login.
+
+## Superseded Staff Contract
+
+Student-license management routes no longer contain a CommunityId path parameter; the authenticated Owner membership resolves tenant context server-side. See [feature 018 API](../018-current-community-resolution/api.md).

@@ -24,6 +24,7 @@ using Application.Features.Communities.Teachers.RemoveTeacher;
 using Application.Features.Communities.UpdateCommunityProfile;
 
 using Domain.Enums;
+using Domain.Services;
 
 using Asp.Versioning;
 
@@ -33,6 +34,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using Shared.Enums;
+using Shared.Exceptions;
 using Shared.Responses;
 
 namespace API.Controllers;
@@ -44,10 +46,12 @@ namespace API.Controllers;
 public class CommunitiesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICommunityAccessService _communityAccessService;
 
-    public CommunitiesController(IMediator mediator)
+    public CommunitiesController(IMediator mediator, ICommunityAccessService communityAccessService)
     {
         _mediator = mediator;
+        _communityAccessService = communityAccessService;
     }
 
     [HttpGet("{communityId:long}")]
@@ -72,16 +76,40 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPatch("{communityId:long}")]
-    public async Task<IActionResult> UpdateCommunity(
-        long communityId,
-        [FromBody] UpdateCommunityProfileRequest request)
+    [HttpGet("me")]
+    public async Task<IActionResult> GetCurrentCommunity()
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
+
+        var result = await _mediator.Send(new GetCommunityProfileQuery
+        {
+            UserId = userId.Value,
+            CommunityId = communityId
+        });
+
+        return Ok(new BaseResponse<CommunityProfileResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
+    }
+
+    [HttpPatch("me")]
+    public async Task<IActionResult> UpdateCurrentCommunity([FromBody] UpdateCommunityProfileRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new UpdateCommunityProfileCommand
         {
@@ -107,9 +135,12 @@ public class CommunitiesController : ControllerBase
             return Unauthorized();
         }
 
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
+
         var result = await _mediator.Send(new InviteTeacherCommand
         {
             UserId = userId.Value,
+            CommunityId = communityId,
             Email = request.Email
         });
 
@@ -120,14 +151,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/teachers")]
-    public async Task<IActionResult> ListTeachers(long communityId)
+    [HttpGet("teachers")]
+    public async Task<IActionResult> ListTeachers()
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new ListTeachersQuery
         {
@@ -142,14 +175,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpDelete("{communityId:long}/teachers/{teacherUserId:long}")]
-    public async Task<IActionResult> RemoveTeacher(long communityId, long teacherUserId)
+    [HttpDelete("teachers/{teacherUserId:long}")]
+    public async Task<IActionResult> RemoveTeacher(long teacherUserId)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new RemoveTeacherCommand
         {
@@ -165,16 +200,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPost("{communityId:long}/grades")]
-    public async Task<IActionResult> CreateGrade(
-        long communityId,
-        [FromBody] CreateGradeRequest request)
+    [HttpPost("grades")]
+    public async Task<IActionResult> CreateGrade([FromBody] CreateGradeRequest request)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new CreateGradeCommand
         {
@@ -191,14 +226,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/grades")]
-    public async Task<IActionResult> ListGrades(long communityId)
+    [HttpGet("grades")]
+    public async Task<IActionResult> ListGrades()
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new ListGradesQuery
         {
@@ -213,16 +250,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPost("{communityId:long}/classes")]
-    public async Task<IActionResult> CreateClass(
-        long communityId,
-        [FromBody] CreateClassRequest request)
+    [HttpPost("classes")]
+    public async Task<IActionResult> CreateClass([FromBody] CreateClassRequest request)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new CreateClassCommand
         {
@@ -239,14 +276,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/classes")]
-    public async Task<IActionResult> ListClasses(long communityId, [FromQuery] long? gradeId)
+    [HttpGet("classes")]
+    public async Task<IActionResult> ListClasses([FromQuery] long? gradeId)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new ListClassesQuery
         {
@@ -262,9 +301,8 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPatch("{communityId:long}/classes/{classId:long}")]
+    [HttpPatch("classes/{classId:long}")]
     public async Task<IActionResult> UpdateClass(
-        long communityId,
         long classId,
         [FromBody] UpdateClassRequest request)
     {
@@ -273,6 +311,8 @@ public class CommunitiesController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new UpdateClassCommand
         {
@@ -290,14 +330,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpDelete("{communityId:long}/classes/{classId:long}")]
-    public async Task<IActionResult> DeleteClass(long communityId, long classId)
+    [HttpDelete("classes/{classId:long}")]
+    public async Task<IActionResult> DeleteClass(long classId)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new DeleteClassCommand
         {
@@ -313,16 +355,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPost("{communityId:long}/student-licenses")]
-    public async Task<IActionResult> AddStudentLicense(
-        long communityId,
-        [FromBody] AddStudentLicenseRequest request)
+    [HttpPost("student-licenses")]
+    public async Task<IActionResult> AddStudentLicense([FromBody] AddStudentLicenseRequest request)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new AddStudentLicenseCommand
         {
@@ -340,9 +382,8 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/student-licenses")]
+    [HttpGet("student-licenses")]
     public async Task<IActionResult> ListStudentLicenses(
-        long communityId,
         [FromQuery] StudentLicenseStatus? status,
         [FromQuery] long? gradeId,
         [FromQuery] long? classId,
@@ -353,6 +394,8 @@ public class CommunitiesController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new ListStudentLicensesQuery
         {
@@ -371,9 +414,8 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/students")]
+    [HttpGet("students")]
     public async Task<IActionResult> ListStudents(
-        long communityId,
         [FromQuery] StudentLicenseStatus? status,
         [FromQuery] long? gradeId,
         [FromQuery] long? classId,
@@ -386,6 +428,8 @@ public class CommunitiesController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new ListStudentsQuery
         {
@@ -406,14 +450,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpGet("{communityId:long}/students/{playerProfileId:long}")]
-    public async Task<IActionResult> GetStudentDetail(long communityId, long playerProfileId)
+    [HttpGet("students/{playerProfileId:long}")]
+    public async Task<IActionResult> GetStudentDetail(long playerProfileId)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new GetStudentDetailQuery
         {
@@ -429,9 +475,8 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpPatch("{communityId:long}/student-licenses/{licenseId:long}")]
+    [HttpPatch("student-licenses/{licenseId:long}")]
     public async Task<IActionResult> UpdateStudentLicense(
-        long communityId,
         long licenseId,
         [FromBody] UpdateStudentLicenseRequest request)
     {
@@ -440,6 +485,8 @@ public class CommunitiesController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new UpdateStudentLicenseCommand
         {
@@ -458,14 +505,16 @@ public class CommunitiesController : ControllerBase
             message: ErrorMessage.Success));
     }
 
-    [HttpDelete("{communityId:long}/student-licenses/{licenseId:long}")]
-    public async Task<IActionResult> RevokeStudentLicense(long communityId, long licenseId)
+    [HttpDelete("student-licenses/{licenseId:long}")]
+    public async Task<IActionResult> RevokeStudentLicense(long licenseId)
     {
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
         }
+
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
 
         var result = await _mediator.Send(new RevokeStudentLicenseCommand
         {
@@ -487,7 +536,23 @@ public class CommunitiesController : ControllerBase
             .FirstOrDefault(c => c.Type == "userId")?.Value;
 
         return long.TryParse(claimValue, out var userId)
-            ? userId
-            : null;
+                ? userId
+                : null;
+    }
+
+    private async Task<long> ResolveCurrentStaffCommunityId(long userId)
+    {
+        var communityId = await _communityAccessService.ResolveCurrentStaffCommunityId(
+            userId,
+            HttpContext.RequestAborted);
+        if (!communityId.HasValue)
+        {
+            throw new GenericException(
+                errorCode: ErrorCode.Failure,
+                message: ErrorMessage.InvalidAccessToken,
+                statusCode: HttpStatusCode.Forbidden);
+        }
+
+        return communityId.Value;
     }
 }

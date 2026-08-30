@@ -66,7 +66,8 @@ public class InvitationApiContractTests
         action.GetCustomAttributes(typeof(HttpPostAttribute), true).Cast<HttpPostAttribute>().Single().Template
             .Should().Be("teachers/invite");
         action.GetParameters().Select(x => x.Name).Should().BeEquivalentTo("request");
-        typeof(InviteTeacherCommand).GetProperty("CommunityId").Should().BeNull();
+        typeof(InviteTeacherRequest).GetProperty("CommunityId").Should().BeNull();
+        typeof(InviteTeacherCommand).GetProperty("CommunityId").Should().NotBeNull();
     }
 
     [Fact]

@@ -121,3 +121,7 @@ API: `PATCH /api/v1/Communities/{communityId}/student-licenses/{licenseId}`
 - Adding an already Google-registered student activates the license immediately and creates Student community access.
 - Not-yet-registered students remain Pending until login activation.
 - Revoked licenses remain visible in list results for audit/history unless filtered out by the frontend.
+
+## Superseded Staff Contract
+
+Use the community-ID-free student-license calls from [feature 018 frontend handoff](../018-current-community-resolution/frontend.md); retained filters identify records only within the server-resolved community.

@@ -71,3 +71,7 @@ PATCH sends both name and slug.
 - The API route is versioned as `/api/v1/Communities/{communityId}`.
 - PATCH requires both name and slug even when only one value changed.
 - Platform-admin status does not make the edit action visible without an Active Owner membership.
+
+## Superseded Staff Contract
+
+Use `GET`/`PATCH /api/v1/Communities/me` for staff profile flows and remove stored or supplied CommunityId. Keep the numeric GET only for Student-compatible profile access. See [feature 018 frontend handoff](../018-current-community-resolution/frontend.md).

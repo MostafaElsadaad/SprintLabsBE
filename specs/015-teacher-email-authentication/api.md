@@ -113,3 +113,6 @@ The backend does not implement these frontend pages.
 
 - Production SMTP provider/library approval is deferred; the planned implementation uses configured SMTP suitable for Mailpit/Mailtrap and basic authenticated SMTP.
 
+## Superseded Staff Contract
+
+Current staff APIs resolve CommunityId from the authenticated user’s active membership and do not add CommunityId to access tokens. See [feature 018 API](../018-current-community-resolution/api.md).

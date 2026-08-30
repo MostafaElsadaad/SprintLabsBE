@@ -41,21 +41,26 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
         CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 ||
+            request.CommunityId <= 0 ||
             string.IsNullOrWhiteSpace(request.Email))
         {
             throw InvalidInput();
         }
 
         var email = NormalizeEmail(request.Email);
-        var communityId = await _communityAccessService.GetSingleActiveCommunityIdForRole(
-            request.UserId,
-            CommunityUserRole.Owner);
-        if (!communityId.HasValue)
+        if (!await _communityAccessService.HasCommunityRole(
+                request.UserId,
+                request.CommunityId,
+                new[] { CommunityUserRole.Owner }))
         {
             throw Forbidden();
         }
 
-        var issue = await _teacherInvitationService.IssueAsync(request.UserId, communityId.Value, email, cancellationToken);
+        var issue = await _teacherInvitationService.IssueAsync(
+            request.UserId,
+            request.CommunityId,
+            email,
+            cancellationToken);
         if (!string.IsNullOrWhiteSpace(issue.InvitationToken))
         {
             await _emailService.SendCommunityInvitationEmailAsync(issue.Email, issue.Name, issue.CommunityName,

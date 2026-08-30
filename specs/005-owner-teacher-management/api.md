@@ -149,3 +149,7 @@ Follow [quickstart.md](./quickstart.md).
 - The implemented route is versioned and controller-based: `/api/v1/Communities/...`.
 - No migration was added because the existing schema already contained the required entities, fields, relationships, and indexes.
 - No custom repository or new permission framework was added.
+
+## Superseded Staff Contract
+
+Teacher list and removal routes are now community-ID-free: `GET /api/v1/Communities/teachers` and `DELETE /api/v1/Communities/teachers/{teacherUserId}`. Invitation remains `POST /api/v1/Communities/teachers/invite` without a client CommunityId. See [feature 018 API](../018-current-community-resolution/api.md).
