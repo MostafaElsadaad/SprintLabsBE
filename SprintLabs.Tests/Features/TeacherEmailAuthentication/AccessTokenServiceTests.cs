@@ -28,7 +28,9 @@ public class AccessTokenServiceTests
 
         token.Claims.Should().Contain(x => x.Type == JwtRegisteredClaimNames.Jti);
         token.Claims.Should().Contain(x => x.Type == "userId" && x.Value == "42");
-        token.Claims.Should().NotContain(x => x.Type.Contains("role", StringComparison.OrdinalIgnoreCase));
+        token.Claims.Should().NotContain(x =>
+            x.Type.Contains("community", StringComparison.OrdinalIgnoreCase) ||
+            x.Type.Contains("role", StringComparison.OrdinalIgnoreCase));
         result.AccessTokenExpiresAt.Kind.Should().Be(DateTimeKind.Utc);
     }
 

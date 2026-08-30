@@ -202,3 +202,7 @@ Controlled errors use the existing `GenericException` and global error response 
 - The implemented route is versioned and controller-based: `/api/v1/Communities/...`.
 - `PATCH` requires `name`; `gradeId` is optional so rename-only updates are supported.
 - Platform-admin status does not bypass the Active Owner/Teacher membership requirement.
+
+## Superseded Staff Contract
+
+Grade and class routes no longer contain a CommunityId path parameter; the authenticated staff membership resolves tenant context server-side. See [feature 018 API](../018-current-community-resolution/api.md).

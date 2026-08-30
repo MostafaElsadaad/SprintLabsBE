@@ -70,6 +70,7 @@ namespace Infrastructure
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICommunityAccessService, CommunityAccessService>();
             services.AddScoped<ICommunityLoginActivationService, CommunityLoginActivationService>();
+            services.AddScoped<IStaffCommunityMembershipService, StaffCommunityMembershipService>();
             services.AddScoped<IXpCalculationService, XpCalculationService>();
             services.AddScoped<ILevelProgressionService, LevelProgressionService>();
             services.AddScoped<IRpRankCalculationService, RpRankCalculationService>();

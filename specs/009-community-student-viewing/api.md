@@ -131,3 +131,7 @@ The detail endpoint only returns a student when a non-revoked student license in
 - Refresh list data after student license management or student login activation flows.
 - Treat analytics fields as placeholders only.
 - Do not infer access from email or platform admin status; render based on server authorization and responses.
+
+## Superseded Staff Contract
+
+Student roster and detail routes no longer contain a CommunityId path parameter; the authenticated Owner/Teacher membership resolves tenant context server-side. See [feature 018 API](../018-current-community-resolution/api.md).

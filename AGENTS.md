@@ -244,5 +244,5 @@ When starting execution, build in this order:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/017-platform-admin-password-authentication/plan.md
+at specs/018-current-community-resolution/plan.md
 <!-- SPECKIT END -->

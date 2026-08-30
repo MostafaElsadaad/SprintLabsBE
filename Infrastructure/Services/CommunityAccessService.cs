@@ -41,17 +41,37 @@ public class CommunityAccessService : ICommunityAccessService
                 && requiredRoles.Contains(x.Role));
     }
 
-    public async Task<long?> GetSingleActiveCommunityIdForRole(long userId, CommunityUserRole role)
+    public async Task<long?> ResolveCurrentStaffCommunityId(
+        long userId,
+        CancellationToken cancellationToken = default)
     {
-        var communityIds = await _communityUserRepository.AsQueryable()
+        var currentMemberships = await _communityUserRepository.AsQueryable()
             .Where(x => x.UserId == userId &&
-                        x.Role == role &&
-                        x.Status == CommunityUserStatus.Active &&
-                        x.Community.Status == CommunityStatus.Active)
-            .Select(x => x.CommunityId)
-            .Take(2)
-            .ToListAsync();
+                        (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher) &&
+                        (x.Status == CommunityUserStatus.Pending || x.Status == CommunityUserStatus.Active))
+            .Select(x => new
+            {
+                x.CommunityId,
+                MembershipStatus = x.Status,
+                CommunityStatus = x.Community.Status
+            })
+            .ToListAsync(cancellationToken);
 
-        return communityIds.Count == 1 ? communityIds[0] : null;
+        var currentCommunityIds = currentMemberships
+            .Select(x => x.CommunityId)
+            .Distinct()
+            .ToList();
+        if (currentCommunityIds.Count != 1)
+        {
+            return null;
+        }
+
+        var communityId = currentCommunityIds[0];
+        return currentMemberships.Any(x =>
+            x.CommunityId == communityId &&
+            x.MembershipStatus == CommunityUserStatus.Active &&
+            x.CommunityStatus == CommunityStatus.Active)
+                ? communityId
+                : null;
     }
 }

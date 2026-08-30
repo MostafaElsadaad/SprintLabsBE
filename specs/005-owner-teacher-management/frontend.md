@@ -119,3 +119,7 @@ Duplicate invites for an existing Pending or Active Teacher are idempotent from 
 
 - Pending teachers activate on matching Google login; the frontend does not call a separate activation endpoint.
 - Removed teachers remain visible in the list with `status = "Removed"` so Owners can see the removal state.
+
+## Superseded Staff Contract
+
+Use the community-ID-free teacher list, invite, and removal calls from [feature 018 frontend handoff](../018-current-community-resolution/frontend.md); do not send CommunityId in URLs, query parameters, or bodies.

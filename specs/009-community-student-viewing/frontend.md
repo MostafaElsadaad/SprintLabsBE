@@ -75,3 +75,7 @@ No create, update, revoke, import, export, assignment, report, dashboard, or ana
 ## Open Questions
 
 - None for this feature. Real analytics display remains a future feature.
+
+## Superseded Staff Contract
+
+Use the community-ID-free roster and detail calls from [feature 018 frontend handoff](../018-current-community-resolution/frontend.md). Do not retry a 403/404 with a different CommunityId.

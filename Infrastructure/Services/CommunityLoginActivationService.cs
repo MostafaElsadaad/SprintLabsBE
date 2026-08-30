@@ -1,9 +1,19 @@
+using System.Data;
+using System.Net;
+
 using Domain.Enums;
 using Domain.Models;
 using Domain.Repositories;
 using Domain.Services;
 
+using Infrastructure.DataAccess;
+using Infrastructure.Services.Common;
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+
+using Shared.Enums;
+using Shared.Exceptions;
 
 namespace Infrastructure.Services;
 
@@ -12,15 +22,18 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
     private readonly IBaseRepository<CommunityUser> _communityUserRepository;
     private readonly IBaseRepository<StudentLicense> _studentLicenseRepository;
     private readonly IBaseRepository<TeacherInvitation>? _teacherInvitationRepository;
+    private readonly ApplicationDbContext? _context;
 
     public CommunityLoginActivationService(
         IBaseRepository<CommunityUser> communityUserRepository,
         IBaseRepository<StudentLicense> studentLicenseRepository,
-        IBaseRepository<TeacherInvitation>? teacherInvitationRepository = null)
+        IBaseRepository<TeacherInvitation>? teacherInvitationRepository = null,
+        ApplicationDbContext? context = null)
     {
         _communityUserRepository = communityUserRepository;
         _studentLicenseRepository = studentLicenseRepository;
         _teacherInvitationRepository = teacherInvitationRepository;
+        _context = context;
     }
 
     public async Task ActivateEligiblePendingTeacherMembershipsAsync(
@@ -33,6 +46,25 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
         {
             return;
         }
+
+        await using var transaction = await BeginTransactionAsync(cancellationToken);
+        if (_context != null)
+        {
+            await StaffCommunityMembershipIntegrity.LockUserAsync(_context, userId, cancellationToken);
+        }
+
+        var currentStaffMemberships = _context != null
+            ? await StaffCommunityMembershipIntegrity.GetCurrentStaffMembershipsAsync(_context, userId, cancellationToken)
+            : await _communityUserRepository.AsQueryable()
+                .Where(x => x.UserId == userId &&
+                            (x.Role == CommunityUserRole.Owner || x.Role == CommunityUserRole.Teacher) &&
+                            (x.Status == CommunityUserStatus.Pending || x.Status == CommunityUserStatus.Active))
+                .ToListAsync(cancellationToken);
+        if (currentStaffMemberships.Select(x => x.CommunityId).Distinct().Count() > 1)
+        {
+            throw TeacherCommunityConflict();
+        }
+
         var memberships = await _communityUserRepository.AsQueryable()
             .Where(x => x.UserId == userId
                 && x.Role == CommunityUserRole.Teacher
@@ -81,6 +113,10 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
         if (changed)
         {
             await _communityUserRepository.SaveChangesAsync();
+        }
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(cancellationToken);
         }
     }
 
@@ -173,5 +209,23 @@ public class CommunityLoginActivationService : ICommunityLoginActivationService
     private static string NormalizeEmail(string email)
     {
         return email.Trim().ToLowerInvariant();
+    }
+
+    private async Task<IDbContextTransaction?> BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        if (_context == null || !_context.Database.IsRelational())
+        {
+            return null;
+        }
+
+        return await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+    }
+
+    private static GenericException TeacherCommunityConflict()
+    {
+        return new GenericException(
+            ErrorCode.TeacherAlreadyBelongsToAnotherCommunity,
+            ErrorMessage.TeacherAlreadyBelongsToAnotherCommunity,
+            HttpStatusCode.Conflict);
     }
 }

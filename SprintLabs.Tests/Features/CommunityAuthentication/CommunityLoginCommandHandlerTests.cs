@@ -97,6 +97,80 @@ public class CommunityLoginCommandHandlerTests
         refresh.VerifyNoOtherCalls();
     }
 
+    [Theory]
+    [InlineData(CommunityUserRole.Owner, CommunityUserRole.Teacher)]
+    [InlineData(CommunityUserRole.Teacher, CommunityUserRole.Owner)]
+    public async Task Handle_current_memberships_in_two_communities_returns_conflict_before_tokens(
+        CommunityUserRole firstRole,
+        CommunityUserRole secondRole)
+    {
+        await using var context = CreateContext();
+        await SeedMembershipAsync(context, firstRole, CommunityUserStatus.Active, 1);
+        await SeedMembershipAsync(context, secondRole, CommunityUserStatus.Pending, 2);
+        var access = new Mock<IAccessTokenService>();
+        var refresh = new Mock<IRefreshTokenService>();
+
+        var action = async () => await CreateHandler(context, Identity(20).Object, access.Object, refresh.Object)
+            .Handle(new CommunityLoginCommand { Identifier = "teacher", Password = "password" }, CancellationToken.None);
+
+        (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
+        access.VerifyNoOtherCalls();
+        refresh.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_platform_administrator_with_conflicting_staff_memberships_returns_conflict_before_tokens()
+    {
+        await using var context = CreateContext();
+        await SeedMembershipAsync(context, CommunityUserRole.Owner, CommunityUserStatus.Active, 1);
+        await SeedMembershipAsync(context, CommunityUserRole.Teacher, CommunityUserStatus.Pending, 2);
+        var access = new Mock<IAccessTokenService>();
+        var refresh = new Mock<IRefreshTokenService>();
+
+        var action = async () => await CreateHandler(context, Identity(20, isPlatformAdmin: true).Object, access.Object, refresh.Object)
+            .Handle(new CommunityLoginCommand { Identifier = "platform.admin", Password = "password" }, CancellationToken.None);
+
+        (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
+        access.VerifyNoOtherCalls();
+        refresh.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_active_staff_membership_in_suspended_second_community_returns_conflict_before_tokens()
+    {
+        await using var context = CreateContext();
+        await SeedMembershipAsync(context, CommunityUserRole.Owner, CommunityUserStatus.Active, 1);
+        await SeedMembershipAsync(context, CommunityUserRole.Teacher, CommunityUserStatus.Active, 2, CommunityStatus.Suspended);
+        var access = new Mock<IAccessTokenService>();
+        var refresh = new Mock<IRefreshTokenService>();
+
+        var action = async () => await CreateHandler(context, Identity(20).Object, access.Object, refresh.Object)
+            .Handle(new CommunityLoginCommand { Identifier = "teacher", Password = "password" }, CancellationToken.None);
+
+        (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
+        access.VerifyNoOtherCalls();
+        refresh.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_removed_staff_and_student_memberships_do_not_conflict_with_one_valid_teacher_membership()
+    {
+        await using var context = CreateContext();
+        await SeedMembershipAsync(context, CommunityUserRole.Teacher, CommunityUserStatus.Active, 1);
+        await SeedMembershipAsync(context, CommunityUserRole.Owner, CommunityUserStatus.Removed, 2);
+        await SeedMembershipAsync(context, CommunityUserRole.Student, CommunityUserStatus.Active, 3);
+        var access = Access(20, AuthenticatedAccountType.Teacher);
+        var refresh = Refresh(20);
+
+        var result = await CreateHandler(context, Identity(20).Object, access.Object, refresh.Object)
+            .Handle(new CommunityLoginCommand { Identifier = "teacher", Password = "password" }, CancellationToken.None);
+
+        result.Role.Should().Be("Teacher");
+        result.Community!.Id.Should().Be(1);
+        access.Verify(x => x.Create(20, "teacher@example.com", "User", AuthenticatedAccountType.Teacher), Times.Once);
+        refresh.Verify(x => x.IssueAsync(20, It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static CommunityLoginCommandHandler CreateHandler(
         ApplicationDbContext context,
         ITeacherIdentityService identity,
@@ -143,9 +217,14 @@ public class CommunityLoginCommandHandlerTests
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
 
-    private static async Task SeedMembershipAsync(ApplicationDbContext context, CommunityUserRole role, CommunityUserStatus status, long communityId = 1)
+    private static async Task SeedMembershipAsync(
+        ApplicationDbContext context,
+        CommunityUserRole role,
+        CommunityUserStatus status,
+        long communityId = 1,
+        CommunityStatus communityStatus = CommunityStatus.Active)
     {
-        context.Communities.Add(new Community { Id = communityId, Name = "Community", Slug = $"community-{communityId}", Status = CommunityStatus.Active });
+        context.Communities.Add(new Community { Id = communityId, Name = "Community", Slug = $"community-{communityId}", Status = communityStatus });
         context.CommunityUsers.Add(new CommunityUser { CommunityId = communityId, UserId = 20, Role = role, Status = status });
         await context.SaveChangesAsync();
     }

@@ -108,28 +108,33 @@ public class TeacherInvitationService : ITeacherInvitationService
             {
                 throw Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
             }
-
-            if (role == CommunityUserRole.Teacher)
-            {
-                user.IsTeacherAccount = true;
-            }
-            user.UpdatedAt = now;
-            Ensure(await _userManager.UpdateAsync(user));
         }
 
-        var currentRoleMemberships = await _context.CommunityUsers
-            .Where(x => x.UserId == user.Id &&
-                        x.Role == role &&
-                        (x.Status == CommunityUserStatus.Active || x.Status == CommunityUserStatus.Pending))
-            .OrderBy(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        if (currentRoleMemberships.Any(x => x.CommunityId != communityId))
+        await StaffCommunityMembershipIntegrity.LockUserAsync(_context, user.Id, cancellationToken);
+        if (await StaffCommunityMembershipIntegrity.HasCurrentStaffMembershipInAnotherCommunityAsync(
+                _context,
+                user.Id,
+                communityId,
+                cancellationToken))
         {
             throw role == CommunityUserRole.Teacher
                 ? TeacherCommunityConflict()
                 : Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
         }
+
+        if (role == CommunityUserRole.Teacher && !user.IsTeacherAccount)
+        {
+            user.IsTeacherAccount = true;
+            user.UpdatedAt = now;
+            Ensure(await _userManager.UpdateAsync(user));
+        }
+
+        var currentRoleMemberships = (await StaffCommunityMembershipIntegrity.GetCurrentStaffMembershipsAsync(
+                _context,
+                user.Id,
+                cancellationToken))
+            .Where(x => x.Role == role)
+            .ToList();
 
         var membership = currentRoleMemberships.SingleOrDefault();
         if (membership?.Status == CommunityUserStatus.Active)
@@ -271,13 +276,12 @@ public class TeacherInvitationService : ITeacherInvitationService
             throw InvalidInvitation();
         }
 
-        var otherCurrentRelationships = await _context.CommunityUsers
-            .Where(x => x.UserId == user.Id &&
-                        x.Role == membership.Role &&
-                        (x.Status == CommunityUserStatus.Active || x.Status == CommunityUserStatus.Pending) &&
-                        x.Id != membership.Id)
-            .AnyAsync(cancellationToken);
-        if (otherCurrentRelationships)
+        await StaffCommunityMembershipIntegrity.LockUserAsync(_context, user.Id, cancellationToken);
+        if (await StaffCommunityMembershipIntegrity.HasCurrentStaffMembershipInAnotherCommunityAsync(
+                _context,
+                user.Id,
+                membership.CommunityId,
+                cancellationToken))
         {
             throw membership.Role == CommunityUserRole.Teacher
                 ? TeacherCommunityConflict()

@@ -101,3 +101,7 @@ Follow [quickstart.md](./quickstart.md).
 - Authorization is evaluated in handlers through `ICommunityAccessService`; no policy or role attribute was added.
 - Slug uniqueness is checked before save and remains protected by the existing unique database index.
 - No migration or platform-admin endpoint change was required.
+
+## Superseded Staff Contract
+
+Feature 018 replaces staff profile calls with `GET` and `PATCH /api/v1/Communities/me`; clients no longer supply CommunityId. `GET /api/v1/Communities/{communityId}` remains for active Student-compatible profile access. See [feature 018 API](../018-current-community-resolution/api.md).

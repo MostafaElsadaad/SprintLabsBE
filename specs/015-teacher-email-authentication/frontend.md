@@ -152,3 +152,6 @@ The link provides only the invitation token.
 
 - The frontend's secure token-storage mechanism depends on the client platform and is outside this backend specification.
 
+## Superseded Staff Contract
+
+Do not derive, persist, or send a CommunityId from staff authentication. Use the current-community staff calls defined in [feature 018 frontend handoff](../018-current-community-resolution/frontend.md).

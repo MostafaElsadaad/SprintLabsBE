@@ -13,6 +13,27 @@ namespace Compass.Tests.Features.CommunityAccessFoundation;
 
 public class CommunityAccessServiceTests
 {
+    public static TheoryData<CommunityUserRole, CommunityUserStatus, CommunityUserRole, CommunityUserStatus>
+        CrossCommunityStaffConflicts => new()
+        {
+            { CommunityUserRole.Owner, CommunityUserStatus.Active, CommunityUserRole.Owner, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserStatus.Active, CommunityUserRole.Owner, CommunityUserStatus.Pending },
+            { CommunityUserRole.Owner, CommunityUserStatus.Pending, CommunityUserRole.Owner, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserStatus.Pending, CommunityUserRole.Owner, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Active, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Active, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Pending, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Pending, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Owner, CommunityUserStatus.Active, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserStatus.Active, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Owner, CommunityUserStatus.Pending, CommunityUserRole.Teacher, CommunityUserStatus.Active },
+            { CommunityUserRole.Owner, CommunityUserStatus.Pending, CommunityUserRole.Teacher, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Active, CommunityUserRole.Owner, CommunityUserStatus.Active },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Active, CommunityUserRole.Owner, CommunityUserStatus.Pending },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Pending, CommunityUserRole.Owner, CommunityUserStatus.Active },
+            { CommunityUserRole.Teacher, CommunityUserStatus.Pending, CommunityUserRole.Owner, CommunityUserStatus.Pending }
+        };
+
     [Fact]
     public async Task CanAccessCommunity_AllowsOnlyActiveMembership()
     {
@@ -41,6 +62,91 @@ public class CommunityAccessServiceTests
         (await service.HasCommunityRole(10, 2, new[] { CommunityUserRole.Owner })).Should().BeFalse();
         (await service.HasCommunityRole(10, 1, Array.Empty<CommunityUserRole>())).Should().BeFalse();
         (await service.HasCommunityRole(10, 1, null)).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(CommunityUserRole.Owner)]
+    [InlineData(CommunityUserRole.Teacher)]
+    public async Task ResolveCurrentStaffCommunityId_returns_one_active_staff_community(CommunityUserRole role)
+    {
+        await using var context = CreateContext();
+        await AddMembershipAsync(context, 1, role, CommunityUserStatus.Active);
+
+        var result = await CreateService(context).ResolveCurrentStaffCommunityId(10);
+
+        result.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(null, null, CommunityStatus.Active)]
+    [InlineData(CommunityUserRole.Owner, CommunityUserStatus.Pending, CommunityStatus.Active)]
+    [InlineData(CommunityUserRole.Teacher, CommunityUserStatus.Removed, CommunityStatus.Active)]
+    [InlineData(CommunityUserRole.Student, CommunityUserStatus.Active, CommunityStatus.Active)]
+    [InlineData(CommunityUserRole.Owner, CommunityUserStatus.Active, CommunityStatus.Suspended)]
+    public async Task ResolveCurrentStaffCommunityId_fails_closed_without_one_eligible_active_staff_membership(
+        CommunityUserRole? role,
+        CommunityUserStatus? status,
+        CommunityStatus communityStatus)
+    {
+        await using var context = CreateContext();
+        if (role.HasValue && status.HasValue)
+        {
+            await AddMembershipAsync(context, 1, role.Value, status.Value, communityStatus);
+        }
+
+        var result = await CreateService(context).ResolveCurrentStaffCommunityId(10);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResolveCurrentStaffCommunityId_ignores_removed_and_student_memberships()
+    {
+        await using var context = CreateContext();
+        await AddMembershipAsync(context, 1, CommunityUserRole.Owner, CommunityUserStatus.Active);
+        await AddMembershipAsync(context, 2, CommunityUserRole.Teacher, CommunityUserStatus.Removed);
+        await AddMembershipAsync(context, 3, CommunityUserRole.Student, CommunityUserStatus.Active);
+
+        var result = await CreateService(context).ResolveCurrentStaffCommunityId(10);
+
+        result.Should().Be(1);
+    }
+
+    [Theory]
+    [MemberData(nameof(CrossCommunityStaffConflicts))]
+    public async Task ResolveCurrentStaffCommunityId_fails_closed_for_every_cross_community_staff_conflict(
+        CommunityUserRole firstRole,
+        CommunityUserStatus firstStatus,
+        CommunityUserRole secondRole,
+        CommunityUserStatus secondStatus)
+    {
+        await using var context = CreateContext();
+        await AddMembershipAsync(context, 1, firstRole, firstStatus);
+        await AddMembershipAsync(context, 2, secondRole, secondStatus);
+
+        var result = await CreateService(context).ResolveCurrentStaffCommunityId(10);
+
+        result.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResolveCurrentStaffCommunityId_never_selects_by_insertion_order(bool reverseOrder)
+    {
+        await using var context = CreateContext();
+        var memberships = new[]
+        {
+            (CommunityId: 1L, Role: CommunityUserRole.Owner),
+            (CommunityId: 2L, Role: CommunityUserRole.Teacher)
+        };
+
+        foreach (var membership in reverseOrder ? memberships.Reverse() : memberships)
+        {
+            await AddMembershipAsync(context, membership.CommunityId, membership.Role, CommunityUserStatus.Active);
+        }
+
+        (await CreateService(context).ResolveCurrentStaffCommunityId(10)).Should().BeNull();
     }
 
     private static ApplicationDbContext CreateContext()
@@ -87,6 +193,30 @@ public class CommunityAccessServiceTests
                 Status = CommunityUserStatus.Removed
             });
 
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task AddMembershipAsync(
+        ApplicationDbContext context,
+        long communityId,
+        CommunityUserRole role,
+        CommunityUserStatus status,
+        CommunityStatus communityStatus = CommunityStatus.Active)
+    {
+        context.Communities.Add(new Community
+        {
+            Id = communityId,
+            Name = $"Community {communityId}",
+            Slug = $"community-{communityId}",
+            Status = communityStatus
+        });
+        context.CommunityUsers.Add(new CommunityUser
+        {
+            CommunityId = communityId,
+            UserId = 10,
+            Role = role,
+            Status = status
+        });
         await context.SaveChangesAsync();
     }
 }
