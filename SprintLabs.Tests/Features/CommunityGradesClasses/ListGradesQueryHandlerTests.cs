@@ -21,7 +21,7 @@ public class ListGradesQueryHandlerTests
     private readonly Mock<IUserService> _userServiceMock = new();
 
     [Fact]
-    public async Task Handle_ReturnsRouteCommunityGradesWithActiveClassCounts()
+    public async Task Handle_ReturnsExactlyTheSupportedGradesInValueOrder()
     {
         await using var context = CommunityGradesClassesTestHelper.CreateContext();
         await CommunityGradesClassesTestHelper.SeedCommunities(context, CommunityUserRole.Teacher);
@@ -35,10 +35,8 @@ public class ListGradesQueryHandlerTests
             CommunityId = 1
         }, CancellationToken.None);
 
-        result.Should().HaveCount(2);
-        result.Select(x => x.Id).Should().Equal(1, 2);
-        result.Single(x => x.Id == 1).ClassCount.Should().Be(1);
-        result.Single(x => x.Id == 2).ClassCount.Should().Be(1);
+        result.Should().HaveCount(6);
+        result.Select(x => x.Value).Should().Equal(7, 8, 9, 10, 11, 12);
     }
 
     private ListGradesQueryHandler CreateHandler(ApplicationDbContext context)
@@ -46,7 +44,6 @@ public class ListGradesQueryHandlerTests
         return new ListGradesQueryHandler(
             _userServiceMock.Object,
             new CommunityAccessService(new BaseRepository<CommunityUser>(context)),
-            new BaseRepository<Grade>(context),
-            new BaseRepository<ClassEntity>(context));
+            new BaseRepository<Grade>(context));
     }
 }

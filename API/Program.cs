@@ -172,6 +172,14 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine(ex.Message);
     }
 }
+
+if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DemoCommunitySeed:Enabled"))
+{
+    using var scope = app.Services.CreateScope();
+    await DemoCommunitySeeder.SeedAsync(
+        scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
+        scope.ServiceProvider.GetRequiredService<UserManager<User>>());
+}
 #endregion
 
 using (var scope = app.Services.CreateScope())

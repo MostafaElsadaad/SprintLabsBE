@@ -63,7 +63,11 @@ public class CreateClassCommandHandler : IRequestHandler<CreateClassCommand, Cla
 
         var gradeExists = await _gradeRepository.AsQueryable()
             .AnyAsync(
-                x => x.Id == request.GradeId && x.CommunityId == request.CommunityId,
+                x => x.Id == request.GradeId
+                     && x.CommunityId == request.CommunityId
+                     && x.Value.HasValue
+                     && x.Value >= 7
+                     && x.Value <= 12,
                 cancellationToken);
         if (!gradeExists)
         {

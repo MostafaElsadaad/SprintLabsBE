@@ -42,7 +42,11 @@ public static class StudentLicenseValidation
     {
         var gradeExists = await gradeRepository.AsQueryable()
             .AnyAsync(
-                x => x.Id == gradeId && x.CommunityId == communityId,
+                x => x.Id == gradeId
+                     && x.CommunityId == communityId
+                     && x.Value.HasValue
+                     && x.Value >= 7
+                     && x.Value <= 12,
                 cancellationToken);
         if (!gradeExists)
         {

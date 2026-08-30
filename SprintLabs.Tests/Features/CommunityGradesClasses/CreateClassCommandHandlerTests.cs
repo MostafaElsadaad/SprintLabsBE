@@ -34,7 +34,7 @@ public class CreateClassCommandHandlerTests
     {
         await using var context = CommunityGradesClassesTestHelper.CreateContext();
         await CommunityGradesClassesTestHelper.SeedCommunities(context, role);
-        context.Grades.Add(new Grade { Id = 1, CommunityId = 1, Name = "Grade 5", SortOrder = 5 });
+        context.Grades.Add(new Grade { Id = 1, CommunityId = 1, Value = 7, Name = "Grade 7", SortOrder = 7 });
         await context.SaveChangesAsync();
         CommunityGradesClassesTestHelper.SetupActiveUser(_userServiceMock);
         var handler = CreateHandler(context);
@@ -57,7 +57,7 @@ public class CreateClassCommandHandlerTests
     {
         await using var context = CommunityGradesClassesTestHelper.CreateContext();
         await CommunityGradesClassesTestHelper.SeedCommunities(context, CommunityUserRole.Owner);
-        context.Grades.Add(new Grade { Id = 3, CommunityId = 2, Name = "Other Grade", SortOrder = 1 });
+        context.Grades.Add(new Grade { Id = 3, CommunityId = 2, Value = 7, Name = "Grade 7", SortOrder = 7 });
         await context.SaveChangesAsync();
         CommunityGradesClassesTestHelper.SetupActiveUser(_userServiceMock);
         var handler = CreateHandler(context);
@@ -80,7 +80,7 @@ public class CreateClassCommandHandlerTests
     {
         await using var context = CommunityGradesClassesTestHelper.CreateContext();
         await CommunityGradesClassesTestHelper.SeedCommunities(context, CommunityUserRole.Student);
-        context.Grades.Add(new Grade { Id = 1, CommunityId = 1, Name = "Grade 5", SortOrder = 5 });
+        context.Grades.Add(new Grade { Id = 1, CommunityId = 1, Value = 7, Name = "Grade 7", SortOrder = 7 });
         await context.SaveChangesAsync();
         CommunityGradesClassesTestHelper.SetupActiveUser(_userServiceMock);
         var handler = CreateHandler(context);

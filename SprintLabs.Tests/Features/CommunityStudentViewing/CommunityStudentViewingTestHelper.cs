@@ -84,9 +84,9 @@ internal static class CommunityStudentViewingTestHelper
         }
 
         context.Grades.AddRange(
-            new Grade { Id = 1, CommunityId = 1, Name = "Grade 5", SortOrder = 5 },
-            new Grade { Id = 2, CommunityId = 1, Name = "Grade 6", SortOrder = 6 },
-            new Grade { Id = 3, CommunityId = 2, Name = "Other Grade", SortOrder = 1 });
+            new Grade { Id = 1, CommunityId = 1, Value = 7, Name = "Grade 7", SortOrder = 7 },
+            new Grade { Id = 2, CommunityId = 1, Value = 8, Name = "Grade 8", SortOrder = 8 },
+            new Grade { Id = 3, CommunityId = 2, Value = 7, Name = "Grade 7", SortOrder = 7 });
 
         context.Classes.AddRange(
             new ClassEntity

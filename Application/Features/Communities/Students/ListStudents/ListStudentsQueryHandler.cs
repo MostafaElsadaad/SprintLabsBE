@@ -1,4 +1,5 @@
 using System.Net;
+using System.Globalization;
 
 using Application.Features.Communities.Students.Common;
 
@@ -155,7 +156,7 @@ public class ListStudentsQueryHandler
                 PlayerName = player?.Name ?? user?.Name,
                 AvatarUrl = player?.AvatarUrl ?? user?.AvatarUrl,
                 GradeId = x.GradeId,
-                GradeName = x.Grade?.Name ?? string.Empty,
+                GradeName = x.Grade?.Value?.ToString(CultureInfo.InvariantCulture) ?? x.Grade?.Name ?? string.Empty,
                 ClassId = x.ClassId,
                 ClassName = x.Class?.Name ?? string.Empty,
                 ActivatedAt = x.ActivatedAt,

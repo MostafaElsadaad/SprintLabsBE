@@ -80,7 +80,11 @@ public class UpdateClassCommandHandler : IRequestHandler<UpdateClassCommand, Cla
         {
             var gradeExists = await _gradeRepository.AsQueryable()
                 .AnyAsync(
-                    x => x.Id == request.GradeId.Value && x.CommunityId == request.CommunityId,
+                    x => x.Id == request.GradeId.Value
+                         && x.CommunityId == request.CommunityId
+                         && x.Value.HasValue
+                         && x.Value >= 7
+                         && x.Value <= 12,
                     cancellationToken);
             if (!gradeExists)
             {

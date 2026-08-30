@@ -21,18 +21,15 @@ public class ListGradesQueryHandler : IRequestHandler<ListGradesQuery, List<Grad
     private readonly IUserService _userService;
     private readonly ICommunityAccessService _communityAccessService;
     private readonly IBaseRepository<Grade> _gradeRepository;
-    private readonly IBaseRepository<Class> _classRepository;
 
     public ListGradesQueryHandler(
         IUserService userService,
         ICommunityAccessService communityAccessService,
-        IBaseRepository<Grade> gradeRepository,
-        IBaseRepository<Class> classRepository)
+        IBaseRepository<Grade> gradeRepository)
     {
         _userService = userService;
         _communityAccessService = communityAccessService;
         _gradeRepository = gradeRepository;
-        _classRepository = classRepository;
     }
 
     public async Task<List<GradeResponse>> Handle(
@@ -50,29 +47,22 @@ public class ListGradesQueryHandler : IRequestHandler<ListGradesQuery, List<Grad
             request.UserId,
             request.CommunityId);
 
-        var classCounts = await _classRepository.AsQueryable()
-            .Where(x =>
-                x.CommunityId == request.CommunityId
-                && x.Status == ClassStatus.Active)
-            .GroupBy(x => x.GradeId)
-            .Select(x => new { GradeId = x.Key, Count = x.Count() })
-            .ToDictionaryAsync(x => x.GradeId, x => x.Count, cancellationToken);
-
         var grades = await _gradeRepository.AsQueryable()
-            .Where(x => x.CommunityId == request.CommunityId)
-            .OrderBy(x => x.SortOrder)
-            .ThenBy(x => x.Name)
+            .Where(x => x.CommunityId == request.CommunityId && x.Value.HasValue)
+            .OrderBy(x => x.Value)
             .ToListAsync(cancellationToken);
+
+        var values = grades.Select(x => x.Value!.Value).ToList();
+        if (values.Count != 6 || !values.SequenceEqual(new[] { 7, 8, 9, 10, 11, 12 }))
+        {
+            throw InvalidGradeContext();
+        }
 
         return grades
             .Select(x => new GradeResponse
             {
                 Id = x.Id,
-                CommunityId = x.CommunityId,
-                Name = x.Name,
-                SortOrder = x.SortOrder,
-                ClassCount = classCounts.TryGetValue(x.Id, out var count) ? count : 0,
-                CreatedAt = x.CreatedAt
+                Value = x.Value!.Value
             })
             .ToList();
     }
@@ -82,6 +72,14 @@ public class ListGradesQueryHandler : IRequestHandler<ListGradesQuery, List<Grad
         return new GenericException(
             message: ErrorMessage.InvalidInput,
             statusCode: HttpStatusCode.BadRequest,
+            errorCode: ErrorCode.Failure);
+    }
+
+    private static GenericException InvalidGradeContext()
+    {
+        return new GenericException(
+            message: ErrorMessage.InvalidInput,
+            statusCode: HttpStatusCode.Conflict,
             errorCode: ErrorCode.Failure);
     }
 }

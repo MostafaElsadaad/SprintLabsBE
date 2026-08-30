@@ -1,4 +1,5 @@
 using System.Net;
+using System.Globalization;
 
 using Application.Features.Communities.Students.Common;
 
@@ -89,7 +90,7 @@ public class GetStudentDetailQueryHandler : IRequestHandler<GetStudentDetailQuer
             Level = player.Level,
             LicenseStatus = license.Status.ToString(),
             GradeId = license.GradeId,
-            GradeName = license.Grade?.Name ?? string.Empty,
+            GradeName = license.Grade?.Value?.ToString(CultureInfo.InvariantCulture) ?? license.Grade?.Name ?? string.Empty,
             ClassId = license.ClassId,
             ClassName = license.Class?.Name ?? string.Empty,
             ActivatedAt = license.ActivatedAt,

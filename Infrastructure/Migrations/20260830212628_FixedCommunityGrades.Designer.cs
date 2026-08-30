@@ -4,6 +4,7 @@ using Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830212628_FixedCommunityGrades")]
+    partial class FixedCommunityGrades
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -871,35 +874,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("StudentLicenses");
                 });
 
-            modelBuilder.Entity("Domain.Models.TeacherClassAssignment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ClassId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(6)")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
-
-                    b.Property<long>("TeacherUserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClassId");
-
-                    b.HasIndex("TeacherUserId", "ClassId")
-                        .IsUnique();
-
-                    b.ToTable("TeacherClassAssignments");
-                });
-
             modelBuilder.Entity("Domain.Models.TeacherInvitation", b =>
                 {
                     b.Property<long>("Id")
@@ -1453,23 +1427,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Grade");
                 });
 
-            modelBuilder.Entity("Domain.Models.TeacherClassAssignment", b =>
-                {
-                    b.HasOne("Domain.Models.Class", "Class")
-                        .WithMany("TeacherClassAssignments")
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Infrastructure.DataAccess.User", null)
-                        .WithMany()
-                        .HasForeignKey("TeacherUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Class");
-                });
-
             modelBuilder.Entity("Domain.Models.TeacherInvitation", b =>
                 {
                     b.HasOne("Domain.Models.CommunityUser", "CommunityUser")
@@ -1536,11 +1493,6 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Domain.Models.Class", b =>
-                {
-                    b.Navigation("TeacherClassAssignments");
                 });
 
             modelBuilder.Entity("Domain.Models.Community", b =>

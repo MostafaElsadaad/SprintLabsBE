@@ -7,4 +7,5 @@ public class TeacherResponse
     public string Email { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public List<TeacherClassResponse> Classes { get; set; } = new();
 }

@@ -7,12 +7,12 @@ using Application.Features.Communities.Common;
 using Application.Features.Communities.GetCommunityProfile;
 using Application.Features.Communities.GradesClasses.Common;
 using Application.Features.Communities.GradesClasses.CreateClass;
-using Application.Features.Communities.GradesClasses.CreateGrade;
 using Application.Features.Communities.GradesClasses.ListGrades;
 using Application.Features.Communities.GradesClasses.UpdateClass;
 using Application.Features.Communities.StudentLicenses.AddStudentLicense;
 using Application.Features.Communities.StudentLicenses.UpdateStudentLicense;
 using Application.Features.Communities.Teachers.InviteTeacher;
+using Application.Features.Communities.Teachers.ReplaceTeacherClassAssignments;
 using Application.Features.Communities.UpdateCommunityProfile;
 
 using Domain.Services;
@@ -40,7 +40,7 @@ public class CommunitiesControllerRouteContractTests
         { nameof(CommunitiesController.ListTeachers), typeof(HttpGetAttribute), "teachers" },
         { nameof(CommunitiesController.InviteTeacher), typeof(HttpPostAttribute), "teachers/invite" },
         { nameof(CommunitiesController.RemoveTeacher), typeof(HttpDeleteAttribute), "teachers/{teacherUserId:long}" },
-        { nameof(CommunitiesController.CreateGrade), typeof(HttpPostAttribute), "grades" },
+        { nameof(CommunitiesController.ReplaceTeacherClassAssignments), typeof(HttpPutAttribute), "teachers/{teacherUserId:long}/classes" },
         { nameof(CommunitiesController.ListGrades), typeof(HttpGetAttribute), "grades" },
         { nameof(CommunitiesController.CreateClass), typeof(HttpPostAttribute), "classes" },
         { nameof(CommunitiesController.ListClasses), typeof(HttpGetAttribute), "classes" },
@@ -74,7 +74,7 @@ public class CommunitiesControllerRouteContractTests
         {
             typeof(UpdateCommunityProfileRequest),
             typeof(InviteTeacherRequest),
-            typeof(CreateGradeRequest),
+            typeof(ReplaceTeacherClassAssignmentsRequest),
             typeof(CreateClassRequest),
             typeof(UpdateClassRequest),
             typeof(AddStudentLicenseRequest),
@@ -158,6 +158,12 @@ public class CommunitiesControllerRouteContractTests
             .ToList();
 
         actionTemplates.Should().NotContain(template => template!.Contains("{communityId:long}", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Staff_grade_creation_route_is_not_exposed()
+    {
+        typeof(CommunitiesController).GetMethod("CreateGrade").Should().BeNull();
     }
 
     [Fact]

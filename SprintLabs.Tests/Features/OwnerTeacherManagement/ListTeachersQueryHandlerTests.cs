@@ -39,12 +39,13 @@ public class ListTeachersQueryHandlerTests
             CommunityId = 1
         }, CancellationToken.None);
 
-        result.Should().HaveCount(3);
-        result.Select(x => x.UserId).Should().BeEquivalentTo(new[] { 20L, 21L, 22L });
-        result.Should().Contain(x => x.UserId == 20 && x.Status == CommunityUserStatus.Pending.ToString());
-        result.Should().Contain(x => x.UserId == 21 && x.Status == CommunityUserStatus.Active.ToString());
-        result.Should().Contain(x => x.UserId == 22 && x.Status == CommunityUserStatus.Removed.ToString());
-        result.Should().NotContain(x => x.UserId == 23);
+        result.Data.Should().HaveCount(3);
+        result.TotalRecords.Should().Be(3);
+        result.Data.Select(x => x.UserId).Should().BeEquivalentTo(new[] { 20L, 21L, 22L });
+        result.Data.Should().Contain(x => x.UserId == 20 && x.Status == CommunityUserStatus.Pending.ToString());
+        result.Data.Should().Contain(x => x.UserId == 21 && x.Status == CommunityUserStatus.Active.ToString());
+        result.Data.Should().Contain(x => x.UserId == 22 && x.Status == CommunityUserStatus.Removed.ToString());
+        result.Data.Should().NotContain(x => x.UserId == 23);
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class ListTeachersQueryHandlerTests
             CommunityId = 1
         }, CancellationToken.None);
 
-        result.Should().BeEmpty();
+        result.Data.Should().BeEmpty();
     }
 
     [Fact]
@@ -104,7 +105,10 @@ public class ListTeachersQueryHandlerTests
         return new ListTeachersQueryHandler(
             _userServiceMock.Object,
             new CommunityAccessService(new BaseRepository<CommunityUser>(context)),
-            new BaseRepository<CommunityUser>(context));
+            new BaseRepository<CommunityUser>(context),
+            new BaseRepository<Grade>(context),
+            new BaseRepository<Class>(context),
+            new BaseRepository<TeacherClassAssignment>(context));
     }
 
     private void SetupUsers(bool isPlatformAdmin = false)
@@ -119,6 +123,13 @@ public class ListTeachersQueryHandlerTests
                 Status = "Active",
                 IsPlatformAdmin = isPlatformAdmin
             });
+
+        _userServiceMock
+            .Setup(x => x.GetUsersByIds(It.IsAny<IEnumerable<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<long> ids, CancellationToken _) => ids.Select(id => new UserIdentityResponse
+            {
+                Id = id, Email = $"user{id}@example.com", Name = $"User {id}", Status = "Active"
+            }).ToList());
     }
 
     private static ApplicationDbContext CreateContext()

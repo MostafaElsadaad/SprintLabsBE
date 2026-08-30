@@ -69,23 +69,30 @@ internal static class CommunityGradesClassesTestHelper
             {
                 Id = 1,
                 CommunityId = 1,
-                Name = "Grade 5",
-                SortOrder = 5
+                Value = 7,
+                Name = "Grade 7",
+                SortOrder = 7
             },
             new Grade
             {
                 Id = 2,
                 CommunityId = 1,
-                Name = "Grade 6",
-                SortOrder = 6
+                Value = 8,
+                Name = "Grade 8",
+                SortOrder = 8
             },
             new Grade
             {
                 Id = 3,
                 CommunityId = 2,
-                Name = "Other Grade",
-                SortOrder = 1
-            });
+                Value = 7,
+                Name = "Grade 7",
+                SortOrder = 7
+            },
+            new Grade { Id = 4, CommunityId = 1, Value = 9, Name = "Grade 9", SortOrder = 9 },
+            new Grade { Id = 5, CommunityId = 1, Value = 10, Name = "Grade 10", SortOrder = 10 },
+            new Grade { Id = 6, CommunityId = 1, Value = 11, Name = "Grade 11", SortOrder = 11 },
+            new Grade { Id = 7, CommunityId = 1, Value = 12, Name = "Grade 12", SortOrder = 12 });
 
         context.Classes.AddRange(
             new ClassEntity

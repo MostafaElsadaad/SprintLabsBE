@@ -31,6 +31,7 @@ namespace Infrastructure.DataAccess
         public DbSet<PlayerRankLog> PlayerRankLogs { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<TeacherInvitation> TeacherInvitations { get; set; }
+        public DbSet<TeacherClassAssignment> TeacherClassAssignments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -275,6 +276,8 @@ namespace Infrastructure.DataAccess
 
             modelBuilder.Entity<Grade>(e =>
             {
+                e.Property(x => x.Value);
+
                 e.Property(x => x.Name)
                     .IsRequired()
                     .HasMaxLength(120);
@@ -288,6 +291,10 @@ namespace Infrastructure.DataAccess
 
                 e.HasIndex(x => x.CommunityId);
                 e.HasIndex(x => new { x.CommunityId, x.SortOrder });
+                e.HasIndex(x => new { x.CommunityId, x.Value }).IsUnique();
+                e.ToTable(table => table.HasCheckConstraint(
+                    "CK_Grades_Value_Supported",
+                    "`Value` IS NULL OR `Value` IN (7, 8, 9, 10, 11, 12)"));
             });
 
             modelBuilder.Entity<Class>(e =>
@@ -363,6 +370,15 @@ namespace Infrastructure.DataAccess
                     .WithMany()
                     .HasForeignKey(x => x.PlayerProfileId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<TeacherClassAssignment>(e =>
+            {
+                e.Property(x => x.CreatedAt).IsRequired().HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                e.HasIndex(x => new { x.TeacherUserId, x.ClassId }).IsUnique();
+                e.HasIndex(x => x.ClassId);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.TeacherUserId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Class).WithMany(x => x.TeacherClassAssignments).HasForeignKey(x => x.ClassId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Match>(e =>

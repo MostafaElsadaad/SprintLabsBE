@@ -4,7 +4,6 @@ using Application.Features.Communities.Common;
 using Application.Features.Communities.GetCommunityProfile;
 using Application.Features.Communities.GradesClasses.Common;
 using Application.Features.Communities.GradesClasses.CreateClass;
-using Application.Features.Communities.GradesClasses.CreateGrade;
 using Application.Features.Communities.GradesClasses.DeleteClass;
 using Application.Features.Communities.GradesClasses.ListClasses;
 using Application.Features.Communities.GradesClasses.ListGrades;
@@ -21,6 +20,7 @@ using Application.Features.Communities.Teachers.Common;
 using Application.Features.Communities.Teachers.InviteTeacher;
 using Application.Features.Communities.Teachers.ListTeachers;
 using Application.Features.Communities.Teachers.RemoveTeacher;
+using Application.Features.Communities.Teachers.ReplaceTeacherClassAssignments;
 using Application.Features.Communities.UpdateCommunityProfile;
 
 using Domain.Enums;
@@ -152,7 +152,13 @@ public class CommunitiesController : ControllerBase
     }
 
     [HttpGet("teachers")]
-    public async Task<IActionResult> ListTeachers()
+    public async Task<IActionResult> ListTeachers(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] long? gradeId = null,
+        [FromQuery] long? classId = null,
+        [FromQuery] string? search = null,
+        [FromQuery] CommunityUserStatus? status = null)
     {
         var userId = GetUserId();
         if (userId == null)
@@ -165,10 +171,16 @@ public class CommunitiesController : ControllerBase
         var result = await _mediator.Send(new ListTeachersQuery
         {
             UserId = userId.Value,
-            CommunityId = communityId
+            CommunityId = communityId,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            GradeId = gradeId,
+            ClassId = classId,
+            Search = search,
+            Status = status
         });
 
-        return Ok(new BaseResponse<List<TeacherResponse>>(
+        return Ok(new BaseResponse<PagedResponse<TeacherResponse>>(
             data: result,
             statusCode: HttpStatusCode.OK,
             errorCode: ErrorCode.Success,
@@ -194,32 +206,6 @@ public class CommunitiesController : ControllerBase
         });
 
         return Ok(new BaseResponse<TeacherResponse>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
-    }
-
-    [HttpPost("grades")]
-    public async Task<IActionResult> CreateGrade([FromBody] CreateGradeRequest request)
-    {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new CreateGradeCommand
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            Name = request.Name,
-            SortOrder = request.SortOrder
-        });
-
-        return Ok(new BaseResponse<GradeResponse>(
             data: result,
             statusCode: HttpStatusCode.OK,
             errorCode: ErrorCode.Success,
@@ -538,6 +524,28 @@ public class CommunitiesController : ControllerBase
         return long.TryParse(claimValue, out var userId)
                 ? userId
                 : null;
+    }
+
+    [HttpPut("teachers/{teacherUserId:long}/classes")]
+    public async Task<IActionResult> ReplaceTeacherClassAssignments(
+        long teacherUserId,
+        [FromBody] ReplaceTeacherClassAssignmentsRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null) return Unauthorized();
+        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
+        var result = await _mediator.Send(new ReplaceTeacherClassAssignmentsCommand
+        {
+            UserId = userId.Value,
+            CommunityId = communityId,
+            TeacherUserId = teacherUserId,
+            ClassIds = request.ClassIds
+        });
+        return Ok(new BaseResponse<TeacherResponse>(
+            data: result,
+            statusCode: HttpStatusCode.OK,
+            errorCode: ErrorCode.Success,
+            message: ErrorMessage.Success));
     }
 
     private async Task<long> ResolveCurrentStaffCommunityId(long userId)

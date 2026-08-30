@@ -20,6 +20,7 @@ namespace Application.Features.Admin.Communities.CreateCommunity;
 
 public class CreateCommunityCommandHandler : IRequestHandler<CreateCommunityCommand, CommunityResponse>
 {
+    private static readonly int[] SupportedGradeValues = [7, 8, 9, 10, 11, 12];
     private readonly IUserService _userService;
     private readonly IBaseRepository<Community> _communityRepository;
     private readonly ITeacherInvitationService _invitationService;
@@ -66,7 +67,16 @@ public class CreateCommunityCommandHandler : IRequestHandler<CreateCommunityComm
             Name = name,
             Slug = slug,
             Status = CommunityStatus.Active,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            Grades = SupportedGradeValues
+                .Select(value => new Grade
+                {
+                    Value = value,
+                    Name = $"Grade {value}",
+                    SortOrder = value,
+                    CreatedAt = DateTime.UtcNow
+                })
+                .ToList()
         });
         await _communityRepository.SaveChangesAsync();
 

@@ -45,7 +45,7 @@ public class GetStudentDetailQueryHandlerTests
         result.Experience.Should().Be(120);
         result.Level.Should().Be(3);
         result.LicenseStatus.Should().Be(StudentLicenseStatus.Active.ToString());
-        result.GradeName.Should().Be("Grade 5");
+        result.GradeName.Should().Be("7");
         result.ClassName.Should().Be("Class A");
         result.Analytics.CompletedAssignments.Should().Be(0);
         result.Analytics.AverageScore.Should().BeNull();

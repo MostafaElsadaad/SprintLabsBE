@@ -62,7 +62,7 @@ public class ListStudentLicensesQueryHandlerTests
 
         result.Should().ContainSingle();
         result[0].Email.Should().Be("alpha@example.com");
-        result[0].Grade.Name.Should().Be("Grade 5");
+        result[0].Grade.Name.Should().Be("7");
         result[0].Class.Name.Should().Be("Class A");
     }
 

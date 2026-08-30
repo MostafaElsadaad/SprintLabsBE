@@ -1,7 +1,6 @@
 using System.Net;
 
 using Application.Features.Communities.GradesClasses.DeleteClass;
-using Application.Features.Communities.GradesClasses.ListGrades;
 
 using Domain.Enums;
 using Domain.Models;
@@ -88,29 +87,6 @@ public class DeleteClassCommandHandlerTests
         exception.Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    [Fact]
-    public async Task Handle_DeletedClass_IsExcludedFromGradeClassCount()
-    {
-        await using var context = CommunityGradesClassesTestHelper.CreateContext();
-        await CommunityGradesClassesTestHelper.SeedCommunities(context, CommunityUserRole.Owner);
-        await CommunityGradesClassesTestHelper.SeedGradesAndClasses(context);
-        CommunityGradesClassesTestHelper.SetupActiveUser(_userServiceMock);
-        await CreateDeleteHandler(context).Handle(new DeleteClassCommand
-        {
-            UserId = 10,
-            CommunityId = 1,
-            ClassId = 1
-        }, CancellationToken.None);
-
-        var grades = await CreateListGradesHandler(context).Handle(new ListGradesQuery
-        {
-            UserId = 10,
-            CommunityId = 1
-        }, CancellationToken.None);
-
-        grades.Single(x => x.Id == 1).ClassCount.Should().Be(0);
-    }
-
     private DeleteClassCommandHandler CreateDeleteHandler(ApplicationDbContext context)
     {
         return new DeleteClassCommandHandler(
@@ -119,12 +95,4 @@ public class DeleteClassCommandHandlerTests
             new BaseRepository<ClassEntity>(context));
     }
 
-    private ListGradesQueryHandler CreateListGradesHandler(ApplicationDbContext context)
-    {
-        return new ListGradesQueryHandler(
-            _userServiceMock.Object,
-            new CommunityAccessService(new BaseRepository<CommunityUser>(context)),
-            new BaseRepository<Grade>(context),
-            new BaseRepository<ClassEntity>(context));
-    }
 }

@@ -1,5 +1,6 @@
 using Domain.Models;
 using Domain.Services;
+using System.Globalization;
 
 namespace Application.Features.Communities.StudentLicenses.Common;
 
@@ -22,7 +23,7 @@ public static class StudentLicenseMapper
             Grade = new StudentLicenseGradeResponse
             {
                 Id = license.GradeId,
-                Name = license.Grade?.Name ?? string.Empty
+                Name = FormatGrade(license.Grade)
             },
             Class = new StudentLicenseClassResponse
             {
@@ -36,4 +37,6 @@ public static class StudentLicenseMapper
             CreatedAt = license.CreatedAt
         };
     }
+
+    private static string FormatGrade(Grade? grade) => grade?.Value?.ToString(CultureInfo.InvariantCulture) ?? grade?.Name ?? string.Empty;
 }

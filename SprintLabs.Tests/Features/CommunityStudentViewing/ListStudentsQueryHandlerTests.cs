@@ -46,7 +46,7 @@ public class ListStudentsQueryHandlerTests
         pending.UserId.Should().BeNull();
         pending.PlayerProfileId.Should().BeNull();
         pending.PlayerName.Should().BeNull();
-        pending.GradeName.Should().Be("Grade 5");
+        pending.GradeName.Should().Be("7");
         pending.ClassName.Should().Be("Class A");
     }
 

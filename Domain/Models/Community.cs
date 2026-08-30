@@ -52,6 +52,8 @@ public class Grade
 {
     public long Id { get; set; }
     public long CommunityId { get; set; }
+    // Null retains legacy/custom rows safely until an operator remediates them.
+    public int? Value { get; set; }
     public string Name { get; set; } = default!;
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -70,4 +72,5 @@ public class Class
     public DateTime? UpdatedAt { get; set; }
     public Community Community { get; set; } = default!;
     public Grade Grade { get; set; } = default!;
+    public ICollection<TeacherClassAssignment> TeacherClassAssignments { get; set; } = new List<TeacherClassAssignment>();
 }
