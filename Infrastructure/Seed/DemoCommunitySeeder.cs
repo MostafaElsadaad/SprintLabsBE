@@ -14,6 +14,7 @@ public static class DemoCommunitySeeder
 {
     private const string Password = "SprintLabsDemo!2026";
     private const string Slug = "sprintlabs-demo-school";
+    private const int TeacherCapacity = 10;
     private static readonly (string Email, string Name, bool Teacher)[] Staff =
     [
         ("owner.demo@sprintlabs.local", "Demo Owner", false),
@@ -100,7 +101,7 @@ public static class DemoCommunitySeeder
         license.UsedStudents = await context.StudentLicenses.CountAsync(x => x.CommunityId == community.Id && x.Status != StudentLicenseStatus.Revoked, cancellationToken);
         license.UsedTeachers = await context.CommunityUsers.CountAsync(x => x.CommunityId == community.Id && x.Role == CommunityUserRole.Teacher && (x.Status == CommunityUserStatus.Active || x.Status == CommunityUserStatus.Pending), cancellationToken);
         license.MaxStudents = Math.Max(license.MaxStudents, license.UsedStudents);
-        license.MaxTeachers = Math.Max(license.MaxTeachers, license.UsedTeachers);
+        license.MaxTeachers = Math.Max(license.MaxTeachers, Math.Max(license.UsedTeachers, TeacherCapacity));
         await context.SaveChangesAsync(cancellationToken);
         if (transaction != null) await transaction.CommitAsync(cancellationToken);
     }

@@ -42,7 +42,9 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
     {
         if (request.UserId <= 0 ||
             request.CommunityId <= 0 ||
-            string.IsNullOrWhiteSpace(request.Email))
+            string.IsNullOrWhiteSpace(request.Email) ||
+            request.ClassIds == null ||
+            request.ClassIds.Any(x => x <= 0))
         {
             throw InvalidInput();
         }
@@ -60,13 +62,30 @@ public class InviteTeacherCommandHandler : IRequestHandler<InviteTeacherCommand,
             request.UserId,
             request.CommunityId,
             email,
+            request.ClassIds.Distinct().ToList(),
             cancellationToken);
         if (!string.IsNullOrWhiteSpace(issue.InvitationToken))
         {
             await _emailService.SendCommunityInvitationEmailAsync(issue.Email, issue.Name, issue.CommunityName,
                 TeacherAuthenticationLinkBuilder.Invitation(_frontendOptions, issue.InvitationToken), cancellationToken);
         }
-        return new TeacherResponse { UserId = issue.UserId, Name = issue.Name, Email = issue.Email, Status = issue.Status, CreatedAt = DateTime.UtcNow };
+        return new TeacherResponse
+        {
+            UserId = issue.UserId,
+            Name = issue.Name,
+            Email = issue.Email,
+            Status = issue.Status,
+            CreatedAt = DateTime.UtcNow,
+            Classes = issue.Classes
+                .Select(x => new TeacherClassResponse
+                {
+                    ClassId = x.ClassId,
+                    ClassName = x.ClassName,
+                    GradeId = x.GradeId,
+                    Grade = x.Grade
+                })
+                .ToList()
+        };
     }
 
     private static string NormalizeEmail(string email)

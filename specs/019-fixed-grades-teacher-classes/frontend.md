@@ -45,6 +45,20 @@ States:
 - Error: show the established error without disclosing assumed tenant ownership.
 - Permissions: hide the roster and assignment actions from Teachers, Students, and platform-admin-only users without an Owner membership.
 
+## Invite Teacher with Initial Classes
+
+Extend the Owner invite form with an optional multi-select for Classes.
+
+- Load choices from `GET /api/v1/Communities/classes`.
+- Submit `POST /api/v1/Communities/teachers/invite` with `{ "email": "...", "classIds": [...] }`.
+- Send `classIds: []` when the Owner selects no initial Classes.
+- Do not send `communityId`; the backend resolves the current Community.
+- On success, use the returned `classes` collection when adding or updating the Teacher roster row.
+- On validation failure, keep the entered email and class selection because no invitation or assignment was created.
+- Hide the invite form from non-Owners.
+
+Assignments selected during invitation are retained while the Teacher is Pending and become relevant when the Teacher accepts the invitation. They do not activate the membership or grant authorization by themselves.
+
 ## Replace Teacher Class Assignments
 
 Owner action: edit a Teacher's complete class set.
@@ -82,6 +96,8 @@ The backend must be running with:
 ```
 
 and the ASP.NET Core environment must be `Development`. Both conditions are mandatory. Production/default configuration remains disabled.
+
+The demo license has a baseline capacity of 10 Teachers. Three seats are used by the seeded demo Teachers, leaving seven seats for testing invitations; Pending invitations also consume seats.
 
 Development-only staff credentials:
 

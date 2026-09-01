@@ -9,4 +9,5 @@ public class TeacherInvitationIssueResult
     public string CommunityName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? InvitationToken { get; set; }
+    public List<TeacherInvitationClassResult> Classes { get; set; } = new();
 }

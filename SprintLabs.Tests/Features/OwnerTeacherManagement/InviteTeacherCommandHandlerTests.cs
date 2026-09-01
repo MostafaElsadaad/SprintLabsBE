@@ -27,15 +27,45 @@ public class InviteTeacherCommandHandlerTests
                 roles.SequenceEqual(new[] { Domain.Enums.CommunityUserRole.Owner }))))
             .ReturnsAsync(true);
         var invitations = new Mock<ITeacherInvitationService>();
-        invitations.Setup(x => x.IssueAsync(10, 1, "teacher@example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TeacherInvitationIssueResult { UserId = 20, Name = "Teacher", Email = "teacher@example.com", CommunityId = 1, CommunityName = "Alpha", Status = "Pending", InvitationToken = "token" });
+        invitations.Setup(x => x.IssueAsync(
+                10,
+                1,
+                "teacher@example.com",
+                It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 30, 31 })),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TeacherInvitationIssueResult
+            {
+                UserId = 20,
+                Name = "Teacher",
+                Email = "teacher@example.com",
+                CommunityId = 1,
+                CommunityName = "Alpha",
+                Status = "Pending",
+                InvitationToken = "token",
+                Classes = new List<TeacherInvitationClassResult>
+                {
+                    new() { ClassId = 30, ClassName = "Class 7A", GradeId = 7, Grade = 7 }
+                }
+            });
         var email = new Mock<IEmailService>();
         var handler = new InviteTeacherCommandHandler(access.Object, invitations.Object, email.Object, Options.Create(new FrontendOptions { BaseUrl = "https://app.example" }));
 
-        var result = await handler.Handle(new InviteTeacherCommand { UserId = 10, CommunityId = 1, Email = " Teacher@Example.com " }, CancellationToken.None);
+        var result = await handler.Handle(new InviteTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            Email = " Teacher@Example.com ",
+            ClassIds = new List<long> { 30, 30, 31 }
+        }, CancellationToken.None);
 
         result.Status.Should().Be("Pending");
-        invitations.Verify(x => x.IssueAsync(10, 1, "teacher@example.com", It.IsAny<CancellationToken>()), Times.Once);
+        result.Classes.Should().ContainSingle().Which.ClassId.Should().Be(30);
+        invitations.Verify(x => x.IssueAsync(
+            10,
+            1,
+            "teacher@example.com",
+            It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 30, 31 })),
+            It.IsAny<CancellationToken>()), Times.Once);
         email.Verify(x => x.SendCommunityInvitationEmailAsync("teacher@example.com", "Teacher", "Alpha", It.Is<string>(url => url.Contains("/invitations/teacher/setup?token=token")), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -65,6 +95,27 @@ public class InviteTeacherCommandHandlerTests
 
         var exception = await action.Should().ThrowAsync<GenericException>();
         exception.Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        invitations.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_non_positive_class_id_rejects_without_invitation()
+    {
+        var access = new Mock<ICommunityAccessService>();
+        var invitations = new Mock<ITeacherInvitationService>();
+        var handler = new InviteTeacherCommandHandler(access.Object, invitations.Object, Mock.Of<IEmailService>(), Options.Create(new FrontendOptions()));
+
+        var action = async () => await handler.Handle(new InviteTeacherCommand
+        {
+            UserId = 10,
+            CommunityId = 1,
+            Email = "teacher@example.com",
+            ClassIds = new List<long> { 0 }
+        }, CancellationToken.None);
+
+        var exception = await action.Should().ThrowAsync<GenericException>();
+        exception.Which.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        access.VerifyNoOtherCalls();
         invitations.VerifyNoOtherCalls();
     }
 

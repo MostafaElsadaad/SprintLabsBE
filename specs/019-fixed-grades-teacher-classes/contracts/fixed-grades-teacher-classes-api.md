@@ -34,6 +34,35 @@ Rules:
 
 Common errors: unauthenticated, suspended/no valid staff context, forbidden membership, or fixed-grade data conflict using established status/envelope behavior.
 
+## Invite a Teacher with Initial Classes
+
+`POST /api/v1/Communities/teachers/invite`
+
+Authorization: Active Community Owner only.
+
+Request:
+
+```json
+{
+  "email": "teacher@example.com",
+  "classIds": [201, 202]
+}
+```
+
+`classIds` is optional and defaults to an empty array. Duplicate IDs are normalized. An explicit empty array creates or reissues the invitation with no current-community class assignments.
+
+Success data (`200`) is the existing Teacher response with its initial `classes` collection. The Teacher membership remains `Pending` until invitation acceptance.
+
+Rules:
+
+- Every supplied Class must be Active, belong to the resolved current Community, and reference a supported Grade.
+- Class validation occurs before creating a placeholder User or membership.
+- Invitation and assignment replacement commit in the same transaction.
+- Assignment does not activate the Teacher or independently authorize any endpoint.
+- Use `PUT /api/v1/Communities/teachers/{teacherUserId}/classes` for later assignment changes.
+
+Common errors: `400` malformed input, `401` unauthenticated, `403` non-Owner, `404` tenant-safe invalid Class, or existing invitation/license conflict behavior.
+
 ## Replace a Teacher's Classes
 
 `PUT /api/v1/Communities/teachers/{teacherUserId}/classes`

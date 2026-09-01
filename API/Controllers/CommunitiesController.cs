@@ -141,7 +141,8 @@ public class CommunitiesController : ControllerBase
         {
             UserId = userId.Value,
             CommunityId = communityId,
-            Email = request.Email
+            Email = request.Email,
+            ClassIds = request.ClassIds ?? new List<long>()
         });
 
         return Ok(new BaseResponse<TeacherResponse>(

@@ -9,4 +9,5 @@ public class InviteTeacherCommand : IRequest<TeacherResponse>
     public long UserId { get; set; }
     public long CommunityId { get; set; }
     public string Email { get; set; } = string.Empty;
+    public List<long> ClassIds { get; set; } = new();
 }

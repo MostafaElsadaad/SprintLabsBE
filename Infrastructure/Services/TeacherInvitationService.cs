@@ -45,7 +45,29 @@ public class TeacherInvitationService : ITeacherInvitationService
         string email,
         CancellationToken cancellationToken)
     {
-        return await IssueAsync(invitedByUserId, communityId, email, CommunityUserRole.Teacher, cancellationToken);
+        return await IssueAsync(
+            invitedByUserId,
+            communityId,
+            email,
+            null,
+            CommunityUserRole.Teacher,
+            cancellationToken);
+    }
+
+    public async Task<TeacherInvitationIssueResult> IssueAsync(
+        long invitedByUserId,
+        long communityId,
+        string email,
+        IReadOnlyCollection<long> classIds,
+        CancellationToken cancellationToken)
+    {
+        return await IssueAsync(
+            invitedByUserId,
+            communityId,
+            email,
+            classIds,
+            CommunityUserRole.Teacher,
+            cancellationToken);
     }
 
     public async Task<TeacherInvitationIssueResult> IssueCommunityAdminSetupAsync(
@@ -54,13 +76,20 @@ public class TeacherInvitationService : ITeacherInvitationService
         string email,
         CancellationToken cancellationToken)
     {
-        return await IssueAsync(invitedByUserId, communityId, email, CommunityUserRole.Owner, cancellationToken);
+        return await IssueAsync(
+            invitedByUserId,
+            communityId,
+            email,
+            null,
+            CommunityUserRole.Owner,
+            cancellationToken);
     }
 
     private async Task<TeacherInvitationIssueResult> IssueAsync(
         long invitedByUserId,
         long communityId,
         string email,
+        IReadOnlyCollection<long>? classIds,
         CommunityUserRole role,
         CancellationToken cancellationToken)
     {
@@ -82,6 +111,12 @@ public class TeacherInvitationService : ITeacherInvitationService
         {
             throw Error(ErrorMessage.InvalidAccessToken, HttpStatusCode.Forbidden);
         }
+
+        var classes = await GetInvitationClassesAsync(
+            communityId,
+            role,
+            classIds,
+            cancellationToken);
 
         var user = await _context.Users.FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
         if (user == null)
@@ -139,11 +174,16 @@ public class TeacherInvitationService : ITeacherInvitationService
         var membership = currentRoleMemberships.SingleOrDefault();
         if (membership?.Status == CommunityUserStatus.Active)
         {
+            if (classes != null)
+            {
+                await ReplaceClassAssignmentsAsync(user.Id, communityId, classes, now, cancellationToken);
+            }
+            await _context.SaveChangesAsync(cancellationToken);
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);
             }
-            return IssueResult(user, community, membership, null);
+            return IssueResult(user, community, membership, null, classes ?? new List<Class>());
         }
 
         if (membership == null)
@@ -199,6 +239,11 @@ public class TeacherInvitationService : ITeacherInvitationService
         await _context.SaveChangesAsync(cancellationToken);
         await RevokeCurrentInvitationsAsync(membership!.Id, now, cancellationToken);
 
+        if (classes != null)
+        {
+            await ReplaceClassAssignmentsAsync(user.Id, communityId, classes, now, cancellationToken);
+        }
+
         var rawToken = SecureTokenGenerator.Generate();
         _context.TeacherInvitations.Add(new TeacherInvitation
         {
@@ -216,7 +261,7 @@ public class TeacherInvitationService : ITeacherInvitationService
             await transaction.CommitAsync(cancellationToken);
         }
 
-        return IssueResult(user, community, membership, rawToken);
+        return IssueResult(user, community, membership, rawToken, classes ?? new List<Class>());
     }
 
     public async Task<TeacherInvitationValidationResult> ValidateAsync(string rawToken, CancellationToken cancellationToken)
@@ -391,7 +436,68 @@ public class TeacherInvitationService : ITeacherInvitationService
             cancellationToken);
     }
 
-    private static TeacherInvitationIssueResult IssueResult(User user, Community community, CommunityUser membership, string? rawToken)
+    private async Task<List<Class>?> GetInvitationClassesAsync(
+        long communityId,
+        CommunityUserRole role,
+        IReadOnlyCollection<long>? classIds,
+        CancellationToken cancellationToken)
+    {
+        if (role != CommunityUserRole.Teacher || classIds == null)
+        {
+            return null;
+        }
+
+        var ids = classIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new List<Class>();
+        }
+
+        var classes = await _context.Classes
+            .Include(x => x.Grade)
+            .Where(x =>
+                ids.Contains(x.Id) &&
+                x.CommunityId == communityId &&
+                x.Status == ClassStatus.Active &&
+                x.Grade.Value.HasValue &&
+                x.Grade.Value >= 7 &&
+                x.Grade.Value <= 12)
+            .ToListAsync(cancellationToken);
+
+        if (classes.Count != ids.Count)
+        {
+            throw Error(ErrorMessage.NotFound, HttpStatusCode.NotFound);
+        }
+
+        return classes;
+    }
+
+    private async Task ReplaceClassAssignmentsAsync(
+        long teacherUserId,
+        long communityId,
+        IReadOnlyCollection<Class> classes,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var previous = await _context.TeacherClassAssignments
+            .Where(x => x.TeacherUserId == teacherUserId && x.Class.CommunityId == communityId)
+            .ToListAsync(cancellationToken);
+        _context.TeacherClassAssignments.RemoveRange(previous);
+        _context.TeacherClassAssignments.AddRange(classes.Select(x => new TeacherClassAssignment
+        {
+            TeacherUserId = teacherUserId,
+            ClassId = x.Id,
+            Class = x,
+            CreatedAt = now
+        }));
+    }
+
+    private static TeacherInvitationIssueResult IssueResult(
+        User user,
+        Community community,
+        CommunityUser membership,
+        string? rawToken,
+        IReadOnlyCollection<Class> classes)
     {
         return new TeacherInvitationIssueResult
         {
@@ -401,7 +507,18 @@ public class TeacherInvitationService : ITeacherInvitationService
             CommunityId = community.Id,
             CommunityName = community.Name,
             Status = membership.Status.ToString(),
-            InvitationToken = rawToken
+            InvitationToken = rawToken,
+            Classes = classes
+                .OrderBy(x => x.Grade.Value)
+                .ThenBy(x => x.Name)
+                .Select(x => new TeacherInvitationClassResult
+                {
+                    ClassId = x.Id,
+                    ClassName = x.Name,
+                    GradeId = x.GradeId,
+                    Grade = x.Grade.Value!.Value
+                })
+                .ToList()
         };
     }
 
