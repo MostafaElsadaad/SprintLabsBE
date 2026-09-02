@@ -12,6 +12,8 @@ using Infrastructure.DataAccess;
 using Infrastructure.Identity;
 using Infrastructure.Seed;
 
+using Domain.Services;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -179,6 +181,27 @@ if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Dem
     await DemoCommunitySeeder.SeedAsync(
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
         scope.ServiceProvider.GetRequiredService<UserManager<User>>());
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var guard = scope.ServiceProvider.GetRequiredService<IDevelopmentAuthenticationGuard>();
+    if (guard.CanSeed)
+    {
+        var seededPlayers = await DevelopmentPlayerSeeder.SeedAsync(
+            scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
+            scope.ServiceProvider.GetRequiredService<UserManager<User>>());
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DevelopmentPlayerSeeder");
+        logger.LogInformation("Ensured {DevelopmentPlayerCount} development player accounts.", seededPlayers.Count);
+        foreach (var seededPlayer in seededPlayers)
+        {
+            logger.LogInformation(
+                "Ensured development account {DevelopmentAccountKey} with UserId {UserId} and PlayerProfileId {PlayerProfileId}.",
+                seededPlayer.AccountKey,
+                seededPlayer.UserId,
+                seededPlayer.PlayerProfileId);
+        }
+    }
 }
 #endregion
 

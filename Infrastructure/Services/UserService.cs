@@ -379,6 +379,7 @@ namespace Infrastructure.Services
             return new UserIdentityResponse
             {
                 Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
                 GoogleId = user.GoogleId,
                 FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? email,
@@ -386,7 +387,9 @@ namespace Infrastructure.Services
                 AvatarUrl = user.AvatarUrl,
                 Status = user.Status.ToString(),
                 IsPlatformAdmin = user.IsPlatformAdmin,
+                IsTeacherAccount = user.IsTeacherAccount,
                 IsSuspended = user.Status == UserStatus.Suspended,
+                IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow,
                 HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };
@@ -469,6 +472,7 @@ namespace Infrastructure.Services
             return new UserIdentityResponse
             {
                 Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
                 GoogleId = user.GoogleId,
                 FirebaseUid = user.FirebaseUid,
                 Email = user.Email ?? fallbackEmail,
@@ -476,7 +480,9 @@ namespace Infrastructure.Services
                 AvatarUrl = user.AvatarUrl,
                 Status = user.Status.ToString(),
                 IsPlatformAdmin = user.IsPlatformAdmin,
+                IsTeacherAccount = user.IsTeacherAccount,
                 IsSuspended = user.Status == UserStatus.Suspended,
+                IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow,
                 HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
                 PlayerProfileId = user.Player?.Id
             };

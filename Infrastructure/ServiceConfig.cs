@@ -52,6 +52,7 @@ namespace Infrastructure
             services.Configure<TeacherAuthenticationOptions>(configuration.GetSection("TeacherAuthentication"));
             services.Configure<EmailOptions>(configuration.GetSection("Email"));
             services.Configure<FrontendOptions>(configuration.GetSection("Frontend"));
+            services.Configure<DevelopmentAuthenticationOptions>(configuration.GetSection(DevelopmentAuthenticationOptions.SectionName));
             services.AddOptions<FirebaseAuthenticationOptions>()
                 .Bind(configuration.GetSection("Authentication:Firebase"))
                 .Validate(x => !string.IsNullOrWhiteSpace(x.ProjectId), "Authentication:Firebase:ProjectId is required.");
@@ -68,6 +69,7 @@ namespace Infrastructure
             services.AddScoped<IFileUploadService, FileUploadService>();
             services.AddScoped<IFileDownloadService, FileDownloadService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddSingleton<IDevelopmentAuthenticationGuard, DevelopmentAuthenticationGuard>();
             services.AddScoped<ICommunityAccessService, CommunityAccessService>();
             services.AddScoped<ICommunityLoginActivationService, CommunityLoginActivationService>();
             services.AddScoped<IStaffCommunityMembershipService, StaffCommunityMembershipService>();
