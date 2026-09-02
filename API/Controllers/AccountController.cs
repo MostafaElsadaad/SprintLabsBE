@@ -4,6 +4,8 @@ using System.Security.Claims;
 
 using Application.Features.Accounts.GoogleAuthenticate;
 using Application.Features.Accounts.FirebaseAuthenticate;
+using Application.Features.Accounts.DevelopmentAuthentication.DevelopmentLogin;
+using Application.Features.Accounts.DevelopmentAuthentication.ListDevelopmentPlayers;
 using Application.Features.Accounts.UpdateProfile;
 using Application.Features.Accounts.CommunityAuthentication.CommunityLogin;
 using Application.Features.Accounts.CommunityAuthentication.RegisterCommunity;
@@ -23,6 +25,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Shared.Enums;
 using Shared.Responses;
+using Shared.Options;
 
 namespace API.Controllers
 {
@@ -61,6 +64,55 @@ namespace API.Controllers
             var loginResponse = await _mediator.Send(new FirebaseAuthenticationCommand { IdToken = request.IdToken });
             return Ok(new BaseResponse<LoginResponse>(
                 data: loginResponse,
+                statusCode: HttpStatusCode.OK,
+                errorCode: ErrorCode.Success,
+                message: ErrorMessage.Success));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("development-login")]
+        [ProducesResponseType(typeof(BaseResponse<LoginResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> DevelopmentLogin([FromBody] DevelopmentLoginRequest request)
+        {
+            var result = await _mediator.Send(new DevelopmentLoginCommand
+            {
+                AccountKey = request.AccountKey,
+                SuppliedApiKeys = Request.Headers[DevelopmentAuthenticationOptions.HeaderName]
+                    .Where(value => value != null)
+                    .Select(value => value!)
+                    .ToArray()
+            });
+
+            return Ok(new BaseResponse<LoginResponse>(
+                data: result,
+                statusCode: HttpStatusCode.OK,
+                errorCode: ErrorCode.Success,
+                message: ErrorMessage.Success));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("development-players")]
+        [ProducesResponseType(typeof(BaseResponse<List<DevelopmentPlayerResponse>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BaseResponse), StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> GetDevelopmentPlayers()
+        {
+            var result = await _mediator.Send(new ListDevelopmentPlayersQuery
+            {
+                SuppliedApiKeys = Request.Headers[DevelopmentAuthenticationOptions.HeaderName]
+                    .Where(value => value != null)
+                    .Select(value => value!)
+                    .ToArray()
+            });
+
+            return Ok(new BaseResponse<List<DevelopmentPlayerResponse>>(
+                data: result,
                 statusCode: HttpStatusCode.OK,
                 errorCode: ErrorCode.Success,
                 message: ErrorMessage.Success));

@@ -105,6 +105,53 @@ public class ExternalPlayerLoginWorkflowTests
         error.Which.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
+    [Fact]
+    public async Task CompleteExistingAsync_UsesExistingJwtClaimsAndLoginResponseMappingWithoutProvisioningOrActivation()
+    {
+        var userService = new Mock<IUserService>();
+        var players = new Mock<IPlayerRepository>();
+        var activation = new Mock<ICommunityLoginActivationService>();
+        List<System.Security.Claims.Claim>? issuedClaims = null;
+        userService.Setup(x => x.Authenticate(It.IsAny<List<System.Security.Claims.Claim>>()))
+            .Callback<List<System.Security.Claims.Claim>>(claims => issuedClaims = claims)
+            .ReturnsAsync(new LoginResponse { AccessToken = "real-jwt" });
+        var workflow = new ExternalPlayerLoginWorkflow(userService.Object, players.Object, activation.Object);
+        var user = new UserIdentityResponse { Id = 7, PlayerProfileId = 11 };
+        var player = new Player { Id = 11, UserId = 7, Email = "dev@example.invalid", Name = "Dev", Gold = 3, Experience = 9, Level = 2 };
+        var context = new ExternalPlayerLoginContext { Subject = "dev-player-01", Email = player.Email, Name = player.Name, PictureUrl = "avatar" };
+
+        var result = await workflow.CompleteExistingAsync(user, player, context, CancellationToken.None);
+
+        result.AccessToken.Should().Be("real-jwt");
+        result.UserId.Should().Be(7);
+        result.PlayerProfileId.Should().Be(11);
+        result.Gold.Should().Be(3);
+        result.Experience.Should().Be(9);
+        result.Level.Should().Be(2);
+        issuedClaims!.Single(x => x.Type == "userId").Value.Should().Be("7");
+        issuedClaims.Single(x => x.Type == "playerProfileId").Value.Should().Be("11");
+        issuedClaims.Single(x => x.Type == "sub").Value.Should().Be("dev-player-01");
+        players.VerifyNoOtherCalls();
+        activation.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task CompleteExistingAsync_MismatchedPlayer_ReturnsConflictWithoutIssuingToken()
+    {
+        var userService = new Mock<IUserService>();
+        var workflow = new ExternalPlayerLoginWorkflow(userService.Object, new Mock<IPlayerRepository>().Object, new Mock<ICommunityLoginActivationService>().Object);
+
+        var action = () => workflow.CompleteExistingAsync(
+            new UserIdentityResponse { Id = 7, PlayerProfileId = 11 },
+            new Player { Id = 11, UserId = 8, Email = "dev@example.invalid", Name = "Dev" },
+            new ExternalPlayerLoginContext(),
+            CancellationToken.None);
+
+        var error = await action.Should().ThrowAsync<GenericException>();
+        error.Which.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        userService.Verify(x => x.Authenticate(It.IsAny<List<System.Security.Claims.Claim>>()), Times.Never);
+    }
+
     private static ExternalPlayerLoginContext FirebaseContext() => new()
     {
         Subject = "firebase-uid",

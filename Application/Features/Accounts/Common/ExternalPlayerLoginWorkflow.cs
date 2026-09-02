@@ -41,6 +41,31 @@ public class ExternalPlayerLoginWorkflow : IExternalPlayerLoginWorkflow
             }
         }
 
+        return await IssueAsync(user, player, context);
+    }
+
+    public async Task<LoginResponse> CompleteExistingAsync(
+        UserIdentityResponse user,
+        Player player,
+        ExternalPlayerLoginContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (user.IsSuspended || user.IsLockedOut)
+        {
+            throw new GenericException(ErrorCode.Failure, ErrorMessage.InvalidAccessToken, HttpStatusCode.Forbidden);
+        }
+
+        if (player.UserId != user.Id || (user.PlayerProfileId.HasValue && user.PlayerProfileId.Value != player.Id))
+        {
+            throw Conflict();
+        }
+
+        return await IssueAsync(user, player, context);
+    }
+
+    private async Task<LoginResponse> IssueAsync(UserIdentityResponse user, Player player, ExternalPlayerLoginContext context)
+    {
         var claims = new List<Claim>
         {
             new("email", context.Email),
