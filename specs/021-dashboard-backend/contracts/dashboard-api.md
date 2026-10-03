@@ -1,0 +1,2 @@
+# Contracts
+Canonical endpoints and frontend mappings are maintained in [../api.md](../api.md). All operations use versioned routes and BaseResponse, staff community resolution, and owner-only management. Teachers can read only assigned classes/students. Game-derived numeric metrics use documented zero placeholders; missing dates are null. Public fields follow the supplied Markdown and existing Communities routes are reused instead of duplicated. No quiz/result/start/export endpoints are included.

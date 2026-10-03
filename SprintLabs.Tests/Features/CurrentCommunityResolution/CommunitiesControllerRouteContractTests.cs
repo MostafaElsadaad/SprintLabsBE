@@ -7,7 +7,8 @@ using Application.Features.Communities.Common;
 using Application.Features.Communities.GetCommunityProfile;
 using Application.Features.Communities.GradesClasses.Common;
 using Application.Features.Communities.GradesClasses.CreateClass;
-using Application.Features.Communities.GradesClasses.ListGrades;
+using Application.Features.CommunityDashboard.ListDashboardGrades;
+using Application.Features.CommunityDashboard.Common;
 using Application.Features.Communities.GradesClasses.UpdateClass;
 using Application.Features.Communities.StudentLicenses.AddStudentLicense;
 using Application.Features.Communities.StudentLicenses.UpdateStudentLicense;
@@ -76,6 +77,7 @@ public class CommunitiesControllerRouteContractTests
             typeof(InviteTeacherRequest),
             typeof(ReplaceTeacherClassAssignmentsRequest),
             typeof(CreateClassRequest),
+            typeof(Shared.Requests.DashboardClassRequest),
             typeof(UpdateClassRequest),
             typeof(AddStudentLicenseRequest),
             typeof(UpdateStudentLicenseRequest)
@@ -86,13 +88,13 @@ public class CommunitiesControllerRouteContractTests
     }
 
     [Fact]
-    public async Task Staff_action_dispatches_the_database_resolved_community_id()
+    public async Task Staff_action_checks_resolved_community_and_dispatches_trusted_user_id()
     {
         var mediator = new Mock<IMediator>();
-        ListGradesQuery? dispatched = null;
-        mediator.Setup(x => x.Send(It.IsAny<IRequest<List<GradeResponse>>>(), It.IsAny<CancellationToken>()))
-            .Callback<IRequest<List<GradeResponse>>, CancellationToken>((request, _) => dispatched = request as ListGradesQuery)
-            .ReturnsAsync(new List<GradeResponse>());
+        ListDashboardGradesQuery? dispatched = null;
+        mediator.Setup(x => x.Send(It.IsAny<IRequest<List<GradeView>>>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<List<GradeView>>, CancellationToken>((request, _) => dispatched = request as ListDashboardGradesQuery)
+            .ReturnsAsync(new List<GradeView>());
         var access = new Mock<ICommunityAccessService>();
         access.Setup(x => x.ResolveCurrentStaffCommunityId(42, It.IsAny<CancellationToken>())).ReturnsAsync(7);
         var controller = CreateController(mediator.Object, access.Object, "42");
@@ -102,7 +104,7 @@ public class CommunitiesControllerRouteContractTests
         result.Should().BeOfType<OkObjectResult>();
         dispatched.Should().NotBeNull();
         dispatched!.UserId.Should().Be(42);
-        dispatched.CommunityId.Should().Be(7);
+        access.Verify(x => x.ResolveCurrentStaffCommunityId(42, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

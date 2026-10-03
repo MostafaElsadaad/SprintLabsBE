@@ -91,7 +91,8 @@ public class TeacherInvitationService : ITeacherInvitationService
         string email,
         IReadOnlyCollection<long>? classIds,
         CommunityUserRole role,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        long? expectedInvitationId = null)
     {
         var trimmedEmail = email.Trim();
         var normalizedEmail = _userManager.NormalizeEmail(trimmedEmail);
@@ -146,6 +147,18 @@ public class TeacherInvitationService : ITeacherInvitationService
         }
 
         await StaffCommunityMembershipIntegrity.LockUserAsync(_context, user.Id, cancellationToken);
+        if (expectedInvitationId.HasValue)
+        {
+            var expected = await _context.TeacherInvitations.Include(x => x.CommunityUser)
+                .SingleOrDefaultAsync(x => x.Id == expectedInvitationId && x.CommunityUser.CommunityId == communityId &&
+                    x.CommunityUser.UserId == user.Id && x.CommunityUser.Role == CommunityUserRole.Teacher, cancellationToken);
+            if (expected == null || expected.AcceptedAt != null || expected.RevokedAt != null ||
+                expected.CommunityUser.Status != CommunityUserStatus.Pending ||
+                await _context.TeacherInvitations.AnyAsync(x => x.CommunityUserId == expected.CommunityUserId && x.Id > expected.Id && x.RevokedAt == null, cancellationToken))
+                throw Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
+            if (expected.LastSentAt > now.AddSeconds(-_options.ConfirmationResendCooldownSeconds))
+                throw Error(ErrorMessage.InvalidInput, HttpStatusCode.TooManyRequests);
+        }
         if (await StaffCommunityMembershipIntegrity.HasCurrentStaffMembershipInAnotherCommunityAsync(
                 _context,
                 user.Id,
@@ -262,6 +275,55 @@ public class TeacherInvitationService : ITeacherInvitationService
         }
 
         return IssueResult(user, community, membership, rawToken, classes ?? new List<Class>());
+    }
+
+    public async Task<TeacherInvitationIssueResult> ResendAsync(long actorUserId, long communityId, long invitationId, CancellationToken ct)
+    {
+        var invitation = await _context.TeacherInvitations.AsNoTracking().Include(x => x.CommunityUser)
+            .SingleOrDefaultAsync(x => x.Id == invitationId && x.CommunityUser.CommunityId == communityId &&
+                x.CommunityUser.Role == CommunityUserRole.Teacher, ct)
+            ?? throw Error(ErrorMessage.NotFound, HttpStatusCode.NotFound);
+        // Null class list preserves existing assignments during resend.
+        return await IssueAsync(actorUserId, communityId, invitation.InvitedEmail, null, CommunityUserRole.Teacher, ct, invitationId);
+    }
+
+    public async Task CancelAsync(long actorUserId, long communityId, long invitationId, CancellationToken ct)
+    {
+        await using var transaction = await BeginTransactionAsync(ct);
+        if (!await HasActiveOwnerAsync(actorUserId, communityId, ct)) throw Error(ErrorMessage.InvalidAccessToken, HttpStatusCode.Forbidden);
+        var invitation = await _context.TeacherInvitations.Include(x => x.CommunityUser)
+            .SingleOrDefaultAsync(x => x.Id == invitationId && x.CommunityUser.CommunityId == communityId &&
+                x.CommunityUser.Role == CommunityUserRole.Teacher, ct)
+            ?? throw Error(ErrorMessage.NotFound, HttpStatusCode.NotFound);
+        var member = invitation.CommunityUser;
+        await StaffCommunityMembershipIntegrity.LockUserAsync(_context, member.UserId, ct);
+        // Re-read after acquiring the lock so a concurrent acceptance/resend cannot use stale state.
+        if (_context.Database.IsRelational())
+        {
+            await _context.Entry(invitation).ReloadAsync(ct);
+            await _context.Entry(member).ReloadAsync(ct);
+        }
+        if (invitation.AcceptedAt != null || await _context.TeacherInvitations.AnyAsync(x =>
+            x.CommunityUserId == member.Id && x.Id > invitation.Id && x.RevokedAt == null, ct))
+            throw Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
+        if (invitation.RevokedAt != null)
+        {
+            if (transaction != null) await transaction.CommitAsync(ct);
+            return;
+        }
+        if (member.Status != CommunityUserStatus.Pending) throw Error(ErrorMessage.ExistingRecord, HttpStatusCode.Conflict);
+        var license = await _context.CommunityLicenses.SingleOrDefaultAsync(x => x.CommunityId == communityId, ct)
+            ?? throw Error(ErrorMessage.NotFound, HttpStatusCode.NotFound);
+        var now = DateTime.UtcNow;
+        await RevokeCurrentInvitationsAsync(member.Id, now, ct);
+        member.Status = CommunityUserStatus.Removed;
+        member.UpdatedAt = now;
+        if (license.UsedTeachers > 0) license.UsedTeachers--;
+        license.UpdatedAt = now;
+        _context.StaffActivities.Add(new StaffActivity { CommunityId = communityId, TeacherUserId = member.UserId,
+            ActorUserId = actorUserId, Label = "Cancelled teacher invitation", CreatedAt = now });
+        await _context.SaveChangesAsync(ct);
+        if (transaction != null) await transaction.CommitAsync(ct);
     }
 
     public async Task<TeacherInvitationValidationResult> ValidateAsync(string rawToken, CancellationToken cancellationToken)

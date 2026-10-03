@@ -24,6 +24,7 @@ public class Community
 
 public class CommunityUser
 {
+    public string TeacherTitle { get; set; } = "TEACHER";
     public long Id { get; set; }
     public long CommunityId { get; set; }
     public long UserId { get; set; }
