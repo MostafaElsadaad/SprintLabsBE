@@ -78,6 +78,8 @@ namespace Infrastructure
             services.AddScoped<IXpCalculationService, XpCalculationService>();
             services.AddScoped<ILevelProgressionService, LevelProgressionService>();
             services.AddScoped<IRpRankCalculationService, RpRankCalculationService>();
+            services.AddScoped<IMatchProgressionService, MatchProgressionService>();
+            services.AddScoped<IProgressionReadService, ProgressionReadService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
             services.AddSingleton<FirebaseApp>(serviceProvider =>

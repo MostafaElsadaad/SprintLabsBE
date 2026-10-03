@@ -4,6 +4,7 @@ using Infrastructure.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003194331_MatchProgressionApiIntegrity")]
+    partial class MatchProgressionApiIntegrity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -401,9 +404,6 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
 
-                    b.Property<int>("Sequence")
-                        .HasColumnType("int");
-
                     b.Property<int>("StreakAfterAnswer")
                         .HasColumnType("int");
 
@@ -417,8 +417,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PlayerProfileId");
 
                     b.HasIndex("QuestionId");
-
-                    b.HasIndex("MatchId", "PlayerProfileId", "Sequence");
 
                     b.ToTable("MatchQuestionResults");
                 });

@@ -14,6 +14,7 @@ public class Match
     public DateTime? EndedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int TotalPlayers { get; set; }
     public Community? Community { get; set; }
     public ICollection<MatchPlayer> MatchPlayers { get; set; } = new List<MatchPlayer>();
     public ICollection<MatchQuestionResult> MatchQuestionResults { get; set; } = new List<MatchQuestionResult>();

@@ -58,6 +58,12 @@ builder.Services.AddSwaggerGen(
         };
 
         setup.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
+        setup.AddSecurityDefinition(API.Authentication.GameServerAuthenticationHandler.SchemeName, new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey, In = ParameterLocation.Header, Name = "Authorization",
+            Description = "Dedicated server only: GameServer <server credential>. Player JWTs cannot write match rewards."
+        });
+        setup.OperationFilter<API.Swagger.GameServerOperationFilter>();
 
         setup.AddSecurityRequirement(new OpenApiSecurityRequirement
         {
@@ -99,6 +105,8 @@ builder.Services.AddIdentityCore<User>(options =>
     .AddTokenProvider<PasswordResetTokenProvider>("TeacherPasswordReset");
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+    API.Authentication.GameServerAuthenticationHandler>(API.Authentication.GameServerAuthenticationHandler.SchemeName, _ => { });
 builder.Services.AddHttpClient();
 
 // API Versioning

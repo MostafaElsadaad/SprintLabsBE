@@ -73,8 +73,9 @@ public class XpCalculationService : IXpCalculationService
         };
     }
 
-    private static int CalculateCorrectAnswerXp(int streak)
+    public int CalculateCorrectAnswerXp(int streak)
     {
+        if (streak < 1) throw new ArgumentOutOfRangeException(nameof(streak));
         return streak switch
         {
             >= 10 => 30,

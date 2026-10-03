@@ -425,7 +425,7 @@ namespace Infrastructure.DataAccess
                     .IsRequired()
                     .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
-                e.HasIndex(x => x.MatchCode);
+                e.HasIndex(x => x.MatchCode).IsUnique();
                 e.HasIndex(x => x.MirrorRoomId);
                 e.HasIndex(x => x.CommunityId);
                 e.HasIndex(x => x.Status);
@@ -466,6 +466,7 @@ namespace Infrastructure.DataAccess
 
             modelBuilder.Entity<MatchQuestionResult>(e =>
             {
+                e.HasIndex(x => new { x.MatchId, x.PlayerProfileId, x.Sequence });
                 e.Property(x => x.QuestionType)
                     .IsRequired()
                     .HasMaxLength(64);
