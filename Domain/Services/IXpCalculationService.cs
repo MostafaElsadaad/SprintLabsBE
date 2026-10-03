@@ -8,6 +8,7 @@ namespace Domain.Services;
 public interface IXpCalculationService
 {
     int CalculateAnswerXp(IEnumerable<XpQuestionResult> orderedQuestionResults);
+    int CalculateCorrectAnswerXp(int streak);
 
     int CalculateMatchResultXp(bool isWinner);
 

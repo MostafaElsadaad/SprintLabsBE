@@ -5,6 +5,7 @@ public class MatchQuestionResult
     public long Id { get; set; }
     public long MatchId { get; set; }
     public long PlayerProfileId { get; set; }
+    public int Sequence { get; set; }
     public long? QuestionId { get; set; }
     public string QuestionType { get; set; } = default!;
     public bool IsCorrect { get; set; }

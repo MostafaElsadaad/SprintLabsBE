@@ -1,0 +1,515 @@
+{
+  "info": {
+    "name": "SprintLabs Match Progression (NOX-84)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local manual integration collection. No credentials are stored. Configure variables privately. Registration/completion writes real game history and awards XP/RP; use a disposable test environment and players."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "serverCredential",
+      "value": ""
+    },
+    {
+      "key": "playerAccessToken",
+      "value": ""
+    },
+    {
+      "key": "player1ProfileId",
+      "value": ""
+    },
+    {
+      "key": "player2ProfileId",
+      "value": ""
+    },
+    {
+      "key": "communityId",
+      "value": ""
+    },
+    {
+      "key": "mirrorRoomId",
+      "value": "postman-test-room"
+    },
+    {
+      "key": "page",
+      "value": "1"
+    },
+    {
+      "key": "pageSize",
+      "value": "20"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Trusted server match flow (writes test rewards)",
+      "item": [
+        {
+          "name": "Register ranked match",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['baseUrl','serverCredential','player1ProfileId','player2ProfileId'].forEach(key => { if (!pm.variables.get(key)) throw new Error('Configure ' + key + ' privately before running.'); });",
+                  "pm.collectionVariables.set('matchCode', pm.variables.replaceIn('{{$guid}}'));",
+                  "pm.collectionVariables.set('startedAt', new Date(Date.now() - 60000).toISOString());",
+                  "pm.collectionVariables.unset('matchId'); pm.collectionVariables.unset('rewardSnapshot');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('matchId', pm.response.json().data.matchId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "GameServer {{serverCredential}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/Matches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchCode\": \"{{matchCode}}\",\n  \"mirrorRoomId\": \"{{mirrorRoomId}}\",\n  \"matchType\": \"Ranked\",\n  \"communityId\": null,\n  \"startedAt\": \"{{startedAt}}\",\n  \"totalPlayers\": 2,\n  \"playerProfileIds\": [\n    {{player1ProfileId}},\n    {{player2ProfileId}}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Complete match",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('endedAt', new Date().toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json().data; pm.collectionVariables.set('rewardSnapshot', JSON.stringify(data)); pm.test('Two human rewards', () => pm.expect(data.rewards.length).to.eql(2)); pm.test('Winner answer and result XP', () => pm.expect(data.rewards.find(x => String(x.playerProfileId) === String(pm.variables.get('player1ProfileId'))).xpGained).to.eql(60)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "GameServer {{serverCredential}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/Matches/{{matchId}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchType\": \"Ranked\",\n  \"communityId\": null,\n  \"mirrorRoomId\": \"{{mirrorRoomId}}\",\n  \"endedAt\": \"{{endedAt}}\",\n  \"players\": [\n    {\n      \"playerProfileId\": {{player1ProfileId}},\n      \"position\": 1,\n      \"correctAnswers\": 1,\n      \"wrongAnswers\": 0,\n      \"maxStreak\": 1,\n      \"answerTimeTotalMs\": 1000,\n      \"questionTimeTotalMs\": 10000\n    },\n    {\n      \"playerProfileId\": {{player2ProfileId}},\n      \"position\": 2,\n      \"correctAnswers\": 0,\n      \"wrongAnswers\": 0,\n      \"maxStreak\": 0,\n      \"answerTimeTotalMs\": 0,\n      \"questionTimeTotalMs\": 0\n    }\n  ],\n  \"questionResults\": [\n    {\n      \"playerProfileId\": {{player1ProfileId}},\n      \"questionId\": null,\n      \"questionType\": \"MCQ\",\n      \"isCorrect\": true,\n      \"answerTimeMs\": 1000,\n      \"questionTimeMs\": 10000,\n      \"streakBeforeAnswer\": 0,\n      \"streakAfterAnswer\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retry settled completion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });",
+                  "pm.test('Exact original reward snapshot', () => pm.expect(JSON.stringify(pm.response.json().data)).to.eql(pm.collectionVariables.get('rewardSnapshot')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "GameServer {{serverCredential}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/Matches/{{matchId}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchType\": \"Ranked\",\n  \"communityId\": null,\n  \"mirrorRoomId\": \"{{mirrorRoomId}}\",\n  \"endedAt\": \"{{endedAt}}\",\n  \"players\": [\n    {\n      \"playerProfileId\": {{player1ProfileId}},\n      \"position\": 1,\n      \"correctAnswers\": 1,\n      \"wrongAnswers\": 0,\n      \"maxStreak\": 1,\n      \"answerTimeTotalMs\": 1000,\n      \"questionTimeTotalMs\": 10000\n    },\n    {\n      \"playerProfileId\": {{player2ProfileId}},\n      \"position\": 2,\n      \"correctAnswers\": 0,\n      \"wrongAnswers\": 0,\n      \"maxStreak\": 0,\n      \"answerTimeTotalMs\": 0,\n      \"questionTimeTotalMs\": 0\n    }\n  ],\n  \"questionResults\": [\n    {\n      \"playerProfileId\": {{player1ProfileId}},\n      \"questionId\": null,\n      \"questionType\": \"MCQ\",\n      \"isCorrect\": true,\n      \"answerTimeMs\": 1000,\n      \"questionTimeMs\": 10000,\n      \"streakBeforeAnswer\": 0,\n      \"streakAfterAnswer\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Player reads (playerAccessToken is player 1)",
+      "item": [
+        {
+          "name": "My progression",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Progression/me"
+          }
+        },
+        {
+          "name": "My rank",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Ranking/me"
+          }
+        },
+        {
+          "name": "Own progression by profile ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Progression/players/{{player1ProfileId}}"
+          }
+        },
+        {
+          "name": "Own rank by profile ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Ranking/players/{{player1ProfileId}}"
+          }
+        },
+        {
+          "name": "Global leaderboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Ranking/leaderboard?page={{page}}&pageSize={{pageSize}}"
+          }
+        },
+        {
+          "name": "My match history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Matches/me/history?page={{page}}&pageSize={{pageSize}}"
+          }
+        },
+        {
+          "name": "Registered match details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Matches/{{matchId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Optional community staff reads (replace token with authorized staff token)",
+      "item": [
+        {
+          "name": "Community leaderboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Communities/{{communityId}}/ranking/leaderboard?page={{page}}&pageSize={{pageSize}}"
+          }
+        },
+        {
+          "name": "Community match history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Communities/{{communityId}}/matches?page={{page}}&pageSize={{pageSize}}"
+          }
+        },
+        {
+          "name": "Community player history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('BaseResponse success data', () => { const body = pm.response.json(); pm.expect(body.errorCode).to.eql(1); pm.expect(body).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/Communities/{{communityId}}/players/{{player1ProfileId}}/matches?page={{page}}&pageSize={{pageSize}}"
+          }
+        }
+      ]
+    }
+  ]
+}

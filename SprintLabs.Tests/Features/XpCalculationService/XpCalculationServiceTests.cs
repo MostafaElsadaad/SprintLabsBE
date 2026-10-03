@@ -100,4 +100,26 @@ public class XpCalculationServiceTests
             .Select(isCorrect => new XpQuestionResult { IsCorrect = isCorrect })
             .ToArray();
     }
+
+    [Theory]
+    [InlineData(1, 10)]
+    [InlineData(2, 12)]
+    [InlineData(4, 14)]
+    [InlineData(6, 18)]
+    [InlineData(8, 22)]
+    [InlineData(10, 30)]
+    [InlineData(1000, 30)]
+    public void CalculateCorrectAnswerXp_Uses_same_streak_rule_as_total(int streak, int expected)
+    {
+        _service.CalculateCorrectAnswerXp(streak).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CalculateCorrectAnswerXp_Rejects_non_positive_streak(int streak)
+    {
+        Action act = () => _service.CalculateCorrectAnswerXp(streak);
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }
