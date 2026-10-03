@@ -10,4 +10,6 @@ public interface ITeacherInvitationService
     Task<TeacherInvitationValidationResult> ValidateAsync(string rawToken, CancellationToken cancellationToken);
     Task CompleteAsync(string rawToken, string name, string password, CancellationToken cancellationToken);
     Task RevokeForMembershipAsync(long communityUserId, CancellationToken cancellationToken);
+    Task<TeacherInvitationIssueResult> ResendAsync(long actorUserId, long communityId, long invitationId, CancellationToken cancellationToken);
+    Task CancelAsync(long actorUserId, long communityId, long invitationId, CancellationToken cancellationToken);
 }

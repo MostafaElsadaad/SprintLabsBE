@@ -1,13 +1,16 @@
+using Application.Features.CommunityDashboard.Common;
+using Application.Features.CommunityDashboard.ListDashboardClasses;
+using Application.Features.CommunityDashboard.ListDashboardGrades;
+using Application.Features.CommunityDashboard.ListDashboardTeachers;
+using Application.Features.CommunityDashboard.ListDashboardStudents;
+using Application.Features.CommunityDashboard.WriteDashboardClass;
+using Shared.Requests;
 using System.Net;
 
 using Application.Features.Communities.Common;
 using Application.Features.Communities.GetCommunityProfile;
 using Application.Features.Communities.GradesClasses.Common;
-using Application.Features.Communities.GradesClasses.CreateClass;
 using Application.Features.Communities.GradesClasses.DeleteClass;
-using Application.Features.Communities.GradesClasses.ListClasses;
-using Application.Features.Communities.GradesClasses.ListGrades;
-using Application.Features.Communities.GradesClasses.UpdateClass;
 using Application.Features.Communities.StudentLicenses.AddStudentLicense;
 using Application.Features.Communities.StudentLicenses.Common;
 using Application.Features.Communities.StudentLicenses.ListStudentLicenses;
@@ -15,10 +18,8 @@ using Application.Features.Communities.StudentLicenses.RevokeStudentLicense;
 using Application.Features.Communities.StudentLicenses.UpdateStudentLicense;
 using Application.Features.Communities.Students.Common;
 using Application.Features.Communities.Students.GetStudentDetail;
-using Application.Features.Communities.Students.ListStudents;
 using Application.Features.Communities.Teachers.Common;
 using Application.Features.Communities.Teachers.InviteTeacher;
-using Application.Features.Communities.Teachers.ListTeachers;
 using Application.Features.Communities.Teachers.RemoveTeacher;
 using Application.Features.Communities.Teachers.ReplaceTeacherClassAssignments;
 using Application.Features.Communities.UpdateCommunityProfile;
@@ -43,7 +44,7 @@ namespace API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Authorize]
-public class CommunitiesController : ControllerBase
+public partial class CommunitiesController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICommunityAccessService _communityAccessService;
@@ -153,39 +154,13 @@ public class CommunitiesController : ControllerBase
     }
 
     [HttpGet("teachers")]
-    public async Task<IActionResult> ListTeachers(
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10,
-        [FromQuery] long? gradeId = null,
-        [FromQuery] long? classId = null,
-        [FromQuery] string? search = null,
-        [FromQuery] CommunityUserStatus? status = null)
+    public async Task<IActionResult> ListTeachers([FromQuery] ListDashboardTeachersQuery query, [FromQuery] int? page = null)
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new ListTeachersQuery
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            GradeId = gradeId,
-            ClassId = classId,
-            Search = search,
-            Status = status
-        });
-
-        return Ok(new BaseResponse<PagedResponse<TeacherResponse>>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        query.UserId = userId.Value;
+        if (page.HasValue) query.PageNumber = page.Value;
+        return await SendDashboard(query, x => DashboardResponseMapper.Page(x, DashboardResponseMapper.Teacher));
     }
 
     [HttpDelete("teachers/{teacherUserId:long}")]
@@ -217,104 +192,36 @@ public class CommunitiesController : ControllerBase
     public async Task<IActionResult> ListGrades()
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new ListGradesQuery
-        {
-            UserId = userId.Value,
-            CommunityId = communityId
-        });
-
-        return Ok(new BaseResponse<List<GradeResponse>>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        await ResolveCurrentStaffCommunityId(userId.Value);
+        return await SendDashboard(new ListDashboardGradesQuery { UserId = userId.Value },
+            rows => rows.Select(DashboardResponseMapper.Grade));
     }
 
     [HttpPost("classes")]
-    public async Task<IActionResult> CreateClass([FromBody] CreateClassRequest request)
+    public async Task<IActionResult> CreateClass([FromBody] DashboardClassRequest request)
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new CreateClassCommand
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            GradeId = request.GradeId,
-            Name = request.Name
-        });
-
-        return Ok(new BaseResponse<ClassResponse>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        return await SendDashboard(new WriteDashboardClassCommand { UserId = userId.Value, Body = request }, DashboardResponseMapper.ClassDetail);
     }
 
     [HttpGet("classes")]
-    public async Task<IActionResult> ListClasses([FromQuery] long? gradeId)
+    public async Task<IActionResult> ListClasses([FromQuery] ListDashboardClassesQuery query, [FromQuery] int? page = null)
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new ListClassesQuery
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            GradeId = gradeId
-        });
-
-        return Ok(new BaseResponse<List<ClassResponse>>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        query.UserId = userId.Value;
+        if (page.HasValue) query.PageNumber = page.Value;
+        return await SendDashboard(query, x => DashboardResponseMapper.Page(x, DashboardResponseMapper.Class));
     }
 
     [HttpPatch("classes/{classId:long}")]
-    public async Task<IActionResult> UpdateClass(
-        long classId,
-        [FromBody] UpdateClassRequest request)
+    public async Task<IActionResult> UpdateClass(long classId, [FromBody] DashboardClassRequest request)
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new UpdateClassCommand
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            ClassId = classId,
-            Name = request.Name,
-            GradeId = request.GradeId
-        });
-
-        return Ok(new BaseResponse<ClassResponse>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        return await SendDashboard(new WriteDashboardClassCommand { UserId = userId.Value, ClassId = classId, Body = request }, DashboardResponseMapper.ClassDetail);
     }
 
     [HttpDelete("classes/{classId:long}")]
@@ -402,39 +309,13 @@ public class CommunitiesController : ControllerBase
     }
 
     [HttpGet("students")]
-    public async Task<IActionResult> ListStudents(
-        [FromQuery] StudentLicenseStatus? status,
-        [FromQuery] long? gradeId,
-        [FromQuery] long? classId,
-        [FromQuery] string? search,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> ListStudents([FromQuery] ListDashboardStudentsQuery query, [FromQuery] int? page = null)
     {
         var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new ListStudentsQuery
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            Status = status,
-            GradeId = gradeId,
-            ClassId = classId,
-            Search = search,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        });
-
-        return Ok(new BaseResponse<PagedResponse<CommunityStudentListItemResponse>>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        if (userId == null) return Unauthorized();
+        query.UserId = userId.Value;
+        if (page.HasValue) query.PageNumber = page.Value;
+        return await SendDashboard(query, x => DashboardResponseMapper.Page(x, DashboardResponseMapper.Student));
     }
 
     [HttpGet("students/{playerProfileId:long}")]

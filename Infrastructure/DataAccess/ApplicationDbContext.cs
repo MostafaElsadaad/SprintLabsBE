@@ -32,10 +32,31 @@ namespace Infrastructure.DataAccess
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<TeacherInvitation> TeacherInvitations { get; set; }
         public DbSet<TeacherClassAssignment> TeacherClassAssignments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<StaffActivity> StaffActivities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<CommunityUser>().Property(x => x.TeacherTitle).IsRequired().HasMaxLength(32).HasDefaultValue("TEACHER");
+            modelBuilder.Entity<Notification>(e =>
+            {
+                e.Property(x => x.Title).IsRequired().HasMaxLength(200);
+                e.Property(x => x.Body).IsRequired().HasMaxLength(4000);
+                e.HasIndex(x => new { x.CommunityId, x.RecipientUserId, x.CreatedAt });
+                e.HasOne<Community>().WithMany().HasForeignKey(x => x.CommunityId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.RecipientUserId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.SenderUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<StaffActivity>(e =>
+            {
+                e.Property(x => x.Label).IsRequired().HasMaxLength(200);
+                e.HasIndex(x => new { x.CommunityId, x.TeacherUserId, x.CreatedAt });
+                e.HasOne<Community>().WithMany().HasForeignKey(x => x.CommunityId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.TeacherUserId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
+            });
 
             modelBuilder.Entity<QuestionsJson>().HasData(QuestionsJsonSeeder.Seed());
             modelBuilder.Entity<QuestionsJson>(e =>

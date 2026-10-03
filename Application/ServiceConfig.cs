@@ -13,6 +13,8 @@ namespace Application
         {
             services.AddMediatR(x => x.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
             services.AddScoped<IExternalPlayerLoginWorkflow, ExternalPlayerLoginWorkflow>();
+            services.AddScoped<Application.Features.CommunityDashboard.Common.DashboardAuthorization>();
+            services.AddScoped<Application.Features.CommunityDashboard.Common.DashboardProjection>();
 
             return services;
         }
