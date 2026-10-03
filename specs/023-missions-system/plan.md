@@ -1,0 +1,4 @@
+# Plan
+Reuse API versioning, BaseResponse, MediatR slices, existing GameServer auth and level calculator. Domain owns model/enum/service boundary; Shared owns DTOs; Infrastructure owns database transactions, assignment, event matching and reward persistence. No new package/project references.
+All player writes lock Players in ascending id order within serializable transactions (same row authority used by match rewards). Unique assignment/event/inventory indexes are secondary guards. Reset processes each player in a transaction before ending activations; no activation-to-player lock inversion. Any DB failure yields safe 503 and requires fresh-scope retry.
+Implement models/configuration; assignment and snapshot service; event engine; claims/reset; configuration/seeds; thin API slices; migrations, focused relational/API tests, full regression and documentation. No live database change, deployment or Unity runtime changes.

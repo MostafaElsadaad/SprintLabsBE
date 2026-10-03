@@ -35,9 +35,23 @@ namespace Infrastructure.DataAccess
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<StaffActivity> StaffActivities { get; set; }
 
+        public DbSet<MissionTemplate> MissionTemplates { get; set; }
+        public DbSet<MissionReward> MissionRewards { get; set; }
+        public DbSet<MissionActivation> MissionActivations { get; set; }
+        public DbSet<MissionActivationItem> MissionActivationItems { get; set; }
+        public DbSet<PlayerMissionAssignment> PlayerMissionAssignments { get; set; }
+        public DbSet<PlayerMission> PlayerMissions { get; set; }
+        public DbSet<MissionEventLog> MissionEventLogs { get; set; }
+        public DbSet<MissionClaimLog> MissionClaimLogs { get; set; }
+        public DbSet<ShopProduct> ShopProducts { get; set; }
+        public DbSet<Item> Items { get; set; }
+        public DbSet<BoxRewardEntry> BoxRewardEntries { get; set; }
+        public DbSet<PlayerInventoryItem> PlayerInventoryItems { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            MissionModelConfiguration.Configure(modelBuilder);
 
             modelBuilder.Entity<CommunityUser>().Property(x => x.TeacherTitle).IsRequired().HasMaxLength(32).HasDefaultValue("TEACHER");
             modelBuilder.Entity<Notification>(e =>

@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "SprintLabs Missions (manual integration)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://example.invalid"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "gameServerCredential",
+      "value": ""
+    },
+    {
+      "key": "eventId",
+      "value": ""
+    },
+    {
+      "key": "playerProfileId",
+      "value": ""
+    },
+    {
+      "key": "playerMissionId",
+      "value": ""
+    },
+    {
+      "key": "occurredAtUtc",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Admin seed (development only)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/missions/seed"
+      }
+    },
+    {
+      "name": "Admin preview templates",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/missions/templates"
+      }
+    },
+    {
+      "name": "My missions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Missions/me"
+      }
+    },
+    {
+      "name": "Trusted event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "GameServer {{gameServerCredential}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/game-server/missions/events",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"playerProfileId\": \"{{playerProfileId}}\",\n  \"eventType\": \"CorrectAnswer\",\n  \"occurredAt\": \"{{occurredAtUtc}}\",\n  \"eventData\": {\n    \"unitId\": 1\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Claim mission",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Missions/{{playerMissionId}}/claim"
+      }
+    },
+    {
+      "name": "Claim all completed",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Missions/claim-all"
+      }
+    },
+    {
+      "name": "Admin reset",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/missions/reset/run"
+      }
+    }
+  ]
+}
