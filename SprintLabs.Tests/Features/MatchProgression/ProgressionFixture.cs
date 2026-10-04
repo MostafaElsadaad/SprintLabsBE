@@ -13,11 +13,11 @@ internal sealed class ProgressionFixture : IDisposable
     public ApplicationDbContext Context { get; }
     public MatchProgressionService Matches { get; }
     public ProgressionReadService Reads { get; }
-    public ProgressionFixture(ApplicationDbContext? context = null)
+    public ProgressionFixture(ApplicationDbContext? context = null, TimeProvider? clock = null)
     {
         Context = context ?? new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         Matches = new(Context, new Infrastructure.Services.XpCalculationService(), new Infrastructure.Services.LevelProgressionService(), new Infrastructure.Services.RpRankCalculationService());
-        Reads = new(Context, new Infrastructure.Services.LevelProgressionService(), new CommunityAccessService(new BaseRepository<CommunityUser>(Context)));
+        Reads = new(Context, new Infrastructure.Services.LevelProgressionService(), new CommunityAccessService(new BaseRepository<CommunityUser>(Context)), clock);
     }
 
     public async Task SeedAsync()

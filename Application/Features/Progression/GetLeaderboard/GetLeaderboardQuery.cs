@@ -4,9 +4,9 @@ using Shared.Responses;
 
 namespace Application.Features.Progression.GetLeaderboard;
 
-public class GetLeaderboardQuery : IRequest<ProgressionPage<LeaderboardEntryResponse>>
+public class GetLeaderboardQuery : IRequest<LeaderboardPageResponse>
 {
     public long UserId { get; set; }
     public long? CommunityId { get; set; }
-    public ProgressionPageRequest Page { get; set; } = new();
+    public LeaderboardRequest Page { get; set; } = new();
 }

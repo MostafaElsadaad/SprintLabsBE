@@ -11,14 +11,15 @@ using Shared.Responses;
 
 namespace Infrastructure.Services;
 
-public class ProgressionReadService : IProgressionReadService
+public partial class ProgressionReadService : IProgressionReadService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILevelProgressionService _levels;
     private readonly ICommunityAccessService _access;
+    private readonly TimeProvider _clock;
 
-    public ProgressionReadService(ApplicationDbContext context, ILevelProgressionService levels, ICommunityAccessService access)
-    { _context = context; _levels = levels; _access = access; }
+    public ProgressionReadService(ApplicationDbContext context, ILevelProgressionService levels, ICommunityAccessService access, TimeProvider? clock = null)
+    { _context = context; _levels = levels; _access = access; _clock = clock ?? TimeProvider.System; }
 
     public async Task<PlayerProgressionResponse> GetProgressionAsync(long userId, long? playerId, CancellationToken ct)
     {
@@ -38,30 +39,6 @@ public class ProgressionReadService : IProgressionReadService
         var player = await AccessiblePlayerAsync(await CallerAsync(userId, ct), playerId, ct);
         return new() { PlayerProfileId = player.Id, Rp = player.Rp,
             RankTier = player.RankTier.ToString(), HighestRankTier = player.HighestRankTier.ToString() };
-    }
-
-    public async Task<ProgressionPage<LeaderboardEntryResponse>> GetLeaderboardAsync(long userId, long? communityId,
-        ProgressionPageRequest page, CancellationToken ct)
-    {
-        ValidatePage(page);
-        var user = await CallerAsync(userId, ct);
-        var query = _context.Players.AsNoTracking().Where(p => p.UserId.HasValue &&
-            _context.Users.Any(u => u.Id == p.UserId && u.Status == UserStatus.Active));
-        if (communityId.HasValue)
-        {
-            var licenses = await ScopedLicensesAsync(user, communityId.Value, ct);
-            licenses = await FilterLicensesAsync(licenses, communityId.Value, page, ct);
-            query = query.Where(p => licenses.Any(l => l.PlayerProfileId == p.Id));
-        }
-        else if (page.GradeId.HasValue || page.ClassId.HasValue) throw Invalid();
-        var total = await query.CountAsync(ct);
-        var offset = (page.Page - 1) * page.PageSize;
-        var players = await query.OrderByDescending(x => x.Rp).ThenBy(x => x.Id)
-            .Skip(offset).Take(page.PageSize).ToListAsync(ct);
-        return new() { Page = page.Page, PageSize = page.PageSize, Total = total,
-            Items = players.Select((p, i) => new LeaderboardEntryResponse
-            { Position = (long)offset + i + 1, PlayerProfileId = p.Id, Name = p.Name, AvatarUrl = p.AvatarUrl,
-                Rp = p.Rp, RankTier = p.RankTier.ToString(), Level = p.Level, TotalWins = p.TotalWins }).ToList() };
     }
 
     public async Task<ProgressionPage<MatchHistoryResponse>> GetHistoryAsync(long userId, long? communityId,

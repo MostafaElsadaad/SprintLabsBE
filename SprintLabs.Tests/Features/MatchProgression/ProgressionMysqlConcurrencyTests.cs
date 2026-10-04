@@ -12,6 +12,28 @@ namespace Compass.Tests.Features.MatchProgression;
 public class ProgressionMysqlConcurrencyTests
 {
     [MysqlFact]
+    public async Task Leaderboard_period_aggregates_and_own_positions_execute_on_mysql()
+    {
+        await using var database = await MysqlProgressionDatabase.CreateAsync();
+        using var f = new ProgressionFixture(database.Context()); await f.SeedAsync();
+        var match = await f.Matches.RegisterAsync(f.Registration(communityId: 1), default);
+        await f.Matches.CompleteAsync(match.MatchId, f.Completion(communityId: 1), default);
+        foreach (var period in new[] { "AllTime", "Week", "Month", "Year" })
+        {
+            var board = await f.Reads.GetLeaderboardAsync(1, 1, new() { Period = period, PageSize = 1 }, default);
+            var me = await f.Reads.GetLeaderboardStandingAsync(1, 1, new() { Period = period }, default);
+            me.CurrentPlayer.Should().BeEquivalentTo(board.CurrentPlayer);
+            board.Total.Should().Be(2);
+            if (period != "AllTime")
+            {
+                board.Items.Single().PlayerProfileId.Should().Be(101);
+                me.CurrentPlayer!.Points.Should().Be(30);
+                me.CurrentPlayer.Position.Should().Be(1);
+            }
+        }
+    }
+
+    [MysqlFact]
     public async Task Same_match_parallel_completions_reward_once()
     {
         await using var database = await MysqlProgressionDatabase.CreateAsync();

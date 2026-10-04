@@ -86,6 +86,49 @@ public class ProgressionApiTests
         (await client.GetAsync("/api/v1/Communities/1/players/102/matches")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Leaderboard_lists_and_own_routes_preserve_envelopes_and_ignore_spoofed_identity()
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        using var server = Server(f, null); using var client = server.CreateClient();
+        (await client.GetAsync("/api/v1/Ranking/leaderboard/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        client.DefaultRequestHeaders.Add("X-Test-User", "1");
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/v1/Ranking/leaderboard?pageSize=1");
+        var data = list.GetProperty("data");
+        data.GetProperty("items")[0].GetProperty("points").GetInt64().Should().Be(1000);
+        data.GetProperty("currentPlayer").GetProperty("position").GetInt64().Should().Be(3);
+        data.GetProperty("period").GetString().Should().Be("AllTime");
+        var me = await client.GetFromJsonAsync<JsonElement>("/api/v1/Ranking/leaderboard/me?userId=2&playerProfileId=102&page=99");
+        me.GetProperty("data").GetProperty("currentPlayer").GetProperty("playerProfileId").GetInt64().Should().Be(101);
+        var school = await client.GetFromJsonAsync<JsonElement>("/api/v1/Communities/1/ranking/leaderboard/me?classId=1");
+        school.GetProperty("data").GetProperty("currentPlayer").GetProperty("position").GetInt64().Should().Be(1);
+        (await client.GetAsync("/api/v1/Communities/1/ranking/leaderboard?classId=2")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.GetAsync("/api/v1/Communities/2/ranking/leaderboard/me")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard?classId=1")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard/me?period=Daily")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard?period=1")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Period_leaderboard_http_returns_ranked_activity_and_utc_boundaries()
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        var match = await f.Matches.RegisterAsync(f.Registration(), default);
+        await f.Matches.CompleteAsync(match.MatchId, f.Completion(), default);
+        using var server = Server(f, null); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "1");
+        var result = await client.GetFromJsonAsync<JsonElement>("/api/v1/Ranking/leaderboard?period=month");
+        var data = result.GetProperty("data");
+        data.GetProperty("period").GetString().Should().Be("Month");
+        data.GetProperty("periodStartsAt").GetString().Should().EndWith("Z");
+        data.GetProperty("periodEndsAt").GetString().Should().EndWith("Z");
+        data.GetProperty("total").GetInt32().Should().Be(2);
+        data.GetProperty("currentPlayer").GetProperty("points").GetInt64().Should().Be(30);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "3");
+        var unranked = await client.GetFromJsonAsync<JsonElement>("/api/v1/Ranking/leaderboard/me?period=Month");
+        unranked.GetProperty("data").GetProperty("currentPlayer").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     private static TestServer Server(ProgressionFixture f, string? credential) => new(new WebHostBuilder()
         .ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["GameServer:ApiKey"] = credential }))
         .ConfigureServices(services =>
