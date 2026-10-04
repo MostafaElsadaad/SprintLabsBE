@@ -7,6 +7,7 @@ public class LeaderboardEntryResponse
     public string Name { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public int Rp { get; set; }
+    public long Points { get; set; }
     public string RankTier { get; set; } = string.Empty;
     public int Level { get; set; }
     public int TotalWins { get; set; }

@@ -1,6 +1,7 @@
 using System.Net;
 using Application.Features.Progression.GetRanking;
 using Application.Features.Progression.GetLeaderboard;
+using Application.Features.Progression.GetLeaderboardStanding;
 using Asp.Versioning;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -24,11 +25,18 @@ public class RankingController : ControllerBase
     public Task<IActionResult> Player(long playerProfileId, CancellationToken ct) => Get(playerProfileId, ct);
 
     [HttpGet("leaderboard")]
-    public Task<IActionResult> GlobalLeaderboard([FromQuery] ProgressionPageRequest page, CancellationToken ct)
+    public Task<IActionResult> GlobalLeaderboard([FromQuery] LeaderboardRequest page, CancellationToken ct)
         => Leaderboard(null, page, ct);
     [HttpGet("/api/v{version:apiVersion}/Communities/{communityId:long}/ranking/leaderboard")]
-    public Task<IActionResult> CommunityLeaderboard(long communityId, [FromQuery] ProgressionPageRequest page, CancellationToken ct)
+    public Task<IActionResult> CommunityLeaderboard(long communityId, [FromQuery] LeaderboardRequest page, CancellationToken ct)
         => Leaderboard(communityId, page, ct);
+
+    [HttpGet("leaderboard/me")]
+    public Task<IActionResult> GlobalStanding([FromQuery] LeaderboardRequest request, CancellationToken ct)
+        => Standing(null, request, ct);
+    [HttpGet("/api/v{version:apiVersion}/Communities/{communityId:long}/ranking/leaderboard/me")]
+    public Task<IActionResult> CommunityStanding(long communityId, [FromQuery] LeaderboardRequest request, CancellationToken ct)
+        => Standing(communityId, request, ct);
 
     private async Task<IActionResult> Get(long? playerId, CancellationToken ct)
     {
@@ -36,10 +44,16 @@ public class RankingController : ControllerBase
         var data = await _mediator.Send(new GetRankingQuery { UserId = userId, PlayerProfileId = playerId }, ct);
         return Ok(new BaseResponse<PlayerRankingResponse>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
     }
-    private async Task<IActionResult> Leaderboard(long? communityId, ProgressionPageRequest page, CancellationToken ct)
+    private async Task<IActionResult> Leaderboard(long? communityId, LeaderboardRequest page, CancellationToken ct)
     {
         if (!long.TryParse(User.FindFirst("userId")?.Value, out var userId) || userId <= 0) return Unauthorized();
         var data = await _mediator.Send(new GetLeaderboardQuery { UserId = userId, CommunityId = communityId, Page = page }, ct);
-        return Ok(new BaseResponse<ProgressionPage<LeaderboardEntryResponse>>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+        return Ok(new BaseResponse<LeaderboardPageResponse>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+    }
+    private async Task<IActionResult> Standing(long? communityId, LeaderboardRequest request, CancellationToken ct)
+    {
+        if (!long.TryParse(User.FindFirst("userId")?.Value, out var userId) || userId <= 0) return Unauthorized();
+        var data = await _mediator.Send(new GetLeaderboardStandingQuery { UserId = userId, CommunityId = communityId, Request = request }, ct);
+        return Ok(new BaseResponse<LeaderboardStandingResponse>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
     }
 }

@@ -90,13 +90,12 @@ Progression fields: playerProfileId, experience (lifetime XP), level, gold, rp, 
 
 ## Leaderboards (NOX-91)
 
-`GET /Ranking/leaderboard?page=1&pageSize=20` — authenticated active user.
-
-`GET /Communities/{communityId}/ranking/leaderboard?page=1&pageSize=20&gradeId=...&classId=...` — platform admin or community owner/teacher. Teachers see their assigned active classes only. Community filters use grade/class IDs belonging to that community; both filters intersect. Global grade/class filters return 400.
-
-Data: `{ "items": [ { "position": 1, "playerProfileId": 101, "name": "Player", "avatarUrl": null, "rp": 480, "rankTier": "Seeker", "level": 2, "totalWins": 1 } ], "page": 1, "pageSize": 20, "total": 1 }`.
-
-Sort: RP descending, profile ID ascending. Position is ordinal within the filtered leaderboard, including previous pages; ties remain stable. Suspended/unlinked users are excluded before counting/paging. Community leaderboards require active enrollment and active classes. PageSize 1–100; large offsets that exceed Int32 return 400. Empty/out-of-range valid page returns empty items with total. Unauthorized community 403, unavailable community or foreign filters 404.
+The existing global/community routes are extended by [Game leaderboard API](../024-game-leaderboards/api.md).
+Default AllTime retains current RP ordering and existing page/row fields. Additive fields provide points, period bounds,
+page-independent currentPlayer standing and authorized grade/class filter options. Week/Month/Year use signed net RP
+from completed ranked matches in the current UTC calendar period. Own-only routes end in `/leaderboard/me`.
+Active enrolled players can read public school standings and filter their own classes; owner/admin/assigned-teacher
+restrictions and private progression/history access remain unchanged. See the linked contract for exact scopes/errors.
 
 ## History and details (NOX-92)
 

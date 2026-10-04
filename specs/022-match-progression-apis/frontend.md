@@ -37,3 +37,7 @@ This feature exposes backend APIs; it does not add UI, scheduling, missions, or 
 ## Later decisions
 
 Actual Unity adapter/retry ownership and result UI wiring, dynamic Immortal Top 10, historical class-assignment snapshots, result correction workflow, and mission rewards remain separate tasks. No frontend is implemented here.
+
+## Game leaderboard extension (2026-10-04)
+
+The current game leaderboard contract adds enrolled-player school access, currentPlayer standing, availableFilters and UTC period net-RP points. Follow [the updated frontend guide](../024-game-leaderboards/frontend.md) for those screens; the staff/history guidance above remains applicable.
