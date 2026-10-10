@@ -24,24 +24,33 @@ public class RevokeStudentLicenseCommandHandler
     private readonly IBaseRepository<StudentLicense> _studentLicenseRepository;
     private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
     private readonly IBaseRepository<CommunityUser> _communityUserRepository;
+    private readonly IStudentEnrollmentTransaction? _transaction;
 
     public RevokeStudentLicenseCommandHandler(
         IUserService userService,
         ICommunityAccessService communityAccessService,
         IBaseRepository<StudentLicense> studentLicenseRepository,
         IBaseRepository<CommunityLicense> communityLicenseRepository,
-        IBaseRepository<CommunityUser> communityUserRepository)
+        IBaseRepository<CommunityUser> communityUserRepository,
+        IStudentEnrollmentTransaction? transaction = null)
     {
         _userService = userService;
         _communityAccessService = communityAccessService;
         _studentLicenseRepository = studentLicenseRepository;
         _communityLicenseRepository = communityLicenseRepository;
         _communityUserRepository = communityUserRepository;
+        _transaction = transaction;
     }
 
     public async Task<StudentLicenseResponse> Handle(
         RevokeStudentLicenseCommand request,
         CancellationToken cancellationToken)
+    {
+        return _transaction == null ? await Revoke(request, cancellationToken) :
+            await _transaction.ExecuteAsync(request.CommunityId, () => Revoke(request, cancellationToken), cancellationToken);
+    }
+
+    private async Task<StudentLicenseResponse> Revoke(RevokeStudentLicenseCommand request, CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 || request.CommunityId <= 0 || request.LicenseId <= 0)
         {

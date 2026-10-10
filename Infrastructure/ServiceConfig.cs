@@ -75,6 +75,8 @@ namespace Infrastructure
             services.AddScoped<IStaffCommunityMembershipService, StaffCommunityMembershipService>();
             services.AddScoped<ITeacherClassAssignmentService, TeacherClassAssignmentService>();
             services.AddScoped<ITeacherProfileService, TeacherProfileService>();
+            services.AddScoped<IStudentRosterFileService, StudentRosterFileService>();
+            services.AddScoped<IStudentEnrollmentTransaction, StudentEnrollmentTransaction>();
             services.AddScoped<IXpCalculationService, XpCalculationService>();
             services.AddScoped<ILevelProgressionService, LevelProgressionService>();
             services.AddScoped<IRpRankCalculationService, RpRankCalculationService>();

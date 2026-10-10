@@ -26,10 +26,10 @@ public class DashboardReadTests
             .Handle(new ListDashboardClassesQuery { UserId = 20 }, default);
         classes.TotalRecords.Should().Be(1);
         classes.Data.Single().Teachers.Should().HaveCount(2);
-        var students = await new ListDashboardStudentsQueryHandler(f.Authorization, f.Projection)
+        var students = await new ListDashboardStudentsQueryHandler(f.StudentRoster)
             .Handle(new ListDashboardStudentsQuery { UserId = 20, ClassId = 1 }, default);
         students.Data.Single().FullName.Should().Be("Student 1");
-        students.Data.Single().SessionsCount.Should().BeNull();
+        students.Data.Single().SessionsCount.Should().Be(0);
         students.Data.Single().ActivityStatus.Should().Be("UNKNOWN");
     }
 

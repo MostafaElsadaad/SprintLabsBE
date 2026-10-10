@@ -61,7 +61,8 @@ public static class DashboardResponseMapper
     public static object Student(StudentView row) => new
     {
         row.Id, row.FullName, AvgScore = row.AvgScore ?? 0, SessionsCount = row.SessionsCount ?? 0,
-        Status = row.ActivityStatus
+        row.Status, row.StudentCode, row.Email, Class = new { Id = row.ClassId, Name = row.ClassName },
+        row.Grade, LicenseStatus = row.LicenseStatus.ToUpperInvariant(), row.JoinedAt, row.ActivatedAt
     };
 
     private static string? TeacherGrade(TeacherView row) => row.Grades.Count == 0 ? null :

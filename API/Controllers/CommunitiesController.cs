@@ -318,8 +318,8 @@ public partial class CommunitiesController : ControllerBase
         return await SendDashboard(query, x => DashboardResponseMapper.Page(x, DashboardResponseMapper.Student));
     }
 
-    [HttpGet("students/{playerProfileId:long}")]
-    public async Task<IActionResult> GetStudentDetail(long playerProfileId)
+    [HttpGet("students/{studentId:long}")]
+    public async Task<IActionResult> GetStudentDetail(long studentId, [FromQuery] string idType = "license")
     {
         var userId = GetUserId();
         if (userId == null)
@@ -327,20 +327,8 @@ public partial class CommunitiesController : ControllerBase
             return Unauthorized();
         }
 
-        var communityId = await ResolveCurrentStaffCommunityId(userId.Value);
-
-        var result = await _mediator.Send(new GetStudentDetailQuery
-        {
-            UserId = userId.Value,
-            CommunityId = communityId,
-            PlayerProfileId = playerProfileId
-        });
-
-        return Ok(new BaseResponse<CommunityStudentDetailResponse>(
-            data: result,
-            statusCode: HttpStatusCode.OK,
-            errorCode: ErrorCode.Success,
-            message: ErrorMessage.Success));
+        return await SendDashboard(new Application.Features.Communities.Students.StudentDetail.StudentDetailQuery
+        { UserId = userId.Value, StudentId = studentId, IdType = idType });
     }
 
     [HttpPatch("student-licenses/{licenseId:long}")]

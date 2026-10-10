@@ -27,6 +27,7 @@ public class UpdateStudentLicenseCommandHandler
     private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
     private readonly IBaseRepository<Grade> _gradeRepository;
     private readonly IBaseRepository<Class> _classRepository;
+    private readonly IStudentEnrollmentTransaction? _transaction;
 
     public UpdateStudentLicenseCommandHandler(
         IUserService userService,
@@ -34,7 +35,8 @@ public class UpdateStudentLicenseCommandHandler
         IBaseRepository<StudentLicense> studentLicenseRepository,
         IBaseRepository<CommunityLicense> communityLicenseRepository,
         IBaseRepository<Grade> gradeRepository,
-        IBaseRepository<Class> classRepository)
+        IBaseRepository<Class> classRepository,
+        IStudentEnrollmentTransaction? transaction = null)
     {
         _userService = userService;
         _communityAccessService = communityAccessService;
@@ -42,11 +44,18 @@ public class UpdateStudentLicenseCommandHandler
         _communityLicenseRepository = communityLicenseRepository;
         _gradeRepository = gradeRepository;
         _classRepository = classRepository;
+        _transaction = transaction;
     }
 
     public async Task<StudentLicenseResponse> Handle(
         UpdateStudentLicenseCommand request,
         CancellationToken cancellationToken)
+    {
+        return _transaction == null ? await UpdateEnrollment(request, cancellationToken) :
+            await _transaction.ExecuteAsync(request.CommunityId, () => UpdateEnrollment(request, cancellationToken), cancellationToken);
+    }
+
+    private async Task<StudentLicenseResponse> UpdateEnrollment(UpdateStudentLicenseCommand request, CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 ||
             request.CommunityId <= 0 ||

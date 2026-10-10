@@ -1,0 +1,1693 @@
+{
+  "info": {
+    "name": "SprintLabs Students - Seeded Repeatable Tests",
+    "description": "Run all requests in order. Fresh UUID CSV data is generated without local file selection; enrollments created by this run are revoked at cleanup. No seeded student is revoked. XLSX export runs automatically. Optional XLSX upload requires a prepared local file; see README. Tokens remain run-local; never export response logs. Requires two free student seats (four when optional XLSX tests run).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01. Login owner and generate fresh run data",
+      "id": "ec180343-0690-4191-9eec-7e9447ebac91",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/v1/Account/community-login",
+        "description": "Expected HTTP 200. Login owner",
+        "body": {
+          "mode": "raw",
+          "raw": "{{loginBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "['ownerToken','teacherToken','ownerId','teacherId','communityId','classId','gradeId','seedStudentId','seedPlayerId','newStudent1','newStudent2','xlsxStudent1','xlsxStudent2','statsBaseline','importCsv','multipartBody','multipartBoundary','createdCount','runId','email1','email2','seedStudentEmail','searchEmail'].forEach(k=>pm.variables.set(k,''));",
+              "const password=pm.variables.get('seedPassword'); if(!password){pm.test('Configure seedPassword locally',()=>{throw new Error('seedPassword is blank');});pm.execution.setNextRequest(null);pm.execution.skipRequest();}",
+              "const runId=pm.variables.replaceIn('{{$guid}}').replace(/-/g,'');pm.variables.set('runId',runId);pm.variables.set('createdCount',0);",
+              "pm.variables.set('loginBody',JSON.stringify({identifier:pm.variables.get('ownerEmail'),password}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let data=null;try{data=pm.response.json().data;}catch(_){}",
+              "const valid=pm.response.code===200 && data && typeof data.accessToken==='string' && data.community && data.community.name==='SprintLabs Demo School' && data.role===\"CommunityAdmin\";",
+              "pm.test('Seeded account and community verified',()=>pm.expect(valid).to.eql(true));",
+              "if(!valid){pm.execution.setNextRequest(null);} else {pm.variables.set('ownerToken',data.accessToken);pm.variables.set('ownerId',data.userId);pm.variables.set('communityId',data.community.id);}"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "02. Login seeded Teacher 1",
+      "id": "4e3a850b-6312-4134-9fa9-f927bef585fb",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": "{{baseUrl}}/api/v1/Account/community-login",
+        "description": "Expected HTTP 200. Login teacher1",
+        "body": {
+          "mode": "raw",
+          "raw": "{{loginBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if(!pm.variables.get('ownerToken')){pm.execution.setNextRequest(null);pm.execution.skipRequest();}",
+              "pm.variables.set('loginBody',JSON.stringify({identifier:pm.variables.get('teacher1Email'),password:pm.variables.get('seedPassword')}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let data=null;try{data=pm.response.json().data;}catch(_){}",
+              "const valid=pm.response.code===200 && data && typeof data.accessToken==='string' && data.community && data.community.name==='SprintLabs Demo School' && data.role===\"Teacher\";",
+              "pm.test('Seeded account and community verified',()=>pm.expect(valid).to.eql(true));",
+              "if(!valid){pm.execution.setNextRequest(null);} else {pm.variables.set('teacherToken',data.accessToken);pm.variables.set('teacherId',data.userId);pm.test('Same community',()=>pm.expect(data.community.id).to.eql(Number(pm.variables.get('communityId'))));if(data.community.id!==Number(pm.variables.get('communityId')))pm.execution.setNextRequest(null);}"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "03. Discover an assigned teacher class",
+      "id": "560b6210-bdc5-4467-bd99-8ba16763e56c",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/classes?pageSize=100",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "if(!data || !Array.isArray(data.items) || !data.items.length){pm.test('Teacher has a seeded class',()=>{throw new Error('No assigned classes');});pm.execution.setNextRequest(null);} else pm.variables.set('classId',data.items[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Discover grade and prepare CSV data",
+      "id": "5230e76d-e9cf-418f-9e86-bd52efc62d69",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/classes/{{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"classId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "if(!data || !data.grade || !data.grade.id){pm.execution.setNextRequest(null);} else {pm.variables.set('gradeId',data.grade.id);const tag='postman-students-'+pm.variables.get('runId');const a=tag+'-a@example.invalid', b=tag+'-b@example.invalid';pm.variables.set('email1',a);pm.variables.set('email2',b);pm.variables.set('importCsv','email,gradeId,classId\\r\\n'+a+','+data.grade.id+','+data.id+'\\r\\n'+b+','+data.grade.id+','+data.id+'\\r\\n'+a+','+data.grade.id+','+data.id+'\\r\\ninvalid-email,'+data.grade.id+','+data.id+'\\r\\n'+tag+'-bad@example.invalid,9007199254740991,9007199254740991\\r\\n');}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Capture enrollment statistics",
+      "id": "2e7c3871-e24d-46a3-a65d-d7b9dde1cded",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/stats?classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"classId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Stats partition',()=>pm.expect(data.total).to.eql(data.active+data.inactive+data.pending));pm.variables.set('statsBaseline',JSON.stringify(data));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Owner active roster and UI fields",
+      "id": "467edab3-cbfe-45a6-953f-ae1a1948bdfb",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?status=ACTIVE&classId={{classId}}&page=1&pageSize=100",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"classId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Frontend page',()=>{pm.expect(data).to.have.keys('items','page','pageSize','total');data.items.forEach(s=>{pm.expect(s).to.have.keys('id','fullName','avgScore','sessionsCount','status','studentCode','email','class','grade','licenseStatus','joinedAt','activatedAt');pm.expect(s.status).to.eql('ACTIVE');});});if(data.items.length)pm.variables.set('seedStudentId',data.items[0].id);",
+              "if(data && data.items && data.items.length)pm.variables.set('seedStudentEmail',data.items[0].email);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Detail using list license ID",
+      "id": "207e86e5-9974-49b3-8b6e-f3a76e35324f",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/{{seedStudentId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"seedStudentId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('List/detail identity and fields',()=>{pm.expect(data.id).to.eql(Number(pm.variables.get('seedStudentId')));pm.expect(data).to.include.keys('email','class','grade','licenseStatus','analytics');pm.expect(data.analytics.matchesPlayed).to.be.at.least(0);});if(data.playerProfileId)pm.variables.set('seedPlayerId',data.playerProfileId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Explicit legacy player-profile selector",
+      "id": "194a76d4-65ff-440d-bf13-f5c66d477e40",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/{{seedPlayerId}}?idType=playerProfile",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"seedPlayerId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Explicit player ID',()=>pm.expect(data.playerProfileId).to.eql(Number(pm.variables.get('seedPlayerId'))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Search student email",
+      "id": "2cbe3145-cd4c-4a55-8b6f-1768be07b2ce",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?search={{searchEmail}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"seedStudentId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }",
+              "pm.variables.set('searchEmail',encodeURIComponent(pm.variables.get('seedStudentEmail')));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Valid searched page',()=>pm.expect(data.items).to.be.an('array'));",
+              "pm.test('Email search includes seeded student',()=>pm.expect(data.items.some(x=>x.id===Number(pm.variables.get('seedStudentId')))).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Teacher assigned-class roster",
+      "id": "c3ca8895-d561-4982-8a62-16607393b9b0",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?status=active&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"classId\", \"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Assigned enrollment rows',()=>data.items.forEach(s=>pm.expect(s.class.id).to.eql(Number(pm.variables.get('classId')))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Teacher scoped statistics",
+      "id": "eb60a808-9500-4f43-b4d5-20c292682a31",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/stats",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Teacher stats partition',()=>pm.expect(data.total).to.eql(data.active+data.inactive+data.pending));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Invalid status rejected",
+      "id": "b97095d2-9a73-4163-b29a-ccce1a0e2ee6",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?status=UNKNOWN",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400',()=>pm.expect(pm.response.code).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Invalid identity selector rejected",
+      "id": "c53f9410-39ee-4cbe-85f1-7654889696c0",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/{{seedStudentId}}?idType=auto",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"seedStudentId\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400',()=>pm.expect(pm.response.code).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Unknown student",
+      "id": "90bd991e-762f-4602-bfcf-7611810a2c91",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/9007199254740991",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404',()=>pm.expect(pm.response.code).to.eql(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Unauthenticated statistics",
+      "id": "0f0580ca-d776-43bb-8e68-5409c5d68927",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/stats",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": []
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401',()=>pm.expect(pm.response.code).to.eql(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Teacher cannot import",
+      "id": "7f7bc781-a56e-4f08-9651-cfcd5b47ac08",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data; boundary={{multipartBoundary}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{multipartBody}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"importCsv\", \"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }",
+              "const boundary='----SprintLabs'+pm.variables.get('runId');pm.variables.set('multipartBoundary',boundary);",
+              "const csv=pm.variables.get('importCsv');",
+              "pm.variables.set('multipartBody','--'+boundary+'\\r\\nContent-Disposition: form-data; name=\"file\"; filename=\"students.csv\"\\r\\nContent-Type: text/csv; charset=utf-8\\r\\n\\r\\n'+csv+'\\r\\n--'+boundary+'--\\r\\n');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403',()=>pm.expect(pm.response.code).to.eql(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. Import fresh CSV with duplicate and invalid rows",
+      "id": "e6aa7529-e328-45a7-9df6-f9ff5efe2c80",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data; boundary={{multipartBoundary}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{multipartBody}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"importCsv\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }",
+              "const boundary='----SprintLabs'+pm.variables.get('runId');pm.variables.set('multipartBoundary',boundary);",
+              "const csv=pm.variables.get('importCsv');",
+              "pm.variables.set('multipartBody','--'+boundary+'\\r\\nContent-Disposition: form-data; name=\"file\"; filename=\"students.csv\"\\r\\nContent-Type: text/csv; charset=utf-8\\r\\n\\r\\n'+csv+'\\r\\n--'+boundary+'--\\r\\n');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Per-row import results',()=>{if(!data || !Array.isArray(data.rows))throw new Error('Import response has no row results.');const summary='Import counts: imported='+data.imported+', skipped='+data.skipped+', failed='+data.failed+'. '+data.rows.filter(r=>r.outcome==='FAILED').map(r=>'Row '+r.rowNumber+': '+r.reasonCode+' - '+r.reason).join('; ');if(data.totalRows!==5 || data.imported!==2 || data.skipped!==1 || data.failed!==2)throw new Error(summary);});",
+              "if(data && Array.isArray(data.rows)){const created=data.rows.filter(x=>x.outcome==='IMPORTED');pm.variables.set('createdCount',created.length);created.forEach(x=>{if(x.email===pm.variables.get('email1'))pm.variables.set('newStudent1',x.licenseId);if(x.email===pm.variables.get('email2'))pm.variables.set('newStudent2',x.licenseId);});}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18. Reimport skips previously enrolled CSV students",
+      "id": "18feeaf3-c699-43be-8350-8a7f24c3965c",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data; boundary={{multipartBoundary}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{multipartBody}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"newStudent2\", \"importCsv\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }",
+              "const boundary='----SprintLabs'+pm.variables.get('runId');pm.variables.set('multipartBoundary',boundary);",
+              "const csv=pm.variables.get('importCsv');",
+              "pm.variables.set('multipartBody','--'+boundary+'\\r\\nContent-Disposition: form-data; name=\"file\"; filename=\"students.csv\"\\r\\nContent-Type: text/csv; charset=utf-8\\r\\n\\r\\n'+csv+'\\r\\n--'+boundary+'--\\r\\n');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('No duplicate enrollments',()=>{pm.expect(data.imported).to.eql(0);pm.expect(data.skipped).to.eql(3);pm.expect(data.failed).to.eql(2);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19. Imported pending detail without login account",
+      "id": "ba42a15a-fa95-4afc-a7a7-26f5dc8fd559",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/{{newStudent1}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Pending identity, email and no fabricated performance',()=>{pm.expect(data.status).to.eql('PENDING');pm.expect(data.email).to.eql(pm.variables.get('email1'));pm.expect(data.userId).to.eql(null);pm.expect(data.playerProfileId).to.eql(null);pm.expect(data.analytics.matchesPlayed).to.eql(0);pm.expect(data.analytics.lastActivityAt).to.eql(null);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20. Pending name/email search",
+      "id": "cb45de11-150c-456d-a957-19e7ebb4a5b2",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?status=PENDING&search={{runId}}&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"newStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Two fresh pending enrollments',()=>pm.expect(data.total).to.eql(2));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21. Stats reflect imported pending students",
+      "id": "5d977da5-fa8b-4710-a4b3-4a92e89b6873",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/stats?classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"statsBaseline\", \"newStudent1\", \"newStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "const before=JSON.parse(pm.variables.get('statsBaseline'));pm.test('Pending stats increment',()=>{pm.expect(data.pending).to.eql(before.pending+2);pm.expect(data.active).to.eql(before.active);pm.expect(data.inactive).to.eql(before.inactive);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22. Owner export CSV",
+      "id": "1123c6ad-b946-4cd4-8db5-95ccf9db16f5",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/export?format=csv&search={{runId}}&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "pm.test('Download headers',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include(\"text/csv\");pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.csv');});",
+              "pm.test('CSV includes current run students',()=>pm.expect(pm.response.text()).to.include(pm.variables.get('email1')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23. Owner export XLSX",
+      "id": "466fbd94-2161-4281-9722-6b4606cfa7bc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/export?format=xlsx&search={{runId}}&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "pm.test('Download headers',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include(\"spreadsheetml.sheet\");pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.xlsx');});",
+              "pm.test('XLSX ZIP signature',()=>pm.expect(pm.response.text().slice(0,2)).to.eql('PK'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24. Teacher export CSV",
+      "id": "6eec2be0-bf86-4078-8d9c-fa6bf607d7ea",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/export?format=csv&search={{runId}}&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "pm.test('Download headers',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include(\"text/csv\");pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.csv');});",
+              "pm.test('CSV includes current run students',()=>pm.expect(pm.response.text()).to.include(pm.variables.get('email1')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25. Teacher export XLSX",
+      "id": "6181e62b-d5b9-45e6-afde-9521931786fd",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/export?format=xlsx&search={{runId}}&classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{teacherToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"teacherToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "pm.test('Download headers',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include(\"spreadsheetml.sheet\");pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.xlsx');});",
+              "pm.test('XLSX ZIP signature',()=>pm.expect(pm.response.text().slice(0,2)).to.eql('PK'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26. Invalid export format",
+      "id": "9ec19aac-1d19-472b-bcd8-eaa9999b3d92",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/export?format=xls",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400',()=>pm.expect(pm.response.code).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27. Malformed CSV rejected before writes",
+      "id": "01be09c6-42b5-47c7-baf0-fa667288a90a",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "multipart/form-data; boundary={{multipartBoundary}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{multipartBody}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }",
+              "const boundary='----SprintLabs'+pm.variables.get('runId');pm.variables.set('multipartBoundary',boundary);",
+              "pm.variables.set('multipartBody','--'+pm.variables.get('multipartBoundary')+'\\r\\nContent-Disposition: form-data; name=\"file\"; filename=\"bad.csv\"\\r\\n\\r\\nemail,email,classId\\r\\na,b,1\\r\\n--'+pm.variables.get('multipartBoundary')+'--\\r\\n');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400',()=>pm.expect(pm.response.code).to.eql(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28. Optional fresh local XLSX import",
+      "id": "cdc57194-62ff-45d1-a90d-38bc8a0ac324",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "students-import.xlsx"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (String(pm.environment.get('runXlsxImportTests')).toLowerCase() !== 'true') pm.execution.skipRequest();",
+              "const required = [\"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Per-row import results',()=>{if(!data || !Array.isArray(data.rows))throw new Error('Import response has no row results.');const summary='Import counts: imported='+data.imported+', skipped='+data.skipped+', failed='+data.failed+'. '+data.rows.filter(r=>r.outcome==='FAILED').map(r=>'Row '+r.rowNumber+': '+r.reasonCode+' - '+r.reason).join('; ');if(data.totalRows!==4 || data.imported!==2 || data.skipped!==1 || data.failed!==1)throw new Error(summary);});",
+              "if(data && Array.isArray(data.rows)){const created=data.rows.filter(x=>x.outcome==='IMPORTED');if(created.length>0)pm.variables.set('xlsxStudent1',created[0].licenseId);if(created.length>1)pm.variables.set('xlsxStudent2',created[1].licenseId);pm.variables.set('createdCount',Number(pm.variables.get('createdCount'))+created.length);}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29. Optional XLSX reimport duplicate check",
+      "id": "d9009ff8-0afc-4705-b427-d30ff330b45d",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/import",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "students-import.xlsx"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (String(pm.environment.get('runXlsxImportTests')).toLowerCase() !== 'true') pm.execution.skipRequest();",
+              "const required = [\"xlsxStudent1\", \"xlsxStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('XLSX repeat skips',()=>{pm.expect(data.imported).to.eql(0);pm.expect(data.skipped).to.eql(3);pm.expect(data.failed).to.eql(1);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30. Revoke only this run newStudent1",
+      "id": "4ebe67b4-eef7-4664-bb62-8b245857f6f6",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/student-licenses/{{newStudent1}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Enrollment revoked and seat released',()=>{pm.expect(data.id).to.eql(Number(pm.variables.get('newStudent1')));pm.expect(data.status).to.eql('Revoked');});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31. Revoke only this run newStudent2",
+      "id": "11b5d06f-629d-4e23-ac32-2930888341b8",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/student-licenses/{{newStudent2}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Enrollment revoked and seat released',()=>{pm.expect(data.id).to.eql(Number(pm.variables.get('newStudent2')));pm.expect(data.status).to.eql('Revoked');});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32. Revoke only this run xlsxStudent1",
+      "id": "638df1ae-965b-4441-ab48-10cb6480ef58",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/student-licenses/{{xlsxStudent1}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (String(pm.environment.get('runXlsxImportTests')).toLowerCase() !== 'true') pm.execution.skipRequest();",
+              "const required = [\"xlsxStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Enrollment revoked and seat released',()=>{pm.expect(data.id).to.eql(Number(pm.variables.get('xlsxStudent1')));pm.expect(data.status).to.eql('Revoked');});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33. Revoke only this run xlsxStudent2",
+      "id": "941a967f-022d-4152-bd27-840ddc41a1e5",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/student-licenses/{{xlsxStudent2}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (String(pm.environment.get('runXlsxImportTests')).toLowerCase() !== 'true') pm.execution.skipRequest();",
+              "const required = [\"xlsxStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Enrollment revoked and seat released',()=>{pm.expect(data.id).to.eql(Number(pm.variables.get('xlsxStudent2')));pm.expect(data.status).to.eql('Revoked');});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34. Retry revocation is idempotent",
+      "id": "283885e5-82ac-4021-9871-08404a420f80",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/student-licenses/{{newStudent1}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Remains revoked',()=>pm.expect(data.status).to.eql('Revoked'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "35. Inactive filtered rows retained",
+      "id": "6be859ff-f60c-45f0-80f8-6d1b33cca2f1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students?status=INACTIVE&search={{runId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"newStudent2\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Run CSV enrollments are inactive',()=>{pm.expect(data.total).to.eql(2);data.items.forEach(x=>{pm.expect(x.status).to.eql('INACTIVE');pm.expect(x.licenseStatus).to.eql('REVOKED');});});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "36. Revoked details remain readable",
+      "id": "ae22aa63-3f78-455a-a504-24b4e2cd387e",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/{{newStudent1}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"newStudent1\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "pm.test('Inactive enrollment detail',()=>pm.expect(data.status).to.eql('INACTIVE'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "37. Final statistics pending restored historical total retained",
+      "id": "d157cd80-a383-4f1e-8189-252c0446b4fc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/Communities/students/stats?classId={{classId}}",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{ownerToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const required = [\"statsBaseline\", \"ownerToken\"];",
+              "if(required.some(k=>!pm.variables.get(k))){ const missingCreatedId=required.some(k=>/^(newStudent|xlsxStudent)/.test(k) && !pm.variables.get(k)); if(!missingCreatedId)pm.test('Earlier setup succeeded',()=>{throw new Error('Run the whole collection in order.');}); pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200',()=>pm.expect(pm.response.code).to.eql(200));",
+              "let envelope=null; try {envelope=pm.response.json();} catch(_){}",
+              "const data=envelope && envelope.data;",
+              "pm.test('Success envelope',()=>{pm.expect(envelope).to.be.an('object');pm.expect(envelope.statusCode).to.eql(200);pm.expect(envelope.errorCode).to.eql(1);});",
+              "const before=JSON.parse(pm.variables.get('statsBaseline'));const created=Number(pm.variables.get('createdCount'));pm.test('Cleanup restores live enrollment counts',()=>{pm.expect(data.pending).to.eql(before.pending);pm.expect(data.active).to.eql(before.active);pm.expect(data.inactive).to.eql(before.inactive+created);pm.expect(data.total).to.eql(before.total+created);});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
