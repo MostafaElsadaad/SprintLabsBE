@@ -52,7 +52,7 @@ public class CommunitiesControllerRouteContractTests
         { nameof(CommunitiesController.UpdateStudentLicense), typeof(HttpPatchAttribute), "student-licenses/{licenseId:long}" },
         { nameof(CommunitiesController.RevokeStudentLicense), typeof(HttpDeleteAttribute), "student-licenses/{licenseId:long}" },
         { nameof(CommunitiesController.ListStudents), typeof(HttpGetAttribute), "students" },
-        { nameof(CommunitiesController.GetStudentDetail), typeof(HttpGetAttribute), "students/{playerProfileId:long}" }
+        { nameof(CommunitiesController.GetStudentDetail), typeof(HttpGetAttribute), "students/{studentId:long}" }
     };
 
     [Theory]

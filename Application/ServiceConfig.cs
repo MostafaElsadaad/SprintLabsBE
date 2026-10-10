@@ -15,6 +15,7 @@ namespace Application
             services.AddScoped<IExternalPlayerLoginWorkflow, ExternalPlayerLoginWorkflow>();
             services.AddScoped<Application.Features.CommunityDashboard.Common.DashboardAuthorization>();
             services.AddScoped<Application.Features.CommunityDashboard.Common.DashboardProjection>();
+            services.AddScoped<Application.Features.Communities.Students.Common.StudentRosterService>();
 
             return services;
         }

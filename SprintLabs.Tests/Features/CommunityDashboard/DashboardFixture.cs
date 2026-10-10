@@ -21,10 +21,11 @@ internal sealed class DashboardFixture : IDisposable
     public Mock<IUserService> Users { get; } = new();
     public DashboardAuthorization Authorization { get; }
     public DashboardProjection Projection { get; }
+    public Application.Features.Communities.Students.Common.StudentRosterService StudentRoster { get; }
 
-    public DashboardFixture()
+    public DashboardFixture(ApplicationDbContext? context = null)
     {
-        Context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+        Context = context ?? new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         Users.Setup(x => x.GetCurrentUser(It.IsAny<long>())).ReturnsAsync((long id) =>
             Context.Users.Where(x => x.Id == id).Select(x => new UserIdentityResponse
@@ -36,6 +37,7 @@ internal sealed class DashboardFixture : IDisposable
         Authorization = new DashboardAuthorization(Users.Object, new CommunityAccessService(Repo<CommunityUser>()), Repo<TeacherClassAssignment>(), Repo<Class>());
         Projection = new DashboardProjection(Repo<Class>(), Repo<StudentLicense>(), Repo<Player>(),
             Repo<CommunityUser>(), Repo<TeacherClassAssignment>(), Repo<StaffActivity>(), Users.Object);
+        StudentRoster = new(Authorization, Projection, Repo<MatchPlayer>());
     }
 
     public BaseRepository<T> Repo<T>() where T : class => new(Context);

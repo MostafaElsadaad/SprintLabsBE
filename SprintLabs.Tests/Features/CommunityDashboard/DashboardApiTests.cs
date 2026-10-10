@@ -28,6 +28,21 @@ namespace Compass.Tests.Features.CommunityDashboard;
 public class DashboardApiTests
 {
     [Fact]
+    public async Task Swagger_document_generates_with_student_multipart_upload()
+    {
+        using var f = new DashboardFixture();
+        using var server = Server(f); using var client = server.CreateClient();
+        var response = await client.GetAsync("/swagger/v1/swagger.json");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var document = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var content = document.GetProperty("paths").GetProperty("/api/v1/Communities/students/import")
+            .GetProperty("post").GetProperty("requestBody").GetProperty("content");
+        content.TryGetProperty("multipart/form-data", out var multipart).Should().BeTrue();
+        multipart.GetProperty("schema").GetProperty("properties").GetProperty("file")
+            .GetProperty("format").GetString().Should().Be("binary");
+    }
+
+    [Fact]
     public async Task Http_routes_ignore_supplied_identity_and_enforce_assigned_classes()
     {
         using var f = new DashboardFixture(); await f.SeedAsync();
@@ -124,7 +139,7 @@ public class DashboardApiTests
         Keys(grades[0], "id", "name", "classesCount", "studentsCount");
         var students = await Data(client, "/api/v1/Communities/students?classId=1&page=1");
         Keys(students, "items", "page", "pageSize", "total");
-        Keys(students.GetProperty("items")[0], "id", "fullName", "avgScore", "sessionsCount", "status");
+        Keys(students.GetProperty("items")[0], "id", "fullName", "avgScore", "sessionsCount", "status", "studentCode", "email", "class", "grade", "licenseStatus", "joinedAt", "activatedAt");
         students.GetProperty("items")[0].GetProperty("sessionsCount").GetInt32().Should().Be(0);
         var teachers = await Data(client, "/api/v1/Communities/teachers");
         Keys(teachers.GetProperty("items")[0], "id", "fullName", "title", "teacherCode", "grade", "classes", "studentsCount", "joinedAt", "status");
@@ -174,6 +189,42 @@ public class DashboardApiTests
         (await client.GetAsync("/api/v1/Communities/teachers/stats")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Student_http_filters_detail_statistics_files_and_import_permissions()
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        f.Context.CommunityLicenses.Single(x => x.CommunityId == 1).MaxStudents = 20;
+        await f.Context.SaveChangesAsync();
+        using var server = Server(f); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "20");
+        var roster = await Data(client, "/api/v1/Communities/students?status=ACTIVE&search=student1@");
+        roster.GetProperty("total").GetInt32().Should().Be(1);
+        (await Data(client, "/api/v1/Communities/students/1")).GetProperty("id").GetInt64().Should().Be(1);
+        (await client.GetAsync("/api/v1/Communities/students/2")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.GetAsync("/api/v1/Communities/students?status=UNKNOWN")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Data(client, "/api/v1/Communities/students/stats")).GetProperty("active").GetInt32().Should().Be(1);
+        foreach (var format in new[] { "csv", "xlsx" })
+        {
+            var download = await client.GetAsync("/api/v1/Communities/students/export?format=" + format);
+            download.StatusCode.Should().Be(HttpStatusCode.OK);
+            download.Content.Headers.ContentDisposition!.FileNameStar.Should().EndWith("." + format);
+            var rows = new StudentRosterFileService().ReadImport(await download.Content.ReadAsByteArrayAsync(), "students." + format);
+            rows.Should().ContainSingle(x => x.Email == "student1@example.com");
+        }
+        using var upload = new MultipartFormDataContent();
+        upload.Add(new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("email,gradeId,classId\nhttp-test@example.com,107,1")), "file", "students.csv");
+        (await client.PostAsync("/api/v1/Communities/students/import", upload)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "10");
+        var imported = await client.PostAsync("/api/v1/Communities/students/import", upload);
+        imported.StatusCode.Should().Be(HttpStatusCode.OK);
+        var data = (await imported.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        data.GetProperty("imported").GetInt32().Should().Be(1);
+        var pendingId = data.GetProperty("rows")[0].GetProperty("licenseId").GetInt64();
+        (await Data(client, "/api/v1/Communities/students/" + pendingId)).GetProperty("status").GetString().Should().Be("PENDING");
+        var repeated = await client.PostAsync("/api/v1/Communities/students/import", upload);
+        (await repeated.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("skipped").GetInt32().Should().Be(1);
+    }
+
     private static void Keys(JsonElement row, params string[] expected) =>
         row.EnumerateObject().Select(x => x.Name).Should().BeEquivalentTo(expected);
 
@@ -194,13 +245,22 @@ public class DashboardApiTests
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
             services.AddScoped<ICommunityAccessService, CommunityAccessService>();
             services.AddScoped<ITeacherClassAssignmentService, TeacherClassAssignmentService>();
+            services.AddScoped<IStudentRosterFileService, StudentRosterFileService>();
+            services.AddScoped<IStudentEnrollmentTransaction, StudentEnrollmentTransaction>();
+            services.AddScoped<IPlayerRepository, PlayerRepository>();
             services.AddApplicationServices(new ConfigurationBuilder().Build());
             services.AddControllers().AddApplicationPart(typeof(CommunityDashboardController).Assembly);
             services.AddApiVersioning(options =>
             {
                 options.DefaultApiVersion = new ApiVersion(1, 0);
                 options.ApiVersionReader = new UrlSegmentApiVersionReader();
-            }).AddMvc();
+            }).AddMvc().AddApiExplorer(options =>
+            {
+                options.GroupNameFormat = "'v'VVV";
+                options.SubstituteApiVersionInUrl = true;
+            });
+            services.AddSwaggerGen(options => options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            { Title = "Student API regression tests", Version = "v1" }));
             services.AddAuthentication("test").AddScheme<AuthenticationSchemeOptions, TestAuthentication>("test", _ => { });
             services.AddAuthorization();
         })
@@ -212,6 +272,7 @@ public class DashboardApiTests
                 catch (GenericException error) { context.Response.StatusCode = (int)(error.StatusCode ?? HttpStatusCode.InternalServerError); }
             });
             app.UseRouting();
+            app.UseSwagger();
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseEndpoints(endpoints => endpoints.MapControllers());

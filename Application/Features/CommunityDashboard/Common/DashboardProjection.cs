@@ -25,11 +25,11 @@ public class DashboardProjection
         _members = members; _assignments = assignments; _activity = activity; _users = users;
     }
 
-    public async Task<List<StudentView>> StudentsAsync(DashboardScope scope, long? classId, CancellationToken ct)
+    public async Task<List<StudentView>> StudentsAsync(DashboardScope scope, long? classId, CancellationToken ct, bool includeRevoked = false)
     {
         if (classId.HasValue) DashboardAuthorization.RequireClass(scope, classId.Value);
         var query = _licenses.AsQueryable().AsNoTracking().Where(x => x.CommunityId == scope.CommunityId &&
-            scope.ClassIds.Contains(x.ClassId) && x.Status != StudentLicenseStatus.Revoked);
+            scope.ClassIds.Contains(x.ClassId) && (includeRevoked || x.Status != StudentLicenseStatus.Revoked));
         if (classId.HasValue) query = query.Where(x => x.ClassId == classId.Value);
         return await (from license in query
                       join player in _players.AsQueryable().AsNoTracking() on license.PlayerProfileId equals (long?)player.Id into linked
@@ -38,6 +38,9 @@ public class DashboardProjection
                       {
                           Id = license.Id, UserId = license.UserId, PlayerProfileId = license.PlayerProfileId,
                           ClassId = license.ClassId, Email = license.Email,
+                          ClassName = license.Class.Name, Grade = new GradeSummary { Id = license.GradeId,
+                              Value = license.Grade.Value ?? 0, Name = license.Grade.Name },
+                          JoinedAt = license.CreatedAt, ActivatedAt = license.ActivatedAt,
                           FullName = player != null ? player.Name : license.Email,
                           LicenseStatus = license.Status.ToString()
                       }).ToListAsync(ct);

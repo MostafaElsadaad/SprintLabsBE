@@ -18,6 +18,21 @@ namespace Compass.Tests.Features.DemoCommunitySeed;
 public class DemoCommunitySeederTests
 {
     [Fact]
+    public async Task SeedAsync_reserves_four_student_import_seats_and_preserves_higher_limits()
+    {
+        await using var context = CreateContext();
+        var userManager = CreateUserManager(context);
+        await DemoCommunitySeeder.SeedAsync(context, userManager);
+        var license = await context.CommunityLicenses.SingleAsync();
+        license.UsedStudents.Should().Be(20);
+        (license.MaxStudents - license.UsedStudents).Should().BeGreaterThanOrEqualTo(4);
+        license.MaxStudents = 40;
+        await context.SaveChangesAsync();
+        await DemoCommunitySeeder.SeedAsync(context, userManager);
+        (await context.CommunityLicenses.SingleAsync()).MaxStudents.Should().Be(40);
+    }
+
+    [Fact]
     public async Task SeedAsync_reserves_invitation_capacity_without_reducing_a_higher_existing_limit()
     {
         await using var context = CreateContext();

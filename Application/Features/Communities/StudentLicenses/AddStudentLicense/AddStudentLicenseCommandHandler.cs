@@ -30,6 +30,7 @@ public class AddStudentLicenseCommandHandler
     private readonly IBaseRepository<Class> _classRepository;
     private readonly IBaseRepository<CommunityUser> _communityUserRepository;
     private readonly IPlayerRepository _playerRepository;
+    private readonly IStudentEnrollmentTransaction? _transaction;
 
     public AddStudentLicenseCommandHandler(
         IUserService userService,
@@ -39,7 +40,8 @@ public class AddStudentLicenseCommandHandler
         IBaseRepository<Grade> gradeRepository,
         IBaseRepository<Class> classRepository,
         IBaseRepository<CommunityUser> communityUserRepository,
-        IPlayerRepository playerRepository)
+        IPlayerRepository playerRepository,
+        IStudentEnrollmentTransaction? transaction = null)
     {
         _userService = userService;
         _communityAccessService = communityAccessService;
@@ -49,11 +51,18 @@ public class AddStudentLicenseCommandHandler
         _classRepository = classRepository;
         _communityUserRepository = communityUserRepository;
         _playerRepository = playerRepository;
+        _transaction = transaction;
     }
 
     public async Task<StudentLicenseResponse> Handle(
         AddStudentLicenseCommand request,
         CancellationToken cancellationToken)
+    {
+        return _transaction == null ? await Enroll(request, cancellationToken) :
+            await _transaction.ExecuteAsync(request.CommunityId, () => Enroll(request, cancellationToken), cancellationToken);
+    }
+
+    private async Task<StudentLicenseResponse> Enroll(AddStudentLicenseCommand request, CancellationToken cancellationToken)
     {
         if (request.UserId <= 0 ||
             request.CommunityId <= 0 ||
@@ -95,7 +104,7 @@ public class AddStudentLicenseCommandHandler
             .FirstOrDefaultAsync(x => x.CommunityId == request.CommunityId, cancellationToken);
         if (communityLicense == null || communityLicense.UsedStudents >= communityLicense.MaxStudents)
         {
-            throw InvalidInput();
+            throw new GenericException(ErrorCode.Failure, ErrorMessage.NoStudentLicenseSeats, HttpStatusCode.BadRequest);
         }
 
         var studentUser = await _userService.FindByEmail(email);

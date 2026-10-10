@@ -20,18 +20,27 @@ public class UpsertCommunityLicenseCommandHandler : IRequestHandler<UpsertCommun
     private readonly IUserService _userService;
     private readonly IBaseRepository<Community> _communityRepository;
     private readonly IBaseRepository<CommunityLicense> _communityLicenseRepository;
+    private readonly IStudentEnrollmentTransaction? _transaction;
 
     public UpsertCommunityLicenseCommandHandler(
         IUserService userService,
         IBaseRepository<Community> communityRepository,
-        IBaseRepository<CommunityLicense> communityLicenseRepository)
+        IBaseRepository<CommunityLicense> communityLicenseRepository,
+        IStudentEnrollmentTransaction? transaction = null)
     {
         _userService = userService;
         _communityRepository = communityRepository;
         _communityLicenseRepository = communityLicenseRepository;
+        _transaction = transaction;
     }
 
     public async Task<CommunityLicenseResponse> Handle(UpsertCommunityLicenseCommand request, CancellationToken cancellationToken)
+    {
+        return _transaction == null ? await UpdateLicense(request, cancellationToken) :
+            await _transaction.ExecuteAsync(request.CommunityId, () => UpdateLicense(request, cancellationToken), cancellationToken);
+    }
+
+    private async Task<CommunityLicenseResponse> UpdateLicense(UpsertCommunityLicenseCommand request, CancellationToken cancellationToken)
     {
         await AdminCommunityAuthorization.EnsurePlatformAdmin(_userService, request.AuthenticatedUserId);
 
