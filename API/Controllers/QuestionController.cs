@@ -10,6 +10,7 @@ using MediatR;
 using Application.Features.Accounts.GoogleAuthenticate;
 using Asp.Versioning;
 using Application.Features.Questions;
+using Shared.Requests.QuestionData;
 
 namespace API.Controllers
 {
@@ -25,16 +26,17 @@ namespace API.Controllers
         }
 
 
-        [HttpGet]
-        public async Task<IActionResult> GetQuestions(int grade, int? assignment)
+        [HttpGet, AllowAnonymous]
+        public async Task<IActionResult> GetQuestions([FromQuery] QuestionBankFilter filter, int? assignment, CancellationToken ct)
         {
             GetQuestionsQuery getQuestionsQuery = new GetQuestionsQuery
             {
-                Grade = grade,
-                Assignment = assignment
+                Grade = filter.Grade,
+                Assignment = assignment,
+                Filter = filter
             };
 
-            var questions = await _mediator.Send(getQuestionsQuery);
+            var questions = await _mediator.Send(getQuestionsQuery, ct);
             return Ok(new BaseResponse<GetQuestionsDto>(
                 data: questions,
                 statusCode: HttpStatusCode.OK,

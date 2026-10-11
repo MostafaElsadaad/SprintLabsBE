@@ -1,0 +1,13 @@
+# Question data scheme
+
+User-approved design: K:/Projects/SprintLab-Artifacts/2026-10-09/Docs/Refined-Question-and-History-Schema.md.
+
+Implement the approved 15 relational tables, with shared QuestionId UUID primary keys stored as binary(16) in MySQL. Retain stable string choice/item/pair/option IDs. User added TimerSeconds to questions and requested TimeTakenSeconds in history on 2026-10-11; both use decimal(10,3), in seconds. No other additional stored fields or JSON columns. Existing players and matches are referenced.
+
+Support all six source types: MCQ, TrueOrFalse, FillBlank, Ordering, MatchingPairs, DragAndDrop. Admin publishes complete immutable question records; identical republishing is idempotent. Game-server credentials can retrieve full answer keys and write complete student responses. Player JWTs can read display-only questions and their own educational history; platform admins and game servers can read/export history within their respective routes. Server identity/match membership validation is mandatory. No educational authoring UI or diagnostics push integration is requested.
+
+Additive compatibility: retain old question-pack GET/PUT APIs and old match progression result contracts. Rename their physical Questions table to LegacyQuestionPacks without deleting rows, then create the new Questions table. New QuestionHistory is authoritative for typed educational responses; MatchQuestionResults remains the existing legacy progression summary and is not automatically linked by fabricated UUIDs.
+
+Validate shared identities, type-specific cardinality, same-question references, complete ordering/matching/drag responses and elapsed time. Preserve published content under existing IDs; changed content requires a new UUID. Atomic writes, foreign keys, indexes and uniqueness protect history. The user subsequently authorised commit, push, PR creation and merge into development. No separate manual live migration/import is requested; existing staging CI and startup migrations may run after merge.
+
+Normal publication requires supplied metadata. User authorised dummy legacy-conversion values: Curriculum/Subject DUMMY, Language und, Term/Unit/Lesson 1; source Grade is retained. Conversion preserves source Timer seconds (default 10 if absent), assigns stable UUIDv5 IDs if missing and exports complete records for both other services to reuse. Per the user's follow-up, GET /api/v1/Question is unauthenticated and returns the new bank in the same Unity payload shape, including answer fields. Publication/import/history operations retain authorisation. No live conversion or migration is executed by this task.
