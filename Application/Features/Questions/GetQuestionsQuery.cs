@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using MediatR;
+using Shared.Requests.QuestionData;
 
 namespace Application.Features.Questions
 {
@@ -12,5 +13,6 @@ namespace Application.Features.Questions
     {
         public int Grade { get; set; }
         public int? Assignment { get; set; }
+        public QuestionBankFilter? Filter { get; set; }
     }
 }

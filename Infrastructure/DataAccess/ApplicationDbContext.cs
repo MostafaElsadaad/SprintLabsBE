@@ -52,6 +52,7 @@ namespace Infrastructure.DataAccess
         {
             base.OnModelCreating(modelBuilder);
             MissionModelConfiguration.Configure(modelBuilder);
+            QuestionDataModelConfiguration.Configure(modelBuilder, Database.IsMySql());
 
             modelBuilder.Entity<CommunityUser>().Property(x => x.TeacherTitle).IsRequired().HasMaxLength(32).HasDefaultValue("TEACHER");
             modelBuilder.Entity<Notification>(e =>
@@ -75,6 +76,7 @@ namespace Infrastructure.DataAccess
             modelBuilder.Entity<QuestionsJson>().HasData(QuestionsJsonSeeder.Seed());
             modelBuilder.Entity<QuestionsJson>(e =>
             {
+                e.ToTable("LegacyQuestionPacks");
                 e.Property(x => x.Grade).IsRequired();
                 e.Property(x => x.CreatedAt).IsRequired();
                 e.Property(x => x.PayloadJson).IsRequired();
