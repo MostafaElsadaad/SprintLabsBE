@@ -1540,7 +1540,7 @@ namespace Infrastructure.Migrations
 
                     b.ToTable("Questions", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Questions_Numbers", "`Grade` > 0 AND `Term` >= 0 AND `Unit` > 0 AND `Lesson` > 0");
+                            t.HasCheckConstraint("CK_Questions_Numbers", "`Grade` > 0 AND `Term` > 0 AND `Unit` > 0 AND `Lesson` > 0");
 
                             t.HasCheckConstraint("CK_Questions_TimerSeconds", "`TimerSeconds` > 0");
                         });

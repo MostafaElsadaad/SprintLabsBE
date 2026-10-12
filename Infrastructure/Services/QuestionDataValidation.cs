@@ -11,7 +11,7 @@ internal static class QuestionDataValidation
         if (r == null || r.QuestionId == Guid.Empty) throw QuestionDataService.Error("A shared question UUID is required.");
         Text(r.Curriculum, 120); Text(r.Language, 20); Text(r.Subject, 120); Text(r.QuestionText, 16000);
         Seconds(r.TimerSeconds, allowZero: false);
-        if (r.Grade <= 0 || r.Term < 0 || r.Unit <= 0 || r.Lesson <= 0) throw QuestionDataService.Error("Grade, unit and lesson must be positive; term must be nonnegative.");
+        if (r.Grade <= 0 || r.Term <= 0 || r.Unit <= 0 || r.Lesson <= 0) throw QuestionDataService.Error("Grade, term, unit and lesson must be positive.");
         if (!Enum.TryParse<QuestionType>(r.QuestionType, out var type) || !Enum.IsDefined(type) || type.ToString() != r.QuestionType)
             throw QuestionDataService.Error("Unsupported question type.");
         if (r.Choices == null || r.AcceptedAnswers == null || r.Items == null || r.Pairs == null || r.Options == null || r.BlankAnswers == null)
