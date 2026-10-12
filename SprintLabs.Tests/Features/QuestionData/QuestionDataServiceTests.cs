@@ -35,6 +35,78 @@ public class QuestionDataServiceTests
         Assert.Equal("atom", Assert.Single(bank.Items).Choices.Single(x => x.IsCorrect == true).ChoiceText);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task Publish_preserves_nonnegative_term_metadata(int term)
+    {
+        await using var f = await Fixture.CreateAsync();
+        var request = Mcq();
+        request.Term = term;
+        await f.Service.PublishAsync(40, request, default);
+        f.Context.ChangeTracker.Clear();
+        var stored = Assert.Single((await f.Service.GetBankAsync(new() { Grade = 7 }, default)).Items);
+        Assert.Equal(term, stored.Term);
+        Assert.Equal(request.QuestionId, stored.QuestionId);
+    }
+
+    [Fact]
+    public async Task Bank_term_zero_filter_returns_only_matching_questions()
+    {
+        await using var f = await Fixture.CreateAsync();
+        var zero = QuestionDataTypesTests.Question("TrueOrFalse");
+        zero.Term = 0;
+        await f.Service.PublishAsync(40, zero, default);
+        await f.Service.PublishAsync(40, Mcq(), default);
+        f.Context.ChangeTracker.Clear();
+        var bank = await f.Service.GetBankAsync(new() { Grade = 7, Term = 0 }, default);
+        Assert.Equal(1, bank.Total);
+        var stored = Assert.Single(bank.Items);
+        Assert.Equal(zero.QuestionId, stored.QuestionId);
+        Assert.Equal(0, stored.Term);
+    }
+
+    [Theory]
+    [InlineData(7, -1, 1, 1)]
+    [InlineData(0, 0, 1, 1)]
+    [InlineData(-1, 0, 1, 1)]
+    [InlineData(7, 0, 0, 1)]
+    [InlineData(7, 0, -1, 1)]
+    [InlineData(7, 0, 1, 0)]
+    [InlineData(7, 0, 1, -1)]
+    public async Task Invalid_bank_metadata_filter_is_rejected(int grade, int term, int unit, int lesson)
+    {
+        await using var f = await Fixture.CreateAsync();
+        var error = await Assert.ThrowsAsync<GenericException>(() => f.Service.GetBankAsync(
+            new() { Grade = grade, Term = term, Unit = unit, Lesson = lesson }, default));
+        Assert.Equal(HttpStatusCode.BadRequest, error.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(7, -1, 1, 1)]
+    [InlineData(0, 0, 1, 1)]
+    [InlineData(-1, 0, 1, 1)]
+    [InlineData(7, 0, 0, 1)]
+    [InlineData(7, 0, -1, 1)]
+    [InlineData(7, 0, 1, 0)]
+    [InlineData(7, 0, 1, -1)]
+    public async Task Invalid_metadata_is_rejected_without_partial_rows(int grade, int term, int unit, int lesson)
+    {
+        await using var f = await Fixture.CreateAsync();
+        var request = Mcq();
+        request.Grade = grade;
+        request.Term = term;
+        request.Unit = unit;
+        request.Lesson = lesson;
+        var error = await Assert.ThrowsAsync<GenericException>(() => f.Service.PublishAsync(40, request, default));
+        Assert.Equal(HttpStatusCode.BadRequest, error.StatusCode);
+        Assert.Equal(0, await f.Context.Set<Question>().CountAsync());
+        Assert.Equal(0, await f.Context.Set<MCQChoice>().CountAsync());
+    }
+
     [Fact]
     public async Task Conflicting_publish_and_non_admin_publish_are_rejected_without_changing_content()
     {
