@@ -11,7 +11,7 @@ internal static class QuestionDataModelConfiguration
     {
         model.Entity<Question>(e =>
         {
-            e.ToTable("Questions", t => t.HasCheckConstraint("CK_Questions_Numbers", "`Grade` > 0 AND `Term` > 0 AND `Unit` > 0 AND `Lesson` > 0"));
+            e.ToTable("Questions", t => t.HasCheckConstraint("CK_Questions_Numbers", "`Grade` > 0 AND `Term` >= 0 AND `Unit` > 0 AND `Lesson` > 0"));
             e.HasKey(x => x.QuestionId);
             Uuid(e.Property(x => x.QuestionId));
             foreach (var name in new[] { "Curriculum", "Subject" }) e.Property<string>(name).IsRequired().HasMaxLength(120);

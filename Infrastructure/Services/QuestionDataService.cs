@@ -43,8 +43,8 @@ public partial class QuestionDataService(ApplicationDbContext context) : IQuesti
 
     public async Task<ProgressionPage<QuestionDataRequest>> GetBankAsync(QuestionBankFilter filter, CancellationToken ct)
     {
-        if (filter == null || filter.Grade <= 0 || filter.Unit <= 0 || filter.Lesson <= 0 || filter.Term <= 0)
-            throw Error("A positive grade and positive optional unit, lesson and term are required.");
+        if (filter == null || filter.Grade <= 0 || filter.Unit <= 0 || filter.Lesson <= 0 || filter.Term < 0)
+            throw Error("A positive grade, positive optional unit and lesson, and nonnegative optional term are required.");
         Page(filter.PageNumber, filter.PageSize);
         var query = Questions().AsNoTracking().Where(x => x.Grade == filter.Grade);
         if (filter.Unit.HasValue) query = query.Where(x => x.Unit == filter.Unit);
