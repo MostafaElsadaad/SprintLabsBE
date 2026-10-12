@@ -8,7 +8,7 @@ An active platform administrator can publish through PUT `/api/v1/Question/bank`
 
 Form fields: Curriculum, Grade, Language, Subject, Term, Unit, Lesson, QuestionId, QuestionType and QuestionText. Show only the chosen type's answer controls:
 
-Term must be positive: school semester options are 1, 2, 3 and 4. Reject zero and negative values in publishing and bank filters. The backend retains its existing positive-term validation without introducing an upper-bound change.
+Term must be nonnegative: Atlas offers 0 (year without semesters), 1, 2 and 3. Publishing and bank filters accept Term 0; reject negative values. The backend retains compatibility with existing positive terms, including 4, without introducing an upper bound.
 
 - MCQ: choice ID/text and exactly one correct choice.
 - TrueOrFalse: correct boolean; allow false explicitly.
