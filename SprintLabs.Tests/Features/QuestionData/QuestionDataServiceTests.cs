@@ -36,12 +36,11 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
-    [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(4)]
-    public async Task Publish_preserves_nonnegative_term_metadata(int term)
+    public async Task Publish_preserves_positive_term_metadata(int term)
     {
         await using var f = await Fixture.CreateAsync();
         var request = Mcq();
@@ -53,30 +52,51 @@ public class QuestionDataServiceTests
         Assert.Equal(request.QuestionId, stored.QuestionId);
     }
 
-    [Fact]
-    public async Task Bank_term_zero_filter_returns_only_matching_questions()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task Bank_positive_term_filter_returns_only_matching_questions(int term)
     {
         await using var f = await Fixture.CreateAsync();
-        var zero = QuestionDataTypesTests.Question("TrueOrFalse");
-        zero.Term = 0;
-        await f.Service.PublishAsync(40, zero, default);
-        await f.Service.PublishAsync(40, Mcq(), default);
+        var matching = QuestionDataTypesTests.Question("TrueOrFalse");
+        matching.Term = term;
+        var other = Mcq();
+        other.Term = term == 1 ? 2 : 1;
+        await f.Service.PublishAsync(40, matching, default);
+        await f.Service.PublishAsync(40, other, default);
         f.Context.ChangeTracker.Clear();
-        var bank = await f.Service.GetBankAsync(new() { Grade = 7, Term = 0 }, default);
+        var bank = await f.Service.GetBankAsync(new() { Grade = 7, Term = term }, default);
         Assert.Equal(1, bank.Total);
         var stored = Assert.Single(bank.Items);
-        Assert.Equal(zero.QuestionId, stored.QuestionId);
-        Assert.Equal(0, stored.Term);
+        Assert.Equal(matching.QuestionId, stored.QuestionId);
+        Assert.Equal(term, stored.Term);
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Database_rejects_nonpositive_term_without_changing_stored_metadata(int term)
+    {
+        await using var f = await Fixture.CreateAsync();
+        await f.Service.PublishAsync(40, Mcq(), default);
+        var stored = await f.Context.Set<Question>().SingleAsync();
+        stored.Term = term;
+        await Assert.ThrowsAsync<DbUpdateException>(() => f.Context.SaveChangesAsync());
+        f.Context.ChangeTracker.Clear();
+        Assert.Equal(1, (await f.Context.Set<Question>().SingleAsync()).Term);
+    }
+
+    [Theory]
+    [InlineData(7, 0, 1, 1)]
     [InlineData(7, -1, 1, 1)]
-    [InlineData(0, 0, 1, 1)]
-    [InlineData(-1, 0, 1, 1)]
-    [InlineData(7, 0, 0, 1)]
-    [InlineData(7, 0, -1, 1)]
-    [InlineData(7, 0, 1, 0)]
-    [InlineData(7, 0, 1, -1)]
+    [InlineData(0, 1, 1, 1)]
+    [InlineData(-1, 1, 1, 1)]
+    [InlineData(7, 1, 0, 1)]
+    [InlineData(7, 1, -1, 1)]
+    [InlineData(7, 1, 1, 0)]
+    [InlineData(7, 1, 1, -1)]
     public async Task Invalid_bank_metadata_filter_is_rejected(int grade, int term, int unit, int lesson)
     {
         await using var f = await Fixture.CreateAsync();
@@ -86,13 +106,14 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
+    [InlineData(7, 0, 1, 1)]
     [InlineData(7, -1, 1, 1)]
-    [InlineData(0, 0, 1, 1)]
-    [InlineData(-1, 0, 1, 1)]
-    [InlineData(7, 0, 0, 1)]
-    [InlineData(7, 0, -1, 1)]
-    [InlineData(7, 0, 1, 0)]
-    [InlineData(7, 0, 1, -1)]
+    [InlineData(0, 1, 1, 1)]
+    [InlineData(-1, 1, 1, 1)]
+    [InlineData(7, 1, 0, 1)]
+    [InlineData(7, 1, -1, 1)]
+    [InlineData(7, 1, 1, 0)]
+    [InlineData(7, 1, 1, -1)]
     public async Task Invalid_metadata_is_rejected_without_partial_rows(int grade, int term, int unit, int lesson)
     {
         await using var f = await Fixture.CreateAsync();

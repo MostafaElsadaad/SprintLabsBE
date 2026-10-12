@@ -8,6 +8,8 @@ An active platform administrator can publish through PUT `/api/v1/Question/bank`
 
 Form fields: Curriculum, Grade, Language, Subject, Term, Unit, Lesson, QuestionId, QuestionType and QuestionText. Show only the chosen type's answer controls:
 
+Term must be positive: school semester options are 1, 2, 3 and 4. Reject zero and negative values in publishing and bank filters. The backend retains its existing positive-term validation without introducing an upper-bound change.
+
 - MCQ: choice ID/text and exactly one correct choice.
 - TrueOrFalse: correct boolean; allow false explicitly.
 - FillBlank: accepted variants for one typed response field.
@@ -15,7 +17,7 @@ Form fields: Curriculum, Grade, Language, Subject, Term, Unit, Lesson, QuestionI
 - MatchingPairs: stable pair ID with approved left/right texts.
 - DragAndDrop: stable option ID/text plus zero-based blank number/correct text; retain duplicate text as separate options.
 
-Validate required metadata, lengths and complete answer structure before sending. Grade, unit and lesson must be positive; Term 0 and existing positive terms are valid, while negative terms are rejected. Keep an explicit Term 0 selection in publishing and bank filters; do not treat 0 as an omitted value. Omit the term filter to include all terms. Disable submission while publishing; retain IDs across retries. Empty states show no published questions; validation errors show the API message; 409 tells the operator to use a new published UUID for changed content. Do not build editing/deletion flows that overwrite published records. Publication retires neither the old question nor its history automatically.
+Validate required metadata, lengths and complete answer structure before sending. Disable submission while publishing; retain IDs across retries. Empty states show no published questions; validation errors show the API message; 409 tells the operator to use a new published UUID for changed content. Do not build editing/deletion flows that overwrite published records. Publication retires neither the old question nor its history automatically.
 
 Admin bank listing uses GET `/bank/admin` with grade required and the optional curriculum/language/subject/term/unit/lesson filters. Suggested columns are the existing metadata, QuestionId, QuestionType and QuestionText. Show loading, empty and error states. Only admins can view this bank with answer keys; ordinary users receive 403.
 
