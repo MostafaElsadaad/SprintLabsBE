@@ -29,6 +29,30 @@ namespace Compass.Tests.Features.QuestionData;
 
 public class QuestionDataApiTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task Admin_publishes_nonnegative_term_and_all_bank_routes_filter_it(int term)
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var q = QuestionDataTypesTests.Question("TrueOrFalse"); q.Term = term;
+        var credential = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        using var server = Server(f, credential); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "40");
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("/api/v1/Question/bank", q)).StatusCode);
+        foreach (var route in new[] { "/api/v1/Question", "/api/v1/Question/bank", "/api/v1/Question/bank/admin", "/api/v1/Question/bank/server" })
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("GameServer", credential);
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"{route}?grade=7&term={term}")).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"{route}?grade=7&term=-1")).StatusCode);
+        }
+        q.QuestionId = Guid.NewGuid(); q.Term = -1;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/api/v1/Question/bank", q)).StatusCode);
+    }
+
     [Fact]
     public async Task Existing_get_returns_new_bank_in_unity_format_without_authentication()
     {

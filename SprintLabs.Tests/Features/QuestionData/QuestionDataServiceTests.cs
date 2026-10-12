@@ -36,11 +36,12 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
+    [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(4)]
-    public async Task Publish_preserves_positive_term_metadata(int term)
+    public async Task Publish_preserves_nonnegative_term_metadata(int term)
     {
         await using var f = await Fixture.CreateAsync();
         var request = Mcq();
@@ -53,11 +54,12 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
+    [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(4)]
-    public async Task Bank_positive_term_filter_returns_only_matching_questions(int term)
+    public async Task Bank_nonnegative_term_filter_returns_only_matching_questions(int term)
     {
         await using var f = await Fixture.CreateAsync();
         var matching = QuestionDataTypesTests.Question("TrueOrFalse");
@@ -75,9 +77,8 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
-    [InlineData(0)]
     [InlineData(-1)]
-    public async Task Database_rejects_nonpositive_term_without_changing_stored_metadata(int term)
+    public async Task Database_rejects_negative_term_without_changing_stored_metadata(int term)
     {
         await using var f = await Fixture.CreateAsync();
         await f.Service.PublishAsync(40, Mcq(), default);
@@ -89,7 +90,6 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
-    [InlineData(7, 0, 1, 1)]
     [InlineData(7, -1, 1, 1)]
     [InlineData(0, 1, 1, 1)]
     [InlineData(-1, 1, 1, 1)]
@@ -106,7 +106,6 @@ public class QuestionDataServiceTests
     }
 
     [Theory]
-    [InlineData(7, 0, 1, 1)]
     [InlineData(7, -1, 1, 1)]
     [InlineData(0, 1, 1, 1)]
     [InlineData(-1, 1, 1, 1)]
