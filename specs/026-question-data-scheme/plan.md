@@ -1,5 +1,7 @@
 # Question data scheme implementation plan
 
+2026-10-13 follow-up: publish from current development in isolated branch codex/question-import-count, preserving term-zero support and unrelated local work. Extend compatible filtering/projection with count; keep the current game response and no-count behavior. Reuse existing import service and correct equivalent fill-answer variants. Focused/full backend regressions precede publication. Existing staging CI deploys the merged development branch. After deployment verify count=10, no-count/assignment routes, all six payload shapes, metadata filtering and admin import retries.
+
 Goal: Implement the user-approved relational question bank and typed history.
 Execution: Inline, requested by the user on 2026-10-11; branch feature/question-data-scheme. No additional approval loop.
 Stack: existing .NET 8, EF Core 8, Pomelo MySQL, MediatR, BaseResponse, GameServer authentication. No new packages or project references.

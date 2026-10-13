@@ -9,3 +9,8 @@
 No live database migration, deployment, educational-tool UI, Unity integration or diagnostics delivery is part of this task. Source rollout instructions live in api.md.
 
 - [x] T006: Seconds-based fields, safe timing source migration, dummy legacy import/export and compatible GET adapter; tests and independent review complete.
+
+- [x] T007: Compatible optional count with database metadata filtering and unchanged Unity payload; bounds/empty/import HTTP regressions.
+- [x] T008: Import staging's four legacy packs through the existing service; verify 97 rows, retained packs, duplicate-free retries and matching shared IDs.
+- [x] T009: Collapse grading-equivalent legacy fill variants, retaining UUID derivation; regression test.
+- [ ] T010: Publish and deploy the user-authorised fixes, then verify count=10, no-count/assignment compatibility and HTTP import replay on staging.

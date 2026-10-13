@@ -1,5 +1,7 @@
 # Question data scheme
 
+2026-10-13 follow-up: user requests importing existing legacy questions and choosing a number by curriculum/grade/unit using the old anonymous response. Compatible GET count is 1..2000 with stable ordering and filters before limit; omitted count preserves existing gameplay. Count with assignment is rejected. Collapse grading-equivalent legacy fill variants without regenerating shared IDs. User selected staging; 97 questions were imported from four retained packs and IDs verified through anonymous GETs. User authorised commit/push/PR/merge/deployment subject to game compatibility. Preserve current term-zero support; no new schema, Unity runtime or history changes.
+
 User-approved design: K:/Projects/SprintLab-Artifacts/2026-10-09/Docs/Refined-Question-and-History-Schema.md.
 
 Implement the approved 15 relational tables, with shared QuestionId UUID primary keys stored as binary(16) in MySQL. Retain stable string choice/item/pair/option IDs. User added TimerSeconds to questions and requested TimeTakenSeconds in history on 2026-10-11; both use decimal(10,3), in seconds. No other additional stored fields or JSON columns. Existing players and matches are referenced.

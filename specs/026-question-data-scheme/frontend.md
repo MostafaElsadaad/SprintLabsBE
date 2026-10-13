@@ -23,6 +23,8 @@ Admin bank listing uses GET `/bank/admin` with grade required and the optional c
 
 ## Game display and server integration
 
+Compatible reads support optional count 1..2000, e.g. anonymous GET `/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10`. Render the unchanged `data.payloadJson.Questions` shape. Database filters apply before limiting; fewer questions may be returned. Selection is stable, not random. Omit count for existing full-bank behavior; do not combine count with assignment. Show 400 validation and 404 empty states. Admin import uses POST `/bank/import-legacy/{packId}`, no body, with the existing admin JWT, returning records/IDs for diagnostics. Imported rows use DUMMY curriculum/unit 1. Case-equivalent legacy fill answers are collapsed without changing grading semantics or shared UUIDs. This requires no Unity update.
+
 Authenticated display reads use GET `/bank`; full trusted keys use GET `/bank/server` from the dedicated server. Render the display-only option/item arrays. Matching has separate left/right presentation IDs; the dedicated server resolves them against independently sorted sides in its full bank. Display shuffling never changes identity.
 
 Clients submit intent to the game server. The game server validates the authenticated player, current controller and question/stage, derives time and verifies the final answer before POST `/history`. Do not send server credentials or correct answer keys to clients. This feature adds no direct client history-write route.

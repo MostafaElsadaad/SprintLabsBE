@@ -11,4 +11,5 @@ public class QuestionBankFilter
     public int? Term { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 50;
+    public int? Count { get; set; }
 }

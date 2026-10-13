@@ -88,7 +88,10 @@ internal static class LegacyQuestionConverter
                 if (left.Count != right.Count) throw QuestionDataService.Error("Matching columns must contain equal numbers of items.");
                 q.Pairs = left.Select((text, i) => new QuestionPairData { PairId = Child("p", i), LeftText = text, RightText = right[i] }).ToList();
                 break;
-            case 3: q.AcceptedAnswers = Strings(data, "CorrectAnswers"); break;
+            case 3:
+                // Legacy packs often list casing variants that grading already treats as equivalent.
+                q.AcceptedAnswers = Strings(data, "CorrectAnswers").DistinctBy(QuestionDataValidation.Normalize).ToList();
+                break;
             case 5:
                 var options = Strings(data, "Answers"); var answers = Strings(data, "CorrectAnswers");
                 if (data.GetProperty("Spaces").GetInt32() != answers.Count) throw QuestionDataService.Error("Blank count and answers do not match.");

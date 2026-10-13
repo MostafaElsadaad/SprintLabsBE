@@ -29,6 +29,8 @@ namespace Application.Features.Questions
 
         public async Task<GetQuestionsDto> Handle(GetQuestionsQuery request, CancellationToken cancellationToken)
         {
+            if (request.Assignment.HasValue && request.Filter?.Count.HasValue == true)
+                throw new GenericException(ErrorCode.Failure, "Count cannot be combined with legacy assignment selection.", HttpStatusCode.BadRequest);
             var question = await _questionsRepository.GetByCustomConditionAsync(x =>
                 x.Grade == request.Grade &&
                 (request.Assignment == null || x.Assignment == request.Assignment));
@@ -39,7 +41,7 @@ namespace Application.Features.Questions
 
             var filter = request.Filter;
             var hasMetadataFilter = filter != null && (filter.Unit.HasValue || filter.Lesson.HasValue || filter.Term.HasValue ||
-                filter.Curriculum != null || filter.Subject != null || filter.Language != null);
+                filter.Curriculum != null || filter.Subject != null || filter.Language != null || filter.Count.HasValue);
             if (request.Assignment == null && hasMetadataFilter && !projected.HasValue)
                 throw new GenericException(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);
 
