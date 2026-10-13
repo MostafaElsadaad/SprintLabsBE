@@ -2,6 +2,22 @@
 
 All routes use `/api/v1/Question` and the existing BaseResponse envelope. This feature adds relational storage; JSON request/response bodies are transport only. The old GET/PUT `/api/v1/Question` pack routes remain compatible.
 
+## Compatible selection and legacy import (2026-10-13)
+
+Anonymous GET `/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10` filters relational rows before selecting up to 10 questions in stable QuestionId order. Count is optional and must be 1..2000; omitted count preserves full-bank behavior (maximum 2000). A smaller bank returns fewer questions. Empty filtered results return 404 without legacy fallback. Count with legacy assignment returns 400. Paged `/bank` routes continue using pageNumber/pageSize. The compatible response remains `data.payloadJson.Questions`, including the same Type/Prompt/Choices/CorrectIndex/Timer etc. and shared IDs; timers stay in seconds. No schema or authentication change is introduced.
+
+Admin import uses the existing POST `/bank/import-legacy/{packId}` with no body. It validates/copies the whole pack into Questions and typed answer tables, retains the legacy row, returns shared IDs and is idempotent for unchanged content. Legacy fill-answer casing/outer-whitespace variants collapse to their first spelling using the existing grading normalization. Original UUID derivation remains unchanged. Normal publication still rejects equivalent duplicate variants.
+
+Staging's four packs were imported on 2026-10-13 using a temporary EF runner calling the existing service: pack 1=grade 5 (55), 2=grade 6 (14), 3=grade 7 (14), 4=grade 8 (14). Total 97, source rows retained, repeated import unchanged. Imported curriculum/subject are DUMMY, language und, term/unit/lesson 1; original grade and timer are retained. Exported IDs live outside Git in SprintLab-Artifacts/question-data-scheme/staging-import-shared-identities.json. This publication enables the corrected HTTP importer and count limit on staging; verify both after deployment.
+
+```sh
+curl.exe -X POST "https://noxed.ddns.net/api/v1/Question/bank/import-legacy/3" -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+curl.exe "https://noxed.ddns.net/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10"
+curl.exe "https://noxed.ddns.net/api/v1/Question?grade=7&count=10"
+```
+
+The import token must belong to an active platform administrator. GET needs no authentication. Curriculum filters must match stored values; imported rows do not have Egypt classification.
+
 ## Routes and permissions
 
 | Method | Route suffix | Authentication / authorisation | Request | Success data |

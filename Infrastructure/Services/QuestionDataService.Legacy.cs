@@ -86,19 +86,21 @@ public partial class QuestionDataService
 
     public async Task<JsonElement?> ProjectBankAsync(QuestionBankFilter filter, CancellationToken ct)
     {
+        if (filter.Count is < 1 or > 2000)
+            throw Error("Question count must be 1..2000.");
         // Keep every page/child query on one snapshot while educational publishing can add UUIDs.
         await using var tx = context.Database.IsRelational() ? await context.Database.BeginTransactionAsync(
             context.Database.IsMySql() ? IsolationLevel.RepeatableRead : IsolationLevel.Serializable, ct) : null;
         var all = new List<QuestionDataRequest>();
         var pageFilter = new QuestionBankFilter { Grade = filter.Grade, Unit = filter.Unit, Lesson = filter.Lesson,
             Curriculum = filter.Curriculum, Language = filter.Language, Subject = filter.Subject, Term = filter.Term,
-            PageNumber = 1, PageSize = 200 };
+            PageNumber = 1, PageSize = Math.Min(filter.Count ?? 200, 200) };
         while (true)
         {
             var page = await GetBankAsync(pageFilter, ct);
-            if (page.Total > 2000) throw Error("Compatible packs are limited to 2000 questions; use the paged bank API.");
-            all.AddRange(page.Items);
-            if (all.Count >= page.Total || page.Items.Count == 0) break;
+            if (!filter.Count.HasValue && page.Total > 2000) throw Error("Compatible packs are limited to 2000 questions; use the paged bank API.");
+            all.AddRange(page.Items.Take((filter.Count ?? 2000) - all.Count));
+            if (all.Count >= Math.Min(page.Total, filter.Count ?? 2000) || page.Items.Count == 0) break;
             pageFilter.PageNumber++;
         }
         if (tx != null) await tx.CommitAsync(ct);

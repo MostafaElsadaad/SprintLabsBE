@@ -29,6 +29,32 @@ namespace Compass.Tests.Features.QuestionData;
 
 public class QuestionDataApiTests
 {
+    [Fact]
+    public async Task Compatible_get_filters_new_rows_and_limits_count_without_authentication()
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        for (var i = 0; i < 12; i++)
+        {
+            var q = QuestionDataTypesTests.Question("TrueOrFalse");
+            q.QuestionText = $"Question {i}";
+            await f.Service.PublishAsync(40, q, default);
+        }
+        var excluded = QuestionDataTypesTests.Question("TrueOrFalse");
+        excluded.Unit = 2;
+        await f.Service.PublishAsync(40, excluded, default);
+        using var server = Server(f, null); using var client = server.CreateClient();
+        var result = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?curriculum=Egypt&grade=7&unit=1&count=10");
+        var questions = result.GetProperty("data").GetProperty("payloadJson").GetProperty("Questions");
+        Assert.Equal(10, questions.GetArrayLength());
+        Assert.DoesNotContain(questions.EnumerateArray(), x => x.GetProperty("QuestionId").GetString() == excluded.QuestionId.ToString());
+        var fewer = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?grade=7&unit=2&count=10");
+        Assert.Single(fewer.GetProperty("data").GetProperty("payloadJson").GetProperty("Questions").EnumerateArray());
+        foreach (var count in new[] { 0, -1, 2001 })
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"/api/v1/Question?grade=7&count={count}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/Question?grade=7&unit=3&count=10")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/v1/Question?grade=7&assignment=1&count=10")).StatusCode);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -94,6 +120,10 @@ public class QuestionDataApiTests
         var first = data.GetProperty("payloadJson").GetProperty("Questions")[0];
         Assert.True(Guid.TryParse(first.GetProperty("QuestionId").GetString(), out _));
         Assert.Equal(8m, first.GetProperty("MCQ").GetProperty("Timer").GetDecimal());
+        var limited = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?curriculum=DUMMY&grade=5&unit=1&count=2");
+        var imported = limited.GetProperty("data").GetProperty("payloadJson").GetProperty("Questions");
+        Assert.Equal(2, imported.GetArrayLength());
+        Assert.All(imported.EnumerateArray(), x => Assert.True(Guid.TryParse(x.GetProperty("QuestionId").GetString(), out _)));
     }
 
     [Fact]

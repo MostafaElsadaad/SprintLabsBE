@@ -10,6 +10,21 @@ namespace Compass.Tests.Features.QuestionData;
 public class QuestionDataLegacyTests
 {
     [Fact]
+    public async Task Legacy_import_collapses_equivalent_answer_variants_and_remains_idempotent()
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var pack = await f.Context.Questions.SingleAsync();
+        pack.PayloadJson = "{\"Questions\":[{\"Type\":3,\"FillBlank\":{\"Prompt\":\"Name the process\",\"CorrectAnswers\":[\"sublimation\",\"Sublimation\",\" sublimation \"],\"Timer\":10}}]}";
+        await f.Context.SaveChangesAsync();
+        var first = await f.Service.ImportLegacyAsync(40, pack.Id, default);
+        var repeated = await f.Service.ImportLegacyAsync(40, pack.Id, default);
+        Assert.Equal(new[] { "sublimation" }, first.Single().AcceptedAnswers);
+        Assert.Equal(first.Single().QuestionId, repeated.Single().QuestionId);
+        Assert.Single(await f.Context.Set<Question>().ToListAsync());
+        Assert.NotNull(await f.Service.ProjectLegacyAsync(pack, default));
+    }
+
+    [Fact]
     public async Task Equivalent_seconds_number_format_does_not_regenerate_legacy_question_ids()
     {
         await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
