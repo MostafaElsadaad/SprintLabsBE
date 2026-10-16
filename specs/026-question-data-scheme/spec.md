@@ -1,5 +1,7 @@
 # Question data scheme
 
+2026-10-16 cutover: user requests seamless migration to the new question tables and explicitly chooses to reject assignment requests. Remove every legacy dependency from the game's GET, including response metadata and JSON fallback. Preserve anonymous route, question payload/IDs, seconds, optional filters/count and current grade-only Unity loader. Return 404 for absent relational questions. Retain outer shape using neutral transport fields; retain source tables/import tools for recovery. No new stored columns, migration or game build is required.
+
 2026-10-13 follow-up: user requests importing existing legacy questions and choosing a number by curriculum/grade/unit using the old anonymous response. Compatible GET count is 1..2000 with stable ordering and filters before limit; omitted count preserves existing gameplay. Count with assignment is rejected. Collapse grading-equivalent legacy fill variants without regenerating shared IDs. User selected staging; 97 questions were imported from four retained packs and IDs verified through anonymous GETs. User authorised commit/push/PR/merge/deployment subject to game compatibility. Preserve current term-zero support; no new schema, Unity runtime or history changes.
 
 User-approved design: K:/Projects/SprintLab-Artifacts/2026-10-09/Docs/Refined-Question-and-History-Schema.md.
