@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
 using Shared.Enums;
+using Shared.Exceptions;
 using Shared.Responses;
 using System.Net;
 
@@ -29,6 +30,8 @@ namespace API.Controllers
         [HttpGet, AllowAnonymous]
         public async Task<IActionResult> GetQuestions([FromQuery] QuestionBankFilter filter, int? assignment, CancellationToken ct)
         {
+            if (Request.Query.ContainsKey(nameof(assignment)) && !assignment.HasValue)
+                throw new GenericException(ErrorCode.Failure, "Assignment must be omitted.", HttpStatusCode.BadRequest);
             GetQuestionsQuery getQuestionsQuery = new GetQuestionsQuery
             {
                 Grade = filter.Grade,

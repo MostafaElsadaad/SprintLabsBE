@@ -24,11 +24,55 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Compass.Tests.Features.QuestionData;
 
 public class QuestionDataApiTests
 {
+    [Fact]
+    public async Task Game_get_reads_all_six_types_even_when_the_legacy_table_is_absent()
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var ids = new List<Guid>();
+        foreach (var type in new[] { "MCQ", "TrueOrFalse", "FillBlank", "Ordering", "MatchingPairs", "DragAndDrop" })
+        {
+            var q = QuestionDataTypesTests.Question(type);
+            if (type == "MCQ") q.Choices = new()
+            {
+                new() { ChoiceId = "atom-c1", ChoiceText = "Atom", IsCorrect = true },
+                new() { ChoiceId = "atom-c2", ChoiceText = "Cell", IsCorrect = false }
+            };
+            await f.Service.PublishAsync(40, q, default);
+            ids.Add(q.QuestionId);
+        }
+        await f.Context.Database.ExecuteSqlRawAsync("DROP TABLE LegacyQuestionPacks");
+        using var server = Server(f, null); using var client = server.CreateClient();
+        var result = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?grade=7");
+        var data = result.GetProperty("data");
+        var questions = data.GetProperty("payloadJson").GetProperty("Questions");
+        Assert.Equal(6, questions.GetArrayLength());
+        Assert.Equal(ids.Order(), questions.EnumerateArray().Select(x => Guid.Parse(x.GetProperty("QuestionId").GetString()!)).Order());
+        Assert.Equal(new[] { 0, 1, 2, 3, 5, 6 }, questions.EnumerateArray().Select(x => x.GetProperty("Type").GetInt32()).Order());
+        Assert.Equal(0, data.GetProperty("id").GetInt64());
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("assignment").ValueKind);
+        Assert.Equal(DateTime.UnixEpoch, data.GetProperty("createdAt").GetDateTime());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/Question?grade=5")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("")]
+    public async Task Assignment_selection_is_rejected_without_legacy_access(string assignment)
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        await f.Context.Database.ExecuteSqlRawAsync("DROP TABLE LegacyQuestionPacks");
+        using var server = Server(f, null); using var client = server.CreateClient();
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync($"/api/v1/Question?grade=5&assignment={assignment}")).StatusCode);
+    }
+
     [Fact]
     public async Task Compatible_get_filters_new_rows_and_limits_count_without_authentication()
     {
@@ -106,18 +150,18 @@ public class QuestionDataApiTests
     {
         await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
         using var server = Server(f, null); using var client = server.CreateClient();
-        var old = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?grade=5&assignment=1");
-        Assert.Equal(5, old.GetProperty("data").GetProperty("payloadJson").GetProperty("Questions").GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/v1/Question?grade=5")).StatusCode);
         client.DefaultRequestHeaders.Add("X-Test-User", "1");
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/api/v1/Question/bank/import-legacy/1", null)).StatusCode);
         client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "40");
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/Question/bank/import-legacy/1", null)).StatusCode);
         client.DefaultRequestHeaders.Remove("X-Test-User");
-        var converted = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?grade=5&assignment=1");
+        var converted = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?grade=5");
         var data = converted.GetProperty("data");
-        Assert.Equal(old.GetProperty("data").GetProperty("id").GetInt64(), data.GetProperty("id").GetInt64());
-        Assert.Equal(old.GetProperty("data").GetProperty("version").GetInt32(), data.GetProperty("version").GetInt32());
-        var first = data.GetProperty("payloadJson").GetProperty("Questions")[0];
+        Assert.Equal(0, data.GetProperty("id").GetInt64());
+        Assert.Equal(1, data.GetProperty("version").GetInt32());
+        Assert.Equal(5, data.GetProperty("payloadJson").GetProperty("Questions").GetArrayLength());
+        var first = data.GetProperty("payloadJson").GetProperty("Questions").EnumerateArray().Single(x => x.GetProperty("Type").GetInt32() == 0);
         Assert.True(Guid.TryParse(first.GetProperty("QuestionId").GetString(), out _));
         Assert.Equal(8m, first.GetProperty("MCQ").GetProperty("Timer").GetDecimal());
         var limited = await client.GetFromJsonAsync<JsonElement>("/api/v1/Question?curriculum=DUMMY&grade=5&unit=1&count=2");

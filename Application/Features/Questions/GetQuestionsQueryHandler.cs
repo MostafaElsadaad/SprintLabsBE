@@ -1,70 +1,36 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-
-using Domain.Models;
-using Domain.Repositories;
 using Domain.Services;
-
 using MediatR;
-
 using Shared.Enums;
 using Shared.Exceptions;
-using System.Text.Json;
+using Shared.Requests.QuestionData;
 
-namespace Application.Features.Questions
+namespace Application.Features.Questions;
+
+public class GetQuestionsQueryHandler(IQuestionDataService questionData)
+    : IRequestHandler<GetQuestionsQuery, GetQuestionsDto>
 {
-    public class GetQuestionsQueryHandler : IRequestHandler<GetQuestionsQuery, GetQuestionsDto>
+    public async Task<GetQuestionsDto> Handle(GetQuestionsQuery request, CancellationToken cancellationToken)
     {
-        private readonly IBaseRepository<QuestionsJson> _questionsRepository;
-        private readonly IQuestionDataService? _questionData;
-        public GetQuestionsQueryHandler(IBaseRepository<QuestionsJson> questionsRepository, IQuestionDataService? questionData = null)
+        if (request.Assignment.HasValue)
+            throw new GenericException(ErrorCode.Failure,
+                "Assignment selection is no longer supported. Use curriculum, grade, unit and lesson filters.",
+                HttpStatusCode.BadRequest);
+
+        var filter = request.Filter ?? new QuestionBankFilter { Grade = request.Grade };
+        var payload = await questionData.ProjectBankAsync(filter, cancellationToken)
+            ?? throw new GenericException(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);
+
+        // Preserve the transport envelope without inventing persisted pack identity or timestamps.
+        return new GetQuestionsDto
         {
-            _questionsRepository = questionsRepository;
-            _questionData = questionData;
-        }
-
-        public async Task<GetQuestionsDto> Handle(GetQuestionsQuery request, CancellationToken cancellationToken)
-        {
-            if (request.Assignment.HasValue && request.Filter?.Count.HasValue == true)
-                throw new GenericException(ErrorCode.Failure, "Count cannot be combined with legacy assignment selection.", HttpStatusCode.BadRequest);
-            var question = await _questionsRepository.GetByCustomConditionAsync(x =>
-                x.Grade == request.Grade &&
-                (request.Assignment == null || x.Assignment == request.Assignment));
-
-            var projected = _questionData == null ? null : request.Assignment == null
-                ? await _questionData.ProjectBankAsync(request.Filter ?? new Shared.Requests.QuestionData.QuestionBankFilter { Grade = request.Grade }, cancellationToken)
-                : question == null ? null : await _questionData.ProjectLegacyAsync(question, cancellationToken);
-
-            var filter = request.Filter;
-            var hasMetadataFilter = filter != null && (filter.Unit.HasValue || filter.Lesson.HasValue || filter.Term.HasValue ||
-                filter.Curriculum != null || filter.Subject != null || filter.Language != null || filter.Count.HasValue);
-            if (request.Assignment == null && hasMetadataFilter && !projected.HasValue)
-                throw new GenericException(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);
-
-            if (question == null && !projected.HasValue)
-                throw new GenericException(
-                    message: ErrorMessage.NotFound,
-                    statusCode: HttpStatusCode.NotFound,
-                    errorCode: ErrorCode.Failure);
-
-            using var doc = projected.HasValue ? null : JsonDocument.Parse(question!.PayloadJson);
-
-            return new GetQuestionsDto
-            {
-                Id = question?.Id ?? 0,
-                Grade = request.Grade,
-                Assignment = question?.Assignment ?? request.Assignment,
-                PayloadJson = projected ?? doc!.RootElement.Clone(),
-                Version = question?.Version ?? 1,
-                CreatedAt = question?.CreatedAt ?? DateTime.UnixEpoch,
-                UpdatedAt = question?.UpdatedAt
-            };
-
-
-        }
+            Id = 0,
+            Grade = filter.Grade,
+            Assignment = null,
+            PayloadJson = payload,
+            Version = 1,
+            CreatedAt = DateTime.UnixEpoch,
+            UpdatedAt = null
+        };
     }
 }

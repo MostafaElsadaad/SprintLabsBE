@@ -23,6 +23,8 @@ Admin bank listing uses GET `/bank/admin` with grade required and the optional c
 
 ## Game display and server integration
 
+2026-10-16: compatible GET is relational-only with no legacy fallback or header lookup. Omit assignment entirely; any assignment query returns 400. Empty relational banks return 404 even if old packs exist. Outer id/version/timestamp fields are neutral transport placeholders; consume actual QuestionId from Questions. Existing Unity uses only payloadJson and grade and needs no change. Publish new game questions through PUT `/Question/bank`; the old PUT `/Question` only edits migration packs and no longer affects gameplay reads.
+
 Compatible reads support optional count 1..2000, e.g. anonymous GET `/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10`. Render the unchanged `data.payloadJson.Questions` shape. Database filters apply before limiting; fewer questions may be returned. Selection is stable, not random. Omit count for existing full-bank behavior; do not combine count with assignment. Show 400 validation and 404 empty states. Admin import uses POST `/bank/import-legacy/{packId}`, no body, with the existing admin JWT, returning records/IDs for diagnostics. Imported rows use DUMMY curriculum/unit 1. Case-equivalent legacy fill answers are collapsed without changing grading semantics or shared UUIDs. This requires no Unity update.
 
 Authenticated display reads use GET `/bank`; full trusted keys use GET `/bank/server` from the dedicated server. Render the display-only option/item arrays. Matching has separate left/right presentation IDs; the dedicated server resolves them against independently sorted sides in its full bank. Display shuffling never changes identity.

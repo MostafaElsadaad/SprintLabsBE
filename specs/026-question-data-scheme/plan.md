@@ -1,5 +1,7 @@
 # Question data scheme implementation plan
 
+2026-10-16: codex/question-relational-reads removes IBaseRepository<QuestionsJson> and optional-service fallback from GetQuestionsQueryHandler; require IQuestionDataService and ProjectBankAsync exclusively. Reject assignment (including blank query) and return neutral pack headers. Prove physical legacy-table independence for all six types in SQLite-backed HTTP tests, plus legacy-only 404 and unchanged imported/new reads. Keep admin migration tools/old pack storage intact. Validate full backend suite and current grade-only game contract before publishing/deploying through the previously authorised staging workflow.
+
 2026-10-13 follow-up: publish from current development in isolated branch codex/question-import-count, preserving term-zero support and unrelated local work. Extend compatible filtering/projection with count; keep the current game response and no-count behavior. Reuse existing import service and correct equivalent fill-answer variants. Focused/full backend regressions precede publication. Existing staging CI deploys the merged development branch. After deployment verify count=10, no-count/assignment routes, all six payload shapes, metadata filtering and admin import retries.
 
 Goal: Implement the user-approved relational question bank and typed history.
