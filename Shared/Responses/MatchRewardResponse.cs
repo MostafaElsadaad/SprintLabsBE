@@ -11,6 +11,8 @@ public class MatchRewardResponse
     public int NewLevel { get; set; }
     public int OldTotalXp { get; set; }
     public int NewTotalXp { get; set; }
+    public int XpIntoCurrentLevel { get; set; }
+    public int NextLevelXpRequirement { get; set; }
     public int RpChange { get; set; }
     public int OldRp { get; set; }
     public int NewRp { get; set; }
