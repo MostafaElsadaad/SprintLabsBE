@@ -10,4 +10,6 @@ public class MatchAnswerRequest
     public int QuestionTimeMs { get; set; }
     public int StreakBeforeAnswer { get; set; }
     public int StreakAfterAnswer { get; set; }
+    // Optional for older servers and unanswered questions; saved atomically with match rewards.
+    public QuestionData.QuestionHistoryRequest? QuestionResponse { get; set; }
 }

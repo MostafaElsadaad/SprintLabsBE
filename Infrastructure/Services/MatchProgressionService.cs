@@ -104,6 +104,7 @@ public class MatchProgressionService : IMatchProgressionService
         if (match.Status != MatchStatus.Started) throw Conflict();
         await _context.Entry(match).Collection(x => x.MatchPlayers).LoadAsync(ct);
         ValidateCompletion(match, request);
+        await QuestionDataService.StageMatchResponsesAsync(_context, matchId, request.QuestionResults, ct);
 
         // Lock profiles in a stable order: different matches may reward the same human concurrently.
         var profiles = new Dictionary<long, Player>();
@@ -254,13 +255,20 @@ public class MatchProgressionService : IMatchProgressionService
     private static MatchCompletionResponse Result(long id, IEnumerable<MatchRewardResult> rewards) => new()
     { MatchId = id, Status = MatchStatus.Completed.ToString(), Rewards = rewards.Select(MapReward).ToList() };
 
-    internal static MatchRewardResponse MapReward(MatchRewardResult x) => new()
+    internal static MatchRewardResponse MapReward(MatchRewardResult x)
     {
+        var levels = new LevelProgressionService();
+        int remaining = x.NewTotalXp;
+        for (int level = 1; level < x.NewLevel; level++) remaining -= levels.CalculateXpRequiredForLevel(level);
+        return new()
+        {
         PlayerProfileId = x.PlayerProfileId, AnswerXp = x.AnswerXp, MatchResultXp = x.MatchResultXp,
         MissionXp = x.MissionXp, XpGained = x.TotalXp, OldLevel = x.OldLevel, NewLevel = x.NewLevel,
         OldTotalXp = x.OldTotalXp, NewTotalXp = x.NewTotalXp, RpChange = x.RpChange, OldRp = x.OldRp,
+        XpIntoCurrentLevel = remaining, NextLevelXpRequirement = levels.CalculateXpRequiredForLevel(x.NewLevel),
         NewRp = x.NewRp, OldRankTier = x.OldRankTier.ToString(), NewRankTier = x.NewRankTier.ToString()
-    };
+        };
+    }
 
     private static GenericException Invalid() => new(ErrorCode.Failure, ErrorMessage.InvalidInput, HttpStatusCode.BadRequest);
     private static GenericException NotFound() => new(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);

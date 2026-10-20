@@ -58,7 +58,9 @@ public partial class QuestionDataService(ApplicationDbContext context) : IQuesti
         return new() { Items = rows.Select(QuestionDataMapping.Question).ToList(), Total = total, Page = filter.PageNumber, PageSize = filter.PageSize };
     }
 
-    private IQueryable<Question> Questions() => context.Set<Question>()
+    private IQueryable<Question> Questions() => Questions(context);
+
+    private static IQueryable<Question> Questions(ApplicationDbContext database) => database.Set<Question>()
         .Include(x => x.Choices).Include(x => x.BooleanAnswers).Include(x => x.AcceptedAnswers)
         .Include(x => x.Items).Include(x => x.Pairs).Include(x => x.Options).Include(x => x.BlankAnswers).AsSplitQuery();
 

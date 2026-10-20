@@ -123,6 +123,7 @@ internal static class LegacyQuestionConverter
                 case "Ordering":
                     data["Items"] = JsonSerializer.SerializeToNode(q.Items.Select(x => x.ItemText));
                     data["CorrectOrder"] = JsonSerializer.SerializeToNode(q.Items.OrderBy(x => x.CorrectPosition).Select(x => x.ItemText));
+                    data["CorrectItemIds"] = JsonSerializer.SerializeToNode(q.Items.OrderBy(x => x.CorrectPosition).Select(x => x.ItemId));
                     data["ItemIds"] = JsonSerializer.SerializeToNode(q.Items.Select(x => x.ItemId)); break;
                 case "MatchingPairs":
                     data["LeftItems"] = JsonSerializer.SerializeToNode(q.Pairs.Select(x => x.LeftText));
