@@ -3,6 +3,7 @@ using Application.Features.Missions.CreateMissionActivation;
 using Application.Features.Missions.PreviewMissionTemplates;
 using Application.Features.Missions.ResetMissions;
 using Application.Features.Missions.SeedMissions;
+using Application.Features.Missions.SeedGameMissions;
 using System.Net;
 using Asp.Versioning;
 using MediatR;
@@ -51,4 +52,10 @@ public class AdminMissionsController : ControllerBase
         return Envelope(await _mediator.Send(new SeedMissionsCommand { UserId = UserId.Value }, ct));
     }
     private IActionResult Envelope<T>(T data) => Ok(new BaseResponse<T>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+    [HttpPost("seed/game")]
+    public async Task<IActionResult> SeedGame(CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await _mediator.Send(new SeedGameMissionsCommand { UserId = UserId.Value }, ct));
+    }
 }

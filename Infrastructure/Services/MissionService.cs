@@ -91,7 +91,10 @@ public partial class MissionService : IMissionService
     private static PlayerMissionResponse Map(PlayerMission mission)
     {
         var r = Read<MissionDefinitionSnapshot>(mission.DefinitionSnapshotJson).Rules;
-        return new() { PlayerMissionId = mission.Id, MissionKey = r.MissionKey, Title = r.Title, Description = r.Description,
+        return new() { PlayerMissionId = mission.Id, ActivationId = mission.MissionActivationId,
+            AssignedAt = mission.AssignedAt, CompletedAt = mission.CompletedAt, ClaimedAt = mission.ClaimedAt,
+            GrantedRewards = mission.ClaimSnapshotJson == null ? new() : Read<MissionClaimResponse>(mission.ClaimSnapshotJson).Rewards,
+            MissionKey = r.MissionKey, Title = r.Title, Description = r.Description,
             Category = r.Category, PeriodType = r.PeriodType, CurrentProgress = mission.CurrentProgress,
             TargetProgress = mission.TargetProgress, Status = mission.Status.ToString(), ExpiresAt = mission.ExpiresAt,
             Rewards = r.Rewards.Select(x => new MissionRewardResponse { RewardType = x.RewardType, Amount = x.Amount, ShopProductId = x.ShopProductId }).ToList() };

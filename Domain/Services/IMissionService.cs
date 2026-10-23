@@ -4,6 +4,8 @@ namespace Domain.Services;
 public interface IMissionService
 {
     Task<List<PlayerMissionResponse>> GetMyAsync(long userId, CancellationToken ct);
+    Task<List<PlayerMissionResponse>> HistoryAsync(long userId, int page, int pageSize, CancellationToken ct);
+    Task<List<long>> SeedGameCatalogueAsync(long adminUserId, CancellationToken ct);
     Task<List<MissionClaimResponse>> ClaimAsync(long userId, long? missionId, CancellationToken ct);
     Task<List<MissionEventResponse>> EventsAsync(List<MissionEventRequest> events, CancellationToken ct);
     Task<MissionResetResponse> ResetAsync(long adminUserId, CancellationToken ct);
