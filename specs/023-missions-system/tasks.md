@@ -1,4 +1,6 @@
 # Tasks
+- [x] 2026-10-23: explicit Seasonal period, game catalogue, completed-history CQRS/API and five new service/API tests; 634 passed, 10 skipped full regression.
+- [ ] Publish/deploy extension and seed staging when authorized; verify catalogue without altering player balances.
 - [x] NOX-104/105: schema, enums, template/rewards/activation/assignment models and migration
 - [x] NOX-106/107: atomic stable assignment and current-player missions API
 - [x] NOX-108/109: trusted deduplicated single/bulk events and five progress modes

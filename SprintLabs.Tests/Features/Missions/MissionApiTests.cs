@@ -66,6 +66,24 @@ public class MissionApiTests
         client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "40");
         (await client.GetAsync("/api/v1/admin/missions/templates")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
+    [Fact]
+    public async Task History_is_owned_and_game_catalogue_seed_requires_platform_admin()
+    {
+        using var f = new MissionFixture(); await f.SeedAsync();
+        var mission = await f.AssignAsync("Boolean", 1);
+        await f.Service.EventsAsync(new() { f.Event() }, default);
+        using var server = Server(f, null); using var client = server.CreateClient();
+        (await client.GetAsync("/api/v1/Missions/me/history")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        client.DefaultRequestHeaders.Add("X-Test-User", "2");
+        (await client.GetFromJsonAsync<JsonElement>("/api/v1/Missions/me/history?userId=1")).GetProperty("data").GetArrayLength().Should().Be(0);
+        (await client.PostAsync("/api/v1/admin/missions/seed/game", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "1");
+        var data = (await client.GetFromJsonAsync<JsonElement>("/api/v1/Missions/me/history?pageSize=1")).GetProperty("data");
+        data[0].GetProperty("playerMissionId").GetInt64().Should().Be(mission.PlayerMissionId);
+        (await client.GetAsync("/api/v1/Missions/me/history?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "40");
+        (await client.PostAsync("/api/v1/admin/missions/seed/game", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
     private static TestServer Server(MissionFixture f, string? credential) => new(new WebHostBuilder()
         .ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["GameServer:ApiKey"] = credential }))
         .ConfigureServices(services =>
