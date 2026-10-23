@@ -45,11 +45,16 @@ public class ProgressionApiTests
         var result = await client.PostAsJsonAsync($"/api/v1/Matches/{id}/complete", f.Completion());
         result.StatusCode.Should().Be(HttpStatusCode.OK);
         var original = await result.Content.ReadAsStringAsync();
+        var rewards = JsonDocument.Parse(original).RootElement.GetProperty("data").GetProperty("rewards");
+        rewards[0].GetProperty("goldGained").GetInt32().Should().Be(65);
+        rewards[0].GetProperty("oldGold").GetInt32().Should().Be(0);
+        rewards[0].GetProperty("newGold").GetInt32().Should().Be(65);
         var retry = await client.PostAsJsonAsync($"/api/v1/Matches/{id}/complete", f.Completion());
         (await retry.Content.ReadAsStringAsync()).Should().Be(original);
         client.DefaultRequestHeaders.Authorization = null;
         (await client.PostAsJsonAsync($"/api/v1/Matches/{id}/complete", f.Completion())).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         f.Context.Players.Single(x => x.Id == 101).TotalMatches.Should().Be(1);
+        f.Context.Players.Single(x => x.Id == 101).Gold.Should().Be(65);
     }
 
     [Theory]

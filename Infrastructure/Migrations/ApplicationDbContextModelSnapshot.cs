@@ -512,6 +512,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime(6)")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
+                    b.Property<int>("GoldGained")
+                        .HasColumnType("int");
+
                     b.Property<long>("MatchId")
                         .HasColumnType("bigint");
 
@@ -519,6 +522,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("MissionXp")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NewGold")
                         .HasColumnType("int");
 
                     b.Property<int>("NewLevel")
@@ -531,6 +537,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("NewTotalXp")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OldGold")
                         .HasColumnType("int");
 
                     b.Property<int>("OldLevel")

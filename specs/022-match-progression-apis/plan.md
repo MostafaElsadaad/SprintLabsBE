@@ -22,4 +22,6 @@ Read filters join Identity status in SQL, avoiding pagination gaps/leaks from fi
 
 ## Validation limits
 
+2026-10-23 gold refinement: calculate placement plus correct-answer gold in MatchProgressionService under existing ordered profile locks and transaction. Add GoldGained/OldGold/NewGold to MatchRewardResults and MatchRewardResponse, with an additive zero-default migration for old rows. No request, Unity payload, auth, mission reward, XP or RP calculation changes. Test placement tiers, all match types, wrong-answer exclusion, replay after other balance updates, legacy replay, overflow/negative balance and relational rollback; retain optional MySQL concurrency coverage.
+
 SQLite verifies SQL query translation, foreign keys, transactional rollback, new-scope replay and order, but cannot prove MySQL row-lock behavior. MySQL tests require an explicit dedicated test connection and privileges to create/drop unique test databases. No production database is used. Changes to an already completed result and historical class snapshots are deferred.

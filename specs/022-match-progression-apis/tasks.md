@@ -1,5 +1,7 @@
 # Tasks
 
+- [x] T-GOLD Add test-first placement/correct-answer gold, persistent snapshots, additive migration, replay/rollback/overflow coverage and API/frontend documentation (2026-10-23).
+
 - [x] T001 Inspect Jira epic/stories, instructions, models/calculators, persistence, authentication and community access.
 - [x] T002 Create feature branch while preserving unrelated user work.
 - [x] T003 Add server-only match registration and completion DTOs, service contracts, CQRS slices and routes (NOX-89).
