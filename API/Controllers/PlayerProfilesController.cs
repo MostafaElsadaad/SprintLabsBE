@@ -29,6 +29,7 @@ namespace API.Controllers
         }
 
         [HttpPatch("me")]
+        [HttpPost("me/appearance")]
         public async Task<IActionResult> UpdateMyPlayerProfile([FromBody] UpdateCurrentPlayerProfileRequest request)
         {
             var userId = GetUserId();
@@ -42,7 +43,9 @@ namespace API.Controllers
                 UserId = userId.Value,
                 Age = request.Age,
                 Grade = request.Grade,
-                SchoolName = request.SchoolName
+                SchoolName = request.SchoolName,
+                AvatarAssetPath = request.AvatarAssetPath,
+                ProfilePictureAssetPath = request.ProfilePictureAssetPath
             });
 
             return Ok(new BaseResponse<PlayerProfileResponse>(

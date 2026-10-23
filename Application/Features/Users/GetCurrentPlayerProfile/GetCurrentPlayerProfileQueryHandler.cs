@@ -58,6 +58,8 @@ namespace Application.Features.Users.GetCurrentPlayerProfile
                 Name = player.Name,
                 Email = player.Email,
                 PictureUrl = player.AvatarUrl,
+                AvatarAssetPath = player.AvatarAssetPath,
+                ProfilePictureAssetPath = player.ProfilePictureAssetPath,
                 Gold = player.Gold,
                 Experience = player.Experience,
                 Level = player.Level,

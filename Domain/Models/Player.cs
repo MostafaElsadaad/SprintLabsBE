@@ -16,6 +16,8 @@ public class Player
     public string Email { get; set; } = default!;
     public string Name { get; set; } = default!;
     public string? AvatarUrl { get; set; }
+    public string? AvatarAssetPath { get; set; }
+    public string? ProfilePictureAssetPath { get; set; }
     public int? Age { get; set; }
     public int? Grade { get; set; }
     public string? SchoolName { get; set; }

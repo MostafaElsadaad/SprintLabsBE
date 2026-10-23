@@ -12,6 +12,8 @@ namespace Shared.Responses
         public string Name { get; set; } = default!;
         public string Email { get; set; } = default!;
         public string? PictureUrl { get; set; }
+        public string? AvatarAssetPath { get; set; }
+        public string? ProfilePictureAssetPath { get; set; }
 
         public int Gold { get; set; }
         public int Experience { get; set; }
