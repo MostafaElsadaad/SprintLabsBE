@@ -55,6 +55,11 @@ namespace Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile
                     errorCode: ErrorCode.Failure);
             }
 
+            var updateAvatar = TryReadNullableString(request.AvatarAssetPath, out var avatarAssetPath);
+            var updatePicture = TryReadNullableString(request.ProfilePictureAssetPath, out var profilePictureAssetPath);
+            ValidateAssetPath(avatarAssetPath, "Assets/_Project/Backend_Data/Avatar/");
+            ValidateAssetPath(profilePictureAssetPath, "Assets/_Project/Backend_Data/ProfilePic/");
+
             if (TryReadNullableInt(request.Age, out var age))
             {
                 if (age is < 1 or > 120)
@@ -85,6 +90,16 @@ namespace Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile
                 player.SchoolName = schoolName;
             }
 
+            if (updateAvatar)
+            {
+                player.AvatarAssetPath = avatarAssetPath;
+            }
+
+            if (updatePicture)
+            {
+                player.ProfilePictureAssetPath = profilePictureAssetPath;
+            }
+
             var updatedPlayer = await _playerRepository.UpdatePlayer(player);
 
             return new PlayerProfileResponse
@@ -93,6 +108,8 @@ namespace Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile
                 Name = updatedPlayer.Name,
                 Email = updatedPlayer.Email,
                 PictureUrl = updatedPlayer.AvatarUrl,
+                AvatarAssetPath = updatedPlayer.AvatarAssetPath,
+                ProfilePictureAssetPath = updatedPlayer.ProfilePictureAssetPath,
                 Gold = updatedPlayer.Gold,
                 Experience = updatedPlayer.Experience,
                 Level = updatedPlayer.Level,
@@ -100,6 +117,37 @@ namespace Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile
                 Age = updatedPlayer.Age,
                 Grade = updatedPlayer.Grade
             };
+        }
+
+        private static void ValidateAssetPath(string? path, string root)
+        {
+            if (path == null)
+            {
+                return;
+            }
+
+            if (path.Length > 512 || !path.StartsWith(root, StringComparison.Ordinal))
+            {
+                ThrowInvalidInput();
+            }
+
+            var relativePath = path.Substring(root.Length);
+            foreach (var segment in relativePath.Split('/'))
+            {
+                if (segment.Length == 0 || segment == "." || segment == ".." ||
+                    segment != segment.Trim() || segment.EndsWith('.') ||
+                    segment.Any(c => !char.IsLetterOrDigit(c) && c != '_' && c != '-' && c != '.' && c != ' '))
+                {
+                    ThrowInvalidInput();
+                }
+            }
+
+            if (!relativePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) &&
+                !relativePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) &&
+                !relativePath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+            {
+                ThrowInvalidInput();
+            }
         }
 
         private static bool TryReadNullableInt(JsonElement value, out int? result)

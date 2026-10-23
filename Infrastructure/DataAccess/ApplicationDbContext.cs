@@ -103,6 +103,12 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.AvatarUrl)
                     .HasMaxLength(500);
 
+                e.Property(x => x.AvatarAssetPath)
+                    .HasMaxLength(512);
+
+                e.Property(x => x.ProfilePictureAssetPath)
+                    .HasMaxLength(512);
+
                 e.Property(x => x.Grade)
                     .HasMaxLength(20);
 

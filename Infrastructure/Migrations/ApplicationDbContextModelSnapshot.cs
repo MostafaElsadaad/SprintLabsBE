@@ -906,6 +906,10 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("Age")
                         .HasColumnType("int");
 
+                    b.Property<string>("AvatarAssetPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
@@ -950,6 +954,10 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<string>("ProfilePictureAssetPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
 
                     b.Property<int>("RankTier")
                         .ValueGeneratedOnAdd()

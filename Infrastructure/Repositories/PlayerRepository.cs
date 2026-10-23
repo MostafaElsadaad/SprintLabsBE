@@ -67,7 +67,11 @@ public class PlayerRepository : IPlayerRepository
     public async Task<Player> UpdatePlayer(Player player)
     {
         player.UpdatedAt = DateTime.UtcNow;
-        _context.Players.Update(player);
+        // Tracked profiles must preserve unrelated values changed by concurrent progression writes.
+        if (_context.Entry(player).State == EntityState.Detached)
+        {
+            _context.Players.Update(player);
+        }
         await _context.SaveChangesAsync();
         return player;
     }
