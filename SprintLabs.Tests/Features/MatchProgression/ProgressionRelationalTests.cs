@@ -30,6 +30,8 @@ public class ProgressionRelationalTests
         (await other.Reads.GetLeaderboardAsync(20, 1, new(), default)).Total.Should().Be(1);
         (await other.Reads.GetHistoryAsync(20, 1, 101, new(), default)).Total.Should().Be(1);
         other.Context.Players.Single(x => x.Id == 101).TotalMatches.Should().Be(1);
+        other.Context.Players.Single(x => x.Id == 101).Gold.Should().Be(65);
+        other.Context.Players.Single(x => x.Id == 102).Gold.Should().Be(30);
     }
 
     [Fact]
@@ -47,12 +49,34 @@ public class ProgressionRelationalTests
         using var verify = new SqliteProgressionContext(options);
         verify.MatchRewardResults.Should().BeEmpty(); verify.MatchQuestionResults.Should().BeEmpty();
         verify.PlayerXpLogs.Should().BeEmpty(); verify.PlayerRankLogs.Should().BeEmpty();
-        verify.Players.Should().OnlyContain(x => x.Experience == 0 && x.TotalMatches == 0);
+        verify.Players.Should().OnlyContain(x => x.Experience == 0 && x.TotalMatches == 0 && x.Gold == 0);
         verify.Matches.Single().Status.Should().Be(Domain.Enums.MatchStatus.Started);
         // Retry from a fresh request scope must now complete normally.
         interceptor.Fail = false;
         using var retry = new ProgressionFixture(new SqliteProgressionContext(options));
         (await retry.Matches.CompleteAsync(match.MatchId, f.Completion(), default)).Rewards.Should().HaveCount(2);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(int.MaxValue)]
+    public async Task Invalid_gold_on_later_player_rolls_back_the_whole_match(int gold)
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:"); await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        using var f = new ProgressionFixture(new SqliteProgressionContext(options));
+        await f.Context.Database.EnsureCreatedAsync(); await f.SeedAsync();
+        f.Context.Players.Single(x => x.Id == 102).Gold = gold;
+        await f.Context.SaveChangesAsync();
+        var match = await f.Matches.RegisterAsync(f.Registration(), default);
+        var failure = await Assert.ThrowsAsync<GenericException>(() => f.Matches.CompleteAsync(match.MatchId, f.Completion(), default));
+        failure.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var verify = new SqliteProgressionContext(options);
+        verify.Players.Single(x => x.Id == 101).Gold.Should().Be(0);
+        verify.Players.Single(x => x.Id == 102).Gold.Should().Be(gold);
+        verify.Players.Should().OnlyContain(x => x.Experience == 0 && x.TotalMatches == 0);
+        verify.MatchRewardResults.Should().BeEmpty(); verify.PlayerXpLogs.Should().BeEmpty();
+        verify.Matches.Single().Status.Should().Be(Domain.Enums.MatchStatus.Started);
     }
 
     private sealed class SqliteProgressionContext : ApplicationDbContext

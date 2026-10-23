@@ -47,6 +47,8 @@ public class ProgressionMysqlConcurrencyTests
         using var verify = database.Context();
         verify.Players.Should().OnlyContain(x => x.Id == 103 || x.TotalMatches == 1);
         verify.MatchRewardResults.Count().Should().Be(2); verify.PlayerXpLogs.Count().Should().Be(5);
+        verify.Players.Single(x => x.Id == 101).Gold.Should().Be(65);
+        verify.Players.Single(x => x.Id == 102).Gold.Should().Be(30);
     }
 
     [MysqlFact]
@@ -60,6 +62,7 @@ public class ProgressionMysqlConcurrencyTests
         using var verify = database.Context();
         var winner = verify.Players.Single(x => x.Id == 101);
         winner.Experience.Should().Be(164); winner.TotalMatches.Should().Be(2); winner.Rp.Should().Be(510);
+        winner.Gold.Should().Be(130);
         verify.MatchRewardResults.Count().Should().Be(4);
     }
 

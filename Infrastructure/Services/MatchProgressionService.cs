@@ -122,10 +122,14 @@ public class MatchProgressionService : IMatchProgressionService
         foreach (var facts in request.Players.OrderBy(x => x.PlayerProfileId))
         {
             var player = profiles[facts.PlayerProfileId];
-            if (player.Experience < 0 || player.Rp < 0 || player.TotalMatches == int.MaxValue ||
+            if (player.Experience < 0 || player.Gold < 0 || player.Rp < 0 || player.TotalMatches == int.MaxValue ||
                 player.TotalWins == int.MaxValue) throw Conflict();
             var answers = request.QuestionResults.Where(x => x.PlayerProfileId == player.Id).ToList();
             var xp = _xp.CalculateXp(answers.Select(x => new XpQuestionResult { IsCorrect = x.IsCorrect }), facts.Position == 1);
+            // Calculate from validated server facts, never from a supplied currency amount.
+            var placementGold = facts.Position switch { 1 => 50, 2 => 30, 3 => 20, _ => 10 };
+            var goldGained = answers.Count(x => x.IsCorrect) * 5 + placementGold;
+            if (player.Gold > int.MaxValue - goldGained) throw Conflict();
             if (player.Experience > int.MaxValue - xp.TotalXp) throw Conflict();
             var level = _levels.CalculateProgression(new LevelProgressionRequest { OldTotalXp = player.Experience, XpGained = xp.TotalXp });
             var rank = _ranks.CalculateRpAndRank(player.Rp, match.MatchType, facts.Position, match.TotalPlayers);
@@ -135,12 +139,14 @@ public class MatchProgressionService : IMatchProgressionService
             {
                 MatchId = matchId, PlayerProfileId = player.Id, CommunityId = match.CommunityId,
                 AnswerXp = xp.AnswerXp, MatchResultXp = xp.MatchResultXp, MissionXp = 0, TotalXp = xp.TotalXp,
+                GoldGained = goldGained, OldGold = player.Gold, NewGold = player.Gold + goldGained,
                 OldLevel = level.OldLevel, NewLevel = level.NewLevel, OldTotalXp = level.OldTotalXp, NewTotalXp = level.NewTotalXp,
                 OldRp = rank.OldRp, NewRp = rank.NewRp, RpChange = rank.RpChange,
                 OldRankTier = oldTier, NewRankTier = newTier, CreatedAt = now
             };
             rewards.Add(reward);
             player.Experience = level.NewTotalXp;
+            player.Gold = reward.NewGold;
             player.Level = level.NewLevel;
             player.Rp = rank.NewRp;
             player.RankTier = newTier;
@@ -264,6 +270,7 @@ public class MatchProgressionService : IMatchProgressionService
         {
         PlayerProfileId = x.PlayerProfileId, AnswerXp = x.AnswerXp, MatchResultXp = x.MatchResultXp,
         MissionXp = x.MissionXp, XpGained = x.TotalXp, OldLevel = x.OldLevel, NewLevel = x.NewLevel,
+        GoldGained = x.GoldGained, OldGold = x.OldGold, NewGold = x.NewGold,
         OldTotalXp = x.OldTotalXp, NewTotalXp = x.NewTotalXp, RpChange = x.RpChange, OldRp = x.OldRp,
         XpIntoCurrentLevel = remaining, NextLevelXpRequirement = levels.CalculateXpRequiredForLevel(x.NewLevel),
         NewRp = x.NewRp, OldRankTier = x.OldRankTier.ToString(), NewRankTier = x.NewRankTier.ToString()

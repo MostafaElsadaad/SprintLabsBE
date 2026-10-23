@@ -66,16 +66,20 @@ Data response:
   "status": "Completed",
   "rewards": [
     { "playerProfileId": 101, "answerXp": 10, "matchResultXp": 50, "missionXp": 0,
-      "xpGained": 60, "oldLevel": 1, "newLevel": 1, "oldTotalXp": 0, "newTotalXp": 60,
+      "xpGained": 60, "goldGained": 55, "oldGold": 0, "newGold": 55,
+      "oldLevel": 1, "newLevel": 1, "oldTotalXp": 0, "newTotalXp": 60,
       "rpChange": 30, "oldRp": 0, "newRp": 30, "oldRankTier": "Student", "newRankTier": "Student" },
     { "playerProfileId": 102, "answerXp": 0, "matchResultXp": 20, "missionXp": 0,
-      "xpGained": 20, "oldLevel": 1, "newLevel": 1, "oldTotalXp": 0, "newTotalXp": 20,
+      "xpGained": 20, "goldGained": 30, "oldGold": 0, "newGold": 30,
+      "oldLevel": 1, "newLevel": 1, "oldTotalXp": 0, "newTotalXp": 20,
       "rpChange": 0, "oldRp": 0, "newRp": 0, "oldRankTier": "Student", "newRankTier": "Student" }
   ]
 }
 ```
 
 Rewards are returned by ascending human profile ID. Retry the same match ID after timeout/503 with bounded backoff. Completed requests return original persisted snapshots, even after another match changes the profile or a retry body differs. No additional profile updates/logs occur. A 400 is a fact/contract error; 404 a missing match; 409 a cancelled/not-started match or progression overflow; 503 a retryable database failure. Mission XP is zero. Friendly/Private return RP delta zero and preserve rank. Immortal remains a placeholder.
+
+Gold (2026-10-23): each newly completed match awards `5 * correct answer count + placement gold` (1st=50, 2nd=30, 3rd=20, remaining=10). Wrong answers award no answer gold. All three match types qualify; bots receive no persistent rewards. Gold is calculated by the backend from validated ordered question facts and placement; do not send a gold amount. `goldGained`, `oldGold`, `newGold` are additive fields in completion and authorized match-detail reward snapshots. Profile reads return the updated `gold` balance. Negative existing gold or an Int32 balance overflow returns 409 and rolls back the entire completion. Gold, XP, history and match state commit atomically. Migration `20261023165048_AddMatchGoldRewards` adds three integer columns with zero defaults; previously settled matches return zero for these new fields and never gain retroactive gold. Historical old/new zero values mean an unavailable legacy snapshot, not the player's actual balance. No response/auth/request envelope changes; older game builds can ignore extra response fields. Mission coins remain separate.
 
 ## Progression and rank reads (NOX-90)
 

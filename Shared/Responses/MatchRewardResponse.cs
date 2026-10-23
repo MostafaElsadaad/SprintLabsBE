@@ -7,6 +7,9 @@ public class MatchRewardResponse
     public int MatchResultXp { get; set; }
     public int MissionXp { get; set; }
     public int XpGained { get; set; }
+    public int GoldGained { get; set; }
+    public int OldGold { get; set; }
+    public int NewGold { get; set; }
     public int OldLevel { get; set; }
     public int NewLevel { get; set; }
     public int OldTotalXp { get; set; }

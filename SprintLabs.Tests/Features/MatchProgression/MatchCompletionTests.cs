@@ -10,6 +10,35 @@ namespace Compass.Tests.Features.MatchProgression;
 
 public class MatchCompletionTests
 {
+    [Theory]
+    [InlineData("Ranked", 1, 65)]
+    [InlineData("Friendly", 2, 45)]
+    [InlineData("Private", 3, 35)]
+    [InlineData("Ranked", 4, 25)]
+    public async Task Gold_uses_correct_answers_and_placement_once(string type, int position, int expected)
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        f.Context.Players.Single(x => x.Id == 101).Gold = 100;
+        await f.Context.SaveChangesAsync();
+        var match = await f.Matches.RegisterAsync(f.Registration(type, totalPlayers: 5), default);
+        var request = f.Completion(type);
+        request.Players[0].Position = position; request.Players[1].Position = 5;
+        var result = await f.Matches.CompleteAsync(match.MatchId, request, default);
+        var reward = JsonSerializer.SerializeToElement(result.Rewards.Single(x => x.PlayerProfileId == 101));
+        reward.GetProperty("GoldGained").GetInt32().Should().Be(expected);
+        reward.GetProperty("OldGold").GetInt32().Should().Be(100);
+        reward.GetProperty("NewGold").GetInt32().Should().Be(100 + expected);
+        f.Context.Players.Single(x => x.Id == 101).Gold.Should().Be(100 + expected);
+        f.Context.Players.Single(x => x.Id == 102).Gold.Should().Be(10);
+        f.Context.Players.Single(x => x.Id == 103).Gold.Should().Be(0);
+        // Later balance changes (e.g. mission claims) must not alter the settled snapshot.
+        f.Context.Players.Single(x => x.Id == 101).Gold += 50;
+        await f.Context.SaveChangesAsync();
+        var retry = await f.Matches.CompleteAsync(match.MatchId, new CompleteMatchRequest(), default);
+        JsonSerializer.Serialize(retry).Should().Be(JsonSerializer.Serialize(result));
+        f.Context.Players.Single(x => x.Id == 101).Gold.Should().Be(150 + expected);
+    }
+
     [Fact]
     public async Task Completion_saves_facts_rewards_and_logs_and_retry_returns_original_result()
     {
@@ -36,6 +65,19 @@ public class MatchCompletionTests
         f.Context.PlayerXpLogs.Should().HaveCount(5);
         f.Context.Players.Single(x => x.Id == 101).TotalMatches.Should().Be(1);
         (await f.Matches.RegisterAsync(registration, default)).MatchId.Should().Be(match.MatchId);
+    }
+
+    [Fact]
+    public async Task Legacy_completed_match_does_not_receive_retroactive_gold()
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        var match = await f.Matches.RegisterAsync(f.Registration(), default);
+        f.Context.Matches.Single().Status = MatchStatus.Completed;
+        f.Context.MatchRewardResults.Add(new Domain.Models.MatchRewardResult { MatchId = match.MatchId, PlayerProfileId = 101 });
+        await f.Context.SaveChangesAsync();
+        var result = await f.Matches.CompleteAsync(match.MatchId, f.Completion(), default);
+        result.Rewards.Single().GoldGained.Should().Be(0);
+        f.Context.Players.Should().OnlyContain(x => x.Gold == 0 && x.Experience == 0);
     }
 
     [Theory]

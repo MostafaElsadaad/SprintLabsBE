@@ -16,7 +16,7 @@ This feature exposes backend APIs; it does not add UI, scheduling, missions, or 
 - Show the server's immediate placement result while backend rewards are pending. Wait approximately 3–5 seconds; if slow, show “Rewards syncing”. Do not freeze return-to-lobby.
 - On completion, select the owning human's reward by authenticated PlayerProfileId. Show xpGained and old/new level; show RP change only for Ranked. Friendly/Private RP remains unchanged.
 - The server retries timeout/503 with bounded backoff and the same MatchId. The client refreshes progression later. Repeated settled results must replace the displayed summary, never accumulate XP locally.
-- No mission rewards/claim button, currency form, or editable XP/RP/level field belongs to this feature. Completion is an automatic server action.
+- Match completion now also returns goldGained/oldGold/newGold. Show goldGained as the match reward when supported and refresh progression/profile for the latest balance; never add the reward to a client-maintained wallet or accept editable currency. Existing Unity builds can ignore additive fields and still receive persisted gold on profile refresh. Mission rewards/claims are separate. Completion is an automatic server action.
 - Bots have no backend profile ID. When a human disconnects and AI controls the retained actor, stop attributing AI answers to that human. TotalPlayers still counts gameplay slots; only genuine human actions enter their result.
 
 ## Leaderboard sections
