@@ -920,6 +920,10 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Curriculum")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -950,6 +954,10 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(1);
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
 
                     b.Property<int>("Level")
                         .ValueGeneratedOnAdd()
@@ -1019,6 +1027,38 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Players");
+                });
+
+            modelBuilder.Entity("Domain.Models.PlayerEducationOption", b =>
+                {
+                    b.Property<string>("Curriculum")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.HasKey("Curriculum", "Language");
+
+                    b.ToTable("PlayerEducationOptions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Curriculum = "Egyptian National",
+                            Language = "English"
+                        },
+                        new
+                        {
+                            Curriculum = "Egyptian National",
+                            Language = "Arabic"
+                        },
+                        new
+                        {
+                            Curriculum = "IG",
+                            Language = "English"
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.PlayerInventoryItem", b =>

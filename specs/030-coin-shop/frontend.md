@@ -60,4 +60,4 @@ Purchasing persists ownership; equipping persists a cosmetic selection. This bac
 7. Try a player with insufficient coins, another player's item, inactive listing, and ordinary-player admin writes: all rejected without wallet/inventory changes.
 8. Retire the listing; new purchases stop, but its owner can still use it through inventory.
 
-Scope: permanent unlocks only. Live MySQL concurrency checks are opt-in and require a disposable test database; they do not run against staging. Backend deployment, real catalogue seeding and Unity UI integration are not performed by this implementation task.
+Scope: permanent unlocks only. Live MySQL concurrency checks are opt-in and require a disposable test database; they do not run against staging. Seed the shop explicitly after deployment; Unity UI integration remains separate.

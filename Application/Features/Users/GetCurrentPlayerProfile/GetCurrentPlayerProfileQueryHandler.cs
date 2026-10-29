@@ -65,6 +65,8 @@ namespace Application.Features.Users.GetCurrentPlayerProfile
                 Level = player.Level,
                 SchoolName = player.SchoolName,
                 Age = player.Age,
+                Curriculum = player.Curriculum,
+                Language = player.Language,
                 Grade = player.Grade
             };
         }

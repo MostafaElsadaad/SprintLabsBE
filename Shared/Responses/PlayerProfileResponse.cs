@@ -20,6 +20,8 @@ namespace Shared.Responses
         public int Level { get; set; }
         public string? SchoolName { get; set; }
         public int? Age { get; set; }
+        public string? Curriculum { get; set; }
+        public string? Language { get; set; }
         public int? Grade { get; set; }
 
     }

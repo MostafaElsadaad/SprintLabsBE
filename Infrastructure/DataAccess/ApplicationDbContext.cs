@@ -88,6 +88,18 @@ namespace Infrastructure.DataAccess
             });
 
             // ✅ Player config INSIDE OnModelCreating
+            modelBuilder.Entity<PlayerEducationOption>(e =>
+            {
+                e.ToTable("PlayerEducationOptions");
+                e.HasKey(x => new { x.Curriculum, x.Language });
+                e.Property(x => x.Curriculum).HasMaxLength(120);
+                e.Property(x => x.Language).HasMaxLength(40);
+                e.HasData(
+                    new PlayerEducationOption { Curriculum = "Egyptian National", Language = "English" },
+                    new PlayerEducationOption { Curriculum = "Egyptian National", Language = "Arabic" },
+                    new PlayerEducationOption { Curriculum = "IG", Language = "English" });
+            });
+
             modelBuilder.Entity<Player>(e =>
             {
                 e.Property(x => x.GoogleId)
@@ -100,6 +112,9 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Name)
                     .IsRequired()
                     .HasMaxLength(100);
+
+                e.Property(x => x.Curriculum).HasMaxLength(120);
+                e.Property(x => x.Language).HasMaxLength(40);
 
                 e.Property(x => x.AvatarUrl)
                     .HasMaxLength(500);

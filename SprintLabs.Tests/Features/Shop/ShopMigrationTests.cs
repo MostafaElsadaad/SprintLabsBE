@@ -11,6 +11,11 @@ public class ShopMigrationTests
     {
         var type=typeof(ApplicationDbContext).Assembly.GetTypes().Single(x=>x.Name=="AddCoinShop");
         var migration=(Migration)Activator.CreateInstance(type)!;
+        // The latest migration target must include the earlier B2C migration after branch integration.
+        var player = migration.TargetModel.FindEntityType("Domain.Models.Player")!;
+        player.FindProperty("Curriculum").Should().NotBeNull();
+        player.FindProperty("Language").Should().NotBeNull();
+        migration.TargetModel.FindEntityType("Domain.Models.PlayerEducationOption").Should().NotBeNull();
         var operations=migration.UpOperations;
         operations.OfType<CreateTableOperation>().Single().Name.Should().Be("ShopPurchases");
         operations.OfType<AddColumnOperation>().Where(x=>x.Table=="ShopProducts").Should().OnlyContain(x=>x.IsNullable);

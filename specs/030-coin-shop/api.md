@@ -1,6 +1,6 @@
 # Coin shop API
 
-Status: implemented locally on `codex/coin-shop`, based on backend development, in an isolated checkout. No deployment, staging database writes or automatic seeding. This branch is independent of the pending B2C setup work. The shop currently sells permanent character/cosmetic unlocks, bought once, then selected with Use/Equip. No consumables, real-money checkout, refunds, boxes for sale, trading, gameplay stats or Unity networking changes.
+Delivery branch: `codex/coin-shop`, integrating the shop and B2C player setup. Apply both migrations through normal deployment. Shop catalogue seeding is explicit, never automatic. The shop currently sells permanent character/cosmetic unlocks, bought once, then selected with Use/Equip. No consumables, real-money checkout, refunds, boxes for sale, trading, gameplay stats or Unity networking changes.
 
 ## Data model
 
@@ -166,4 +166,4 @@ Controlled failures use the usual message/statusCode/errorCode envelope (errorCo
 - Tests cover fresh-context persistence, identity spoofing, duplicate/replayed requests, retired items, insufficient coins, ownership from mission inventory, non-character equipment rejection, admin permissions, input validation, rollback after a forced receipt-write failure, and stale tracked-wallet refresh.
 - `dotnet ef migrations has-pending-model-changes --project Infrastructure --startup-project API --no-build`: no pending model differences.
 - `git diff --check`: passed. No package/project reference changes. Unity files and existing B2C work are untouched except the living handoff entry.
-- Real MySQL concurrency, deployment migration and end-to-end Unity testing remain to be run in the intended test environment. No staged catalogue or player balance was changed.
+- Real MySQL concurrency and end-to-end Unity testing require the intended test environment. Verify deployment migrations separately; no purchase or player-balance edits are part of deployment verification.
