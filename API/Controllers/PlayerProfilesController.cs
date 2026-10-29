@@ -1,3 +1,7 @@
+using Application.Features.PlayerProfiles.Common;
+using Application.Features.PlayerProfiles.GetPlayerSetup;
+using Application.Features.PlayerProfiles.GetSetupOptions;
+using Application.Features.PlayerProfiles.SavePlayerSetup;
 using System.Net;
 
 using Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile;
@@ -53,6 +57,35 @@ namespace API.Controllers
                 statusCode: HttpStatusCode.OK,
                 errorCode: ErrorCode.Success,
                 message: ErrorMessage.Success));
+        }
+
+        [HttpGet("me/setup")]
+        public async Task<IActionResult> GetMySetup(CancellationToken cancellationToken)
+        {
+            var id = GetUserId();
+            if (id == null) return Unauthorized();
+            var result = await _mediator.Send(new GetPlayerSetupQuery { UserId = id.Value }, cancellationToken);
+            return Ok(new BaseResponse<PlayerSetupResponse>(data: result, statusCode: HttpStatusCode.OK, errorCode: ErrorCode.Success, message: ErrorMessage.Success));
+        }
+
+        [HttpGet("setup-options")]
+        public async Task<IActionResult> GetSetupOptions(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetSetupOptionsQuery(), cancellationToken);
+            return Ok(new BaseResponse<GetSetupOptionsResponse>(data: result, statusCode: HttpStatusCode.OK, errorCode: ErrorCode.Success, message: ErrorMessage.Success));
+        }
+
+        [HttpPost("me/setup")]
+        public async Task<IActionResult> SaveMySetup([FromBody] SavePlayerSetupRequest request, CancellationToken cancellationToken)
+        {
+            var id = GetUserId();
+            if (id == null) return Unauthorized();
+            var result = await _mediator.Send(new SavePlayerSetupCommand
+            {
+                UserId = id.Value, Nickname = request.Nickname, Grade = request.Grade,
+                Curriculum = request.Curriculum, Language = request.Language
+            }, cancellationToken);
+            return Ok(new BaseResponse<PlayerSetupResponse>(data: result, statusCode: HttpStatusCode.OK, errorCode: ErrorCode.Success, message: ErrorMessage.Success));
         }
 
         private long? GetUserId()

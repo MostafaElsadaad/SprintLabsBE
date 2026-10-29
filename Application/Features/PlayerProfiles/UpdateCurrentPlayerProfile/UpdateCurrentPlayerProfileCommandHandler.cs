@@ -115,6 +115,8 @@ namespace Application.Features.PlayerProfiles.UpdateCurrentPlayerProfile
                 Level = updatedPlayer.Level,
                 SchoolName = updatedPlayer.SchoolName,
                 Age = updatedPlayer.Age,
+                Curriculum = updatedPlayer.Curriculum,
+                Language = updatedPlayer.Language,
                 Grade = updatedPlayer.Grade
             };
         }
