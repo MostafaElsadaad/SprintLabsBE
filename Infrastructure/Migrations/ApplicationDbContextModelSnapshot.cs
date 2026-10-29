@@ -289,6 +289,9 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<bool>("IsCharacter")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("ItemKey")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -917,10 +920,17 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Curriculum")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
+
+                    b.Property<long?>("EquippedCharacterItemId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Experience")
                         .ValueGeneratedOnAdd()
@@ -944,6 +954,10 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(1);
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
 
                     b.Property<int>("Level")
                         .ValueGeneratedOnAdd()
@@ -994,6 +1008,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("EquippedCharacterItemId");
+
                     b.HasIndex("Experience");
 
                     b.HasIndex("GoogleId")
@@ -1011,6 +1027,38 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Players");
+                });
+
+            modelBuilder.Entity("Domain.Models.PlayerEducationOption", b =>
+                {
+                    b.Property<string>("Curriculum")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.HasKey("Curriculum", "Language");
+
+                    b.ToTable("PlayerEducationOptions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Curriculum = "Egyptian National",
+                            Language = "English"
+                        },
+                        new
+                        {
+                            Curriculum = "Egyptian National",
+                            Language = "Arabic"
+                        },
+                        new
+                        {
+                            Curriculum = "IG",
+                            Language = "English"
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.PlayerInventoryItem", b =>
@@ -1735,8 +1783,14 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int?>("CoinPrice")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<long?>("ItemId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1745,7 +1799,64 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ShopProducts");
+                    b.HasIndex("ItemId")
+                        .IsUnique();
+
+                    b.ToTable("ShopProducts", t =>
+                        {
+                            t.HasCheckConstraint("CK_ShopProducts_DirectPrice", "(`ItemId` IS NULL AND `CoinPrice` IS NULL) OR (`ItemId` IS NOT NULL AND `CoinPrice` IS NOT NULL AND `CoinPrice` > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Models.ShopPurchase", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CoinsAfter")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CoinsSpent")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("PlayerProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<long>("ShopProductId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("ShopProductId");
+
+                    b.HasIndex("PlayerProfileId", "Id");
+
+                    b.HasIndex("PlayerProfileId", "ItemId")
+                        .IsUnique();
+
+                    b.HasIndex("PlayerProfileId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("ShopPurchases", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ShopPurchases_Coins", "`CoinsSpent` > 0 AND `CoinsAfter` >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.StaffActivity", b =>
@@ -2456,6 +2567,11 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Models.Player", b =>
                 {
+                    b.HasOne("Domain.Models.Item", null)
+                        .WithMany()
+                        .HasForeignKey("EquippedCharacterItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Infrastructure.DataAccess.User", null)
                         .WithOne("Player")
                         .HasForeignKey("Domain.Models.Player", "UserId")
@@ -2731,6 +2847,35 @@ namespace Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Models.ShopProduct", b =>
+                {
+                    b.HasOne("Domain.Models.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Domain.Models.ShopPurchase", b =>
+                {
+                    b.HasOne("Domain.Models.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Models.Player", null)
+                        .WithMany()
+                        .HasForeignKey("PlayerProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Models.ShopProduct", null)
+                        .WithMany()
+                        .HasForeignKey("ShopProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

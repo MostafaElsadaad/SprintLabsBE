@@ -4,6 +4,8 @@ public class ShopProduct
 {
     public long Id { get; set; }
     public string Name { get; set; } = "";
+    public long? ItemId { get; set; }
+    public int? CoinPrice { get; set; }
     public bool IsActive { get; set; } = true;
     public ICollection<BoxRewardEntry> BoxRewards { get; set; } = new List<BoxRewardEntry>();
 }

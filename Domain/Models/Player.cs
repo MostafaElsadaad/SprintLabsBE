@@ -18,6 +18,9 @@ public class Player
     public string? AvatarUrl { get; set; }
     public string? AvatarAssetPath { get; set; }
     public string? ProfilePictureAssetPath { get; set; }
+    public long? EquippedCharacterItemId { get; set; }
+    public string? Curriculum { get; set; }
+    public string? Language { get; set; }
     public int? Age { get; set; }
     public int? Grade { get; set; }
     public string? SchoolName { get; set; }
