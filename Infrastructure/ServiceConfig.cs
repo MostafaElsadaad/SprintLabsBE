@@ -83,6 +83,7 @@ namespace Infrastructure
             services.AddScoped<IMatchProgressionService, MatchProgressionService>();
             services.AddScoped<IQuestionDataService, QuestionDataService>();
             services.AddScoped<IMissionService, MissionService>();
+            services.AddScoped<IShopService, ShopService>();
             services.AddScoped<IProgressionReadService, ProgressionReadService>();
             services.AddScoped<IApisSyncService,ApiSyncService>();
             services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();

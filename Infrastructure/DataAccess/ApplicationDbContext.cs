@@ -52,6 +52,7 @@ namespace Infrastructure.DataAccess
         {
             base.OnModelCreating(modelBuilder);
             MissionModelConfiguration.Configure(modelBuilder);
+            ShopModelConfiguration.Configure(modelBuilder);
             QuestionDataModelConfiguration.Configure(modelBuilder, Database.IsMySql());
 
             modelBuilder.Entity<CommunityUser>().Property(x => x.TeacherTitle).IsRequired().HasMaxLength(32).HasDefaultValue("TEACHER");
