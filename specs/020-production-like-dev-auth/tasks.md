@@ -223,3 +223,16 @@ Task T017: Add GET controller contract tests in DevelopmentAuthenticationControl
 - No migration or parallel authentication/token service is planned.
 - `IUserService.Authenticate` and existing `LoginResponse` remain authoritative.
 - Commit after each task or small logical group and preserve unrelated worktree changes.
+
+## 2026-10-30 - School-linked development player setup
+
+- [X] T025 Add failing SQLite/handler tests for protected explicit assignment, capacity,
+  role/identity/scope rejection, repeat safety and pending-license activation.
+- [X] T026 Implement the operator-only development assignment controller and CQRS files
+  using existing guard, repositories and enrollment transaction; preserve normal login.
+- [X] T027 Add HTTP tests for anonymous, missing key, non-admin and Production denial,
+  and rejection of client identity override. Twenty-one focused cases pass.
+- [X] T028 Update API/frontend/spec/plan context and run build/full regressions.
+- [ ] T029 Publish after authorization, verify deployment, assign only the chosen staging
+  development account to an existing test school/class, then verify player membership and
+  School/Class boards across periods. Record live outcome without credentials.

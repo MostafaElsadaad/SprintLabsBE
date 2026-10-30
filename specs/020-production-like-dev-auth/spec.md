@@ -215,3 +215,14 @@ Existing Firebase and Google player login continue to behave as before. From the
 - When a development authorization key is configured, invalid or missing key behavior follows the application's controlled unauthorized response conventions without distinguishing why validation failed.
 - The optional authorization key protects development operations but is not intended to replace network-level access controls on shared development or staging deployments.
 - This specification is backend-only. A later Unity feature will consume the safe list and normal login response without changing the backend contract defined here.
+
+## 2026-10-30 scope amendment - Explicit school test setup
+
+The requested school-linked development-player test adds a separate, explicitly invoked
+administrator setup operation. Existing startup, discovery and login still never enroll,
+repair identities or claim verified provider email. This narrow amendment extends FR-047
+only for non-Production administrator-controlled school assignment of an existing catalogue
+User/Player pair. Production and ordinary-player requests must be refused; identities,
+provider fields, ownership and progression remain unchanged. Normal capacity, active
+scope and student-role integrity apply. Identical retries must not consume another seat;
+conflicting existing roles or assignments must not be moved or downgraded. See api.md.

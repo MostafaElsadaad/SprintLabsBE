@@ -50,3 +50,14 @@ See [the developer guide](game-developer-guide.md) for local setup, seeds and cr
 ## Maintaining this memory
 
 Update this file after material backend feature/integration/deployment changes, with factual behavior, links, validation and known limits. Update owning API/frontend docs too. When Unity changes, follow its PROJECT_HANDOFF.md rules. Distinguish implemented, tested and deployed states. Never record credentials, personal player data or copied conversation transcripts.
+
+## 2026-10-30 - Development school assignment (local branch only)
+
+Branch codex/development-school-assignment adds an explicit platform-admin setup action
+POST /api/v1/admin/development-players/{accountKey}/school for existing catalogue accounts,
+under the existing non-Production development guard/key. It creates/activates a matching
+Student license/membership using existing serializable enrollment transactions and seat
+capacity. Stable tuple retries reuse the license; role/identity/enrollment conflicts are
+rejected. Provider identity, player IDs, progression and normal login remain unchanged.
+See specs/020-production-like-dev-auth/api.md and frontend.md. Twenty-one new SQLite/HTTP
+checks pass. No schema or package changes. Not deployed; no live assignment performed.
