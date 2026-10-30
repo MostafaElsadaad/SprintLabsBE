@@ -243,3 +243,14 @@ Focused groups:
 ## Complexity Tracking
 
 No constitution violations require justification.
+
+## 2026-10-30 school test setup extension
+
+Add a thin AdminDevelopmentPlayersController and the AssignDevelopmentSchool CQRS slice.
+Reuse IDevelopmentAuthenticationGuard, the database-backed platform-admin user check,
+DevelopmentPlayerCatalog and existing User/Player resolution, IBaseRepository CRUD,
+StudentLicenseValidation and IStudentEnrollmentTransaction. No new service, package,
+project reference or migration. Student membership/license rows and seat counter commit
+atomically; retain existing identities, roles, financial/progression/provider data. Tests
+use SQLite transactions and the actual HTTP authorization pipeline, alongside existing
+production-login regression tests. Deployment and live setup are separate verification.
