@@ -61,3 +61,23 @@ Purchasing persists ownership; equipping persists a cosmetic selection. This bac
 8. Retire the listing; new purchases stop, but its owner can still use it through inventory.
 
 Scope: permanent unlocks only. Live MySQL concurrency checks are opt-in and require a disposable test database; they do not run against staging. Seed the shop explicitly after deployment; Unity UI integration remains separate.
+
+## 2026-10-30 - Bundled Unity character listings
+
+Migration `20261030090000_SeedUnityCharacterCatalogue` creates missing Tech Smith
+and Soul Mendrix character items and active 100-coin listings. Keys match the
+Unity build: `shop/tech-smith` / `characters/tech-smith` and
+`shop/soul-mendrix` / `characters/soul-mendrix`.
+
+Apply through the normal backend database migration process after AddCoinShop.
+The new migration does not change the schema, wallets, ownership or selection.
+Existing items and listings (including administrator-edited prices/inactive flags)
+are preserved. A non-character item occupying a stable key is skipped rather than
+converted; resolve that collision explicitly through catalogue administration.
+The Down operation retains catalogue rows to protect receipts and ownership;
+retire a listing through the existing admin PUT with isActive=false if required.
+No administrator token is needed by Unity or embedded in the migration.
+
+After deployment/database update, sign in as a player and GET /api/v1/Shop,
+then Refresh Magical Shop. Only unowned characters appear for sale in Unity.
+See unity-character-catalogue.md for the existing manual admin configuration path.
