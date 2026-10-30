@@ -1,6 +1,8 @@
 # SprintLabs AI Agent Workflow
 
 ## Daily flow
+Read `AGENTS.md`, [current state](current-state.md) and the relevant feature contracts first. For Unity work or seeding, follow [the game developer guide](game-developer-guide.md). Use the [starter prompt](codex-prompts.md) for cross-repository tasks.
+
 1. Pick one user story only.
 2. Create or update its spec in `specs/<number>-<feature-name>/spec.md`.
 3. Create/update the technical plan.

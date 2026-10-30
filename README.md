@@ -1,31 +1,15 @@
-# SprintLabs AI Agent Setup Pack
+# SprintLabs backend
 
-Copy these files into the root of your SprintLabs repository:
+.NET 8 education/game API using ASP.NET Core controllers, MediatR, EF Core and MySQL.
 
-```text
-AGENTS.md
-.codex/skills/*/SKILL.md
-.specify/memory/constitution.md
-docs/ai/*
-docs/features/_template/feature-brief.md
+Start with [AGENTS.md](AGENTS.md), then [current project context](docs/ai/current-state.md) and the [game developer backend guide](docs/ai/game-developer-guide.md).
+
+Use the [backend + Unity starter prompt](docs/ai/codex-prompts.md) for cross-repository work. API and frontend contracts live under `specs/<feature>/`. The combined B2C setup/shop integration guide is [here](specs/030-coin-shop/game-integration.md).
+
+```powershell
+dotnet restore SprintLabs.sln
+dotnet build SprintLabs.sln
+dotnet test SprintLabs.sln --no-restore
 ```
 
-Then initialize Spec Kit in your actual repo using the official CLI:
-
-```bash
-specify init . --force --integration codex --integration-options="--skills"
-```
-
-Recommended first Codex task:
-
-```text
-Read AGENTS.md and docs/ai/agent-workflow.md. Inspect the repository and summarize the current architecture and build/test commands. Do not modify files.
-```
-
-Recommended first feature:
-
-```text
-Use $sprintlabs-json-question-api and $sprintlabs-cqrs-api-slice.
-Implement Insert Questions API based on existing Get Questions API.
-Do not normalize question internals.
-```
+Runtime needs MySQL and private configuration; follow the developer guide before starting the API. Startup can apply migrations to the configured database. Pushes to `development` automatically deploy staging through GitHub Actions.

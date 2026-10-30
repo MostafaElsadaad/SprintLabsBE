@@ -1,5 +1,9 @@
 # SprintLabs Agent Instructions
 
+## Shared project context
+
+At the start of a task, read `docs/ai/current-state.md` after this file. For content seeding, small API edits or Unity integration, also read `docs/ai/game-developer-guide.md` and the relevant feature contracts under `specs/`. Inspect current code when older documents disagree. Update shared context after material feature, integration or deployment changes; record verified state and outstanding checks without credentials. For cross-repository work, also follow Unity's own AGENTS.md and PROJECT_HANDOFF.md.
+
 
 ## Application feature folder structure
 

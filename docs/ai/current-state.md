@@ -1,103 +1,52 @@
-# SprintLabs Current State
+# SprintLabs current state
 
-## Project
-SprintLabs backend, .NET Core API, CQRS/MediatR, EF Core/MySQL, repository pattern, BaseResponse style.
+Last documentation review: 2026-10-30. This is shared repository context. Verify current source, branches and environments before acting.
 
-## AI workflow
-Use Spec Kit + Codex skills + AGENTS.md.
-For each feature:
-1. Create branch
-2. Run $speckit-specify
-3. Run $speckit-plan
-4. Run $speckit-tasks
-5. Implement from spec/plan/tasks
-6. Build/test
-7. Commit
+## Architecture and authority
 
-## Completed multi-tenancy features
+.NET 8: API -> Application/Infrastructure; Application -> Domain; Infrastructure -> Domain; Domain -> Shared. Follow AGENTS.md: thin controllers, MediatR slices, existing repositories, EF Core/MySQL and BaseResponse envelopes.
 
-### 001 User Identity Foundation
-- Added Users table.
-- Linked Player/Profile to User.
-- Google login creates/finds User.
-- Login returns UserId and PlayerProfileId.
-- Added /api/users/me.
-- Added /api/users/me/player-profile.
+The backend owns persisted identity, wallet, XP, level, rank, inventory, mission progress and question history. Trusted Mirror servers report match facts. Player clients cannot award themselves rewards. Platform administration is checked against database users; community access uses active scoped membership and roles.
 
-### 002 Admin Community Foundation
-- Added Communities.
-- Added CommunityUsers.
-- Added CommunityLicenses.
-- Platform admin uses Users.IsPlatformAdmin.
-- Added admin community create/list.
-- Added owner assignment.
-- Added license limit update.
+## Feature map
 
-### 003 Community Access Foundation
-- Added community access service.
-- CanAccessCommunity(userId, communityId).
-- HasCommunityRole(userId, communityId, roles).
-- Added /api/users/me/communities.
+| Area | Source contracts |
+|---|---|
+| Identity, communities, teachers, students | Relevant `specs/001-*` through `specs/025-*`; later features extend earlier ones |
+| Development player login | `specs/020-production-like-dev-auth/api.md` |
+| Relational questions and typed history | `specs/026-question-data-scheme/api.md` |
+| Match registration/completion and progression | `specs/022-match-progression-apis/api.md`, `specs/027-game-postmatch-integration/api.md`, current services/tests |
+| Weekly/seasonal missions, claims/history | `specs/023-missions-system/api.md` |
+| Bundled profile/avatar selection | `specs/028-bundled-profile-appearance/api.md` |
+| B2C nickname/grade/curriculum/language | `specs/029-b2c-player-setup/api.md` |
+| Coin shop, inventory and equipment | `specs/030-coin-shop/api.md`, `specs/030-coin-shop/game-integration.md` |
 
-### 004 Owner Community Profile
-- Added GET /api/communities/{communityId}.
-- Added PATCH /api/communities/{communityId}.
-- GET requires active community membership.
-- PATCH requires active Owner role.
+Older specs can describe earlier delivery stages. Resolve disagreements against actual controllers, DTOs, services and tests, then correct stale documentation.
 
-### 005 Owner Teacher Management
-- Owner can invite teachers.
-- Owner can list teachers.
-- Owner can remove teachers by setting status Removed.
-- Teacher seats use CommunityLicense MaxTeachers/UsedTeachers.
-- Pending + Active teachers count as UsedTeachers.
-- Teacher pending membership activates on Google login.
-- Existing logged-in teacher invite should become Active immediately.
+## Important current behavior
 
-### 006 Community Grades and Classes
-- Added Grades.
-- Added Classes.
-- Owner/Teacher can create/list grades.
-- Owner/Teacher can create/list/update/delete classes.
-- Classes are soft deleted.
-- Grade/class must belong to route community.
+- Anonymous GET `/api/v1/Question` reads relational Questions and typed tables, preserving `data.payloadJson.Questions` for the game. No legacy fallback. Assignment filters are rejected. Publish using admin PUT `/api/v1/Question/bank`; old root PUT maintains legacy packs only.
+- Educational tooling generates shared question UUIDs once. Preserve question/answer identities across services. Question timers and typed history durations use seconds; some legacy match summary fields explicitly use milliseconds. Follow each DTO's units.
+- Match registration/completion requires GameServer authentication; normal JWTs do not authorize trusted match facts. Completion is bulk per match with retry protection. Preserve stable registration/request identities.
+- B2C setup reuses Players.Name/Grade, adding Curriculum/Language. Community-managed players cannot overwrite community setup through the B2C form.
+- Shop uses the existing Gold wallet and inventory. Permanent purchases require a stable requestId for retries and do not auto-equip. Asset keys map to bundled Unity assets. No default shop listings are automatically seeded.
+- Mission boxes and direct character shop listings are distinct. Do not convert existing non-character reward items through shop tooling.
 
-### 007 Owner Student License Management
-- Added StudentLicenses.
-- Owner can add/list/update/revoke student licenses.
-- Pending + Active student licenses count as UsedStudents.
-- Revoked licenses do not count.
-- Grade/class validation is required.
-- Pending email can be changed within StudentEmailChangeLimit.
-- Revoke sets status Revoked and decrements UsedStudents once.
+## Recorded rollout and limits
 
-### 008 Student License Activation on Login
-- Google login detects pending StudentLicenses by email.
-- Creates/finds PlayerProfile.
-- Activates StudentLicense.
-- Sets UserId, PlayerProfileId, ActivatedAt.
-- Creates/restores CommunityUser Role=Student Status=Active.
-- UsedStudents is not incremented during activation.
-- Existing logged-in student added later should activate immediately during student license creation.
+B2C setup and shop were merged through backend PR #44 into `development` as `741bc2d0d62b3aaaebeb09c1e102dcb27b1e94ab`. Staging workflow run `40801951920` succeeded on 2026-10-29. Both migrations and three example education pairs were verified. No shop seed or test purchase was executed during that deployment verification; recheck current content rather than assuming it remains empty.
 
-## Important business rules
-- Backend never trusts frontend role claims.
-- Platform admin = Users.IsPlatformAdmin.
-- Community access = Active CommunityUser.
-- Owner/Teacher/Student permissions come from CommunityUser.Role + Status.
-- Pending/Removed memberships do not grant access.
-- Student/teacher invite capacity is reserved when invite/license is created, not when login activation happens.
-- Login activation must never increment UsedStudents or UsedTeachers again.
+Combined suite at that rollout: 700 passed, 13 opt-in MySQL tests skipped, 0 failed. Skipped tests do not establish live MySQL concurrency correctness. Backend deployment alone does not establish Unity integration: inspect the game's current source and PROJECT_HANDOFF.md.
 
-## Current next feature
-Continue after student activation flow. Next likely feature should be student listing or student access endpoints, depending on roadmap.
+## Environments and working copies
 
-## Commands
-Build:
-dotnet build
+- Backend: `https://github.com/MostafaElsadaad/SprintLabsBE`; staging branch `development`.
+- Unity: `https://github.com/MostafaElsadaad/SprintLab`; inspect its current branch, AGENTS.md and PROJECT_HANDOFF.md.
+- Staging API: `https://noxed.ddns.net`; local example API: `http://localhost:5153`. Backend API and Mirror server addresses are separate settings.
+- Paths vary by workstation. Never assume another developer's drive letters, credentials, branch or dirty files are available.
 
-Apply migration:
-dotnet ef database update
+See [the developer guide](game-developer-guide.md) for local setup, seeds and cross-repository changes.
 
-Check repo:
-git status
+## Maintaining this memory
+
+Update this file after material backend feature/integration/deployment changes, with factual behavior, links, validation and known limits. Update owning API/frontend docs too. When Unity changes, follow its PROJECT_HANDOFF.md rules. Distinguish implemented, tested and deployed states. Never record credentials, personal player data or copied conversation transcripts.
