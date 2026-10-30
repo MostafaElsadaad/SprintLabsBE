@@ -167,3 +167,23 @@ Controlled failures use the usual message/statusCode/errorCode envelope (errorCo
 - `dotnet ef migrations has-pending-model-changes --project Infrastructure --startup-project API --no-build`: no pending model differences.
 - `git diff --check`: passed. No package/project reference changes. Unity files and existing B2C work are untouched except the living handoff entry.
 - Real MySQL concurrency and end-to-end Unity testing require the intended test environment. Verify deployment migrations separately; no purchase or player-balance edits are part of deployment verification.
+
+## 2026-10-30 - Bundled Unity character listings
+
+Migration `20261030090000_SeedUnityCharacterCatalogue` creates missing Tech Smith
+and Soul Mendrix character items and active 100-coin listings. Keys match the
+Unity build: `shop/tech-smith` / `characters/tech-smith` and
+`shop/soul-mendrix` / `characters/soul-mendrix`.
+
+Apply through the normal backend database migration process after AddCoinShop.
+The new migration does not change the schema, wallets, ownership or selection.
+Existing items and listings (including administrator-edited prices/inactive flags)
+are preserved. A non-character item occupying a stable key is skipped rather than
+converted; resolve that collision explicitly through catalogue administration.
+The Down operation retains catalogue rows to protect receipts and ownership;
+retire a listing through the existing admin PUT with isActive=false if required.
+No administrator token is needed by Unity or embedded in the migration.
+
+After deployment/database update, sign in as a player and GET /api/v1/Shop,
+then Refresh Magical Shop. Only unowned characters appear for sale in Unity.
+See unity-character-catalogue.md for the existing manual admin configuration path.
