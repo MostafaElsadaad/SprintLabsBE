@@ -25,10 +25,10 @@ public class RankingController : ControllerBase
     public Task<IActionResult> Player(long playerProfileId, CancellationToken ct) => Get(playerProfileId, ct);
 
     [HttpGet("leaderboard")]
-    public Task<IActionResult> GlobalLeaderboard([FromQuery] LeaderboardRequest page, CancellationToken ct)
+    public Task<IActionResult> GlobalLeaderboard([FromQuery(Name = "")] LeaderboardRequest page, CancellationToken ct)
         => Leaderboard(null, page, ct);
     [HttpGet("/api/v{version:apiVersion}/Communities/{communityId:long}/ranking/leaderboard")]
-    public Task<IActionResult> CommunityLeaderboard(long communityId, [FromQuery] LeaderboardRequest page, CancellationToken ct)
+    public Task<IActionResult> CommunityLeaderboard(long communityId, [FromQuery(Name = "")] LeaderboardRequest page, CancellationToken ct)
         => Leaderboard(communityId, page, ct);
 
     [HttpGet("leaderboard/me")]
