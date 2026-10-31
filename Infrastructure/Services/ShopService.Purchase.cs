@@ -18,29 +18,9 @@ public partial class ShopService
                 if (previous.ShopProductId != productId) throw Conflict("requestId was already used for another product.");
                 return Receipt(previous, true);
             }
-            var product = await context.ShopProducts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == productId, ct);
-            if (product == null || !product.IsActive || product.CoinPrice is not > 0 || product.ItemId == null) throw Missing();
-            var item = await context.Items.AsNoTracking().SingleOrDefaultAsync(x => x.Id == product.ItemId && x.IsCharacter, ct);
-            if (item == null) throw Missing();
-            var owned = await context.PlayerInventoryItems.SingleOrDefaultAsync(x => x.PlayerProfileId == player.Id && x.ItemId == item.Id, ct);
-            if (owned?.Quantity > 0) throw Conflict("Item already owned.");
-            if (player.Gold < product.CoinPrice.Value) throw Conflict("Insufficient coins.");
-            // The client supplies intent only: price, balance, item and ownership come from the database.
-            player.Gold -= product.CoinPrice.Value;
-            var now = DateTime.UtcNow;
-            player.UpdatedAt = new DateTime(now.Ticks - now.Ticks % 10, DateTimeKind.Utc);
-            if (owned == null)
-            {
-                owned = new PlayerInventoryItem { PlayerProfileId = player.Id, ItemId = item.Id };
-                context.PlayerInventoryItems.Add(owned);
-            }
-            owned.Quantity = 1;
-            var purchase = new ShopPurchase { PlayerProfileId = player.Id, ShopProductId = productId,
-                ItemId = item.Id, RequestId = key, CoinsSpent = product.CoinPrice.Value,
-                CoinsAfter = player.Gold, PurchasedAt = player.UpdatedAt.Value };
-            context.Set<ShopPurchase>().Add(purchase);
-            await context.SaveChangesAsync(ct);
-            return Receipt(purchase);
+            if (await context.Set<ShopOperation>().AnyAsync(x => x.PlayerProfileId == player.Id && x.RequestId == key, ct))
+                throw Conflict("requestId was already used for another action.");
+            throw Conflict("Direct character purchases have been replaced by magical boxes.");
         }, ct);
     }
 

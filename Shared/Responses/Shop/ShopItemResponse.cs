@@ -2,6 +2,8 @@ namespace Shared.Responses.Shop;
 
 public class ShopItemResponse
 {
+    public string? Category { get; set; }
+    public int SellPrice { get; set; }
     public long ItemId { get; set; }
     public string ItemKey { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

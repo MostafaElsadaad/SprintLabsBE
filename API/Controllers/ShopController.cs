@@ -1,3 +1,7 @@
+using Application.Features.Shop.PurchaseShopBox;
+using Application.Features.Shop.OpenShopBox;
+using Application.Features.Shop.SellShopItem;
+using Application.Features.Shop.EquipShopItem;
 using System.Net;
 using Application.Features.Shop.GetShopCatalogue;
 using Application.Features.Shop.GetShopInventory;
@@ -49,6 +53,30 @@ public class ShopController(IMediator mediator) : ControllerBase
     {
         if (!UserId.HasValue) return Unauthorized();
         return Envelope(await mediator.Send(new GetShopHistoryQuery { UserId = UserId.Value, Page = page, PageSize = pageSize }, ct));
+    }
+    [HttpPost("boxes/{productId:long}/purchase")]
+    public async Task<IActionResult> PurchaseBox(long productId, [FromBody] ShopPurchaseRequest request, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await mediator.Send(new PurchaseShopBoxCommand {UserId=UserId.Value,ProductId=productId,RequestId=request.RequestId},ct));
+    }
+    [HttpPost("me/boxes/{productId:long}/open")]
+    public async Task<IActionResult> OpenBox(long productId, [FromBody] ShopPurchaseRequest request, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await mediator.Send(new OpenShopBoxCommand {UserId=UserId.Value,ProductId=productId,RequestId=request.RequestId},ct));
+    }
+    [HttpPost("me/items/{itemId:long}/sell")]
+    public async Task<IActionResult> SellItem(long itemId, [FromBody] ShopPurchaseRequest request, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await mediator.Send(new SellShopItemCommand {UserId=UserId.Value,ItemId=itemId,RequestId=request.RequestId},ct));
+    }
+    [HttpPut("me/equipped-item")]
+    public async Task<IActionResult> EquipItem([FromBody] EquipShopItemRequest request, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await mediator.Send(new EquipShopItemCommand {UserId=UserId.Value,ItemId=request.ItemId,Category=request.Category},ct));
     }
     private IActionResult Envelope<T>(T data) => Ok(new BaseResponse<T>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
 }

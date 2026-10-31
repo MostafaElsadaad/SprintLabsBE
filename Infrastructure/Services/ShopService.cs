@@ -57,6 +57,13 @@ public partial class ShopService(ApplicationDbContext context) : IShopService
                 await context.Entry(player).ReloadAsync(ct);
             }
             if (player.UserId != userId) throw Missing();
+            // A reused scope may have observed inventory before another reward/mutation. The wallet
+            // lock protects the aggregate; resolve its dependent rows fresh after that lock as well.
+            foreach (var entry in context.ChangeTracker.Entries().Where(x =>
+                x.Entity is PlayerInventoryItem i && i.PlayerProfileId == id ||
+                x.Entity is PlayerBox b && b.PlayerProfileId == id ||
+                x.Entity is PlayerCosmeticEquipment e && e.PlayerProfileId == id).ToList())
+                entry.State = EntityState.Detached;
             var result = await action(player);
             await context.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -72,6 +79,7 @@ public partial class ShopService(ApplicationDbContext context) : IShopService
     {
         ItemId = item.Id, ItemKey = item.ItemKey, Name = item.Name, IconKey = item.IconKey,
         PrefabKey = item.PrefabKey, IsCharacter = item.IsCharacter, QuantityOwned = quantity,
+        Category = CategoryOf(item), SellPrice = SellPriceOf(item),
         IsEquipped = equipped == item.Id && quantity > 0
     };
     private static ShopPurchaseResponse Receipt(ShopPurchase purchase, bool replay = false) => new()

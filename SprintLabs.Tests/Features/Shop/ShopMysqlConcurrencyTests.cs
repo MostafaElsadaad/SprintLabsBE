@@ -27,33 +27,36 @@ public class ShopMysqlConcurrencyTests
         using var fixture = new MissionFixture(db.Context()); await fixture.SeedAsync();
         fixture.Context.Players.Single(x => x.Id == 101).Gold = 1000;
         await fixture.Context.SaveChangesAsync();
-        return (await new ShopService(fixture.Context).SeedExampleAsync(40, default)).ProductId;
+        return (await new ShopService(fixture.Context).SeedMagicalBoxesAsync(40, default))[0].ProductId;
     }
 
     [MysqlFact]
     public async Task Concurrent_same_request_charges_once_and_returns_one_receipt()
     {
         await using var db=await ShopMysqlDatabase.CreateAsync(); var product=await Seed(db); var request=Guid.NewGuid();
-        var results=await Task.WhenAll(Retry(db,(_,s)=>s.PurchaseAsync(1,product,request,default)),Retry(db,(_,s)=>s.PurchaseAsync(1,product,request,default)));
-        results.Select(x=>x.PurchaseId).Distinct().Should().HaveCount(1);
-        using var verify=db.Context(); verify.Players.Single(x=>x.Id==101).Gold.Should().Be(500);
-        verify.Set<Domain.Models.ShopPurchase>().Count().Should().Be(1); verify.PlayerInventoryItems.Single().Quantity.Should().Be(1);
+        var results=await Task.WhenAll(Retry(db,(_,s)=>s.PurchaseBoxAsync(1,product,request,default)),Retry(db,(_,s)=>s.PurchaseBoxAsync(1,product,request,default)));
+        results.Select(x=>x.RequestId).Distinct().Should().HaveCount(1);
+        using var verify=db.Context(); verify.Players.Single(x=>x.Id==101).Gold.Should().Be(900);
+        verify.Set<Domain.Models.ShopOperation>().Count().Should().Be(1); verify.Set<Domain.Models.PlayerBox>().Single().Quantity.Should().Be(1);
     }
 
     [MysqlFact]
     public async Task Concurrent_different_products_cannot_spend_the_same_coins()
     {
         await using var db=await ShopMysqlDatabase.CreateAsync(); var first=await Seed(db);
-        using(var c=db.Context()) {c.Players.Single(x=>x.Id==101).Gold=500; await c.SaveChangesAsync();}
-        var second=await Retry(db,(_,s)=>s.UpsertProductAsync(40,"other",new ShopProductRequest{Name="Other",CoinPrice=500,IconKey="other",PrefabKey="other"},default));
+        using(var c=db.Context()) {c.Players.Single(x=>x.Id==101).Gold=100; await c.SaveChangesAsync();}
+        var second=await Retry(db,async (c,s)=>{
+            var product=(await s.CatalogueAsync(1,default)).Boxes[1];
+            c.ShopProducts.Single(x=>x.Id==product.ProductId).CoinPrice=100;await c.SaveChangesAsync();return product;
+        });
         async Task<bool> Purchase(long id)
         {
-            try {await Retry(db,(_,s)=>s.PurchaseAsync(1,id,Guid.NewGuid(),default));return true;}
+            try {await Retry(db,(_,s)=>s.PurchaseBoxAsync(1,id,Guid.NewGuid(),default));return true;}
             catch(GenericException e) when(e.StatusCode==HttpStatusCode.Conflict){return false;}
         }
         var result=await Task.WhenAll(Purchase(first),Purchase(second.ProductId)); result.Count(x=>x).Should().Be(1);
         using var verify=db.Context(); verify.Players.Single(x=>x.Id==101).Gold.Should().Be(0);
-        verify.Set<Domain.Models.ShopPurchase>().Count().Should().Be(1);
+        verify.Set<Domain.Models.ShopOperation>().Count().Should().Be(1);
     }
 
     [MysqlFact]
@@ -65,11 +68,33 @@ public class ShopMysqlConcurrencyTests
             var m=await fixture.AssignAsync("Boolean",1); mission=m.PlayerMissionId;
             await fixture.Service.EventsAsync(new(){fixture.Event()},default);
         }
-        var purchase=Retry(db,(_,s)=>s.PurchaseAsync(1,product,Guid.NewGuid(),default));
+        var purchase=Retry(db,(_,s)=>s.PurchaseBoxAsync(1,product,Guid.NewGuid(),default));
         var claim=Retry(db,(c,_)=>new MissionService(c,new Infrastructure.Services.LevelProgressionService()).ClaimAsync(1,mission,default));
         await Task.WhenAll(purchase,claim);
-        using var verify=db.Context(); verify.Players.Single(x=>x.Id==101).Gold.Should().Be(520);
+        using var verify=db.Context(); verify.Players.Single(x=>x.Id==101).Gold.Should().Be(920);
         verify.Players.Single(x=>x.Id==101).Experience.Should().Be(50);
+    }
+
+
+    [MysqlFact]
+    public async Task Concurrent_open_retries_keep_exactly_one_ordered_five_reward_receipt()
+    {
+        await using var db=await ShopMysqlDatabase.CreateAsync();var product=await Seed(db);
+        await Retry(db,(_,s)=>s.PurchaseBoxAsync(1,product,Guid.NewGuid(),default));var request=Guid.NewGuid();
+        var results=await Task.WhenAll(Retry(db,(_,s)=>s.OpenBoxAsync(1,product,request,default)),Retry(db,(_,s)=>s.OpenBoxAsync(1,product,request,default)));
+        results.Count(x=>x.IsReplay).Should().Be(1);results[0].Rewards.Select(x=>x.ItemId).Should().Equal(results[1].Rewards.Select(x=>x.ItemId));
+        using var verify=db.Context();verify.PlayerInventoryItems.Sum(x=>x.Quantity).Should().Be(5);verify.Set<Domain.Models.PlayerBox>().Single().Quantity.Should().Be(0);
+    }
+
+    [MysqlFact]
+    public async Task Concurrent_sale_retries_credit_exactly_one_copy()
+    {
+        await using var db=await ShopMysqlDatabase.CreateAsync();var product=await Seed(db);
+        await Retry(db,(_,s)=>s.PurchaseBoxAsync(1,product,Guid.NewGuid(),default));
+        var opened=await Retry(db,(_,s)=>s.OpenBoxAsync(1,product,Guid.NewGuid(),default));var itemId=opened.Rewards[0].ItemId;var request=Guid.NewGuid();
+        var results=await Task.WhenAll(Retry(db,(_,s)=>s.SellItemAsync(1,itemId,request,default)),Retry(db,(_,s)=>s.SellItemAsync(1,itemId,request,default)));
+        results.Count(x=>x.IsReplay).Should().Be(1);
+        using var verify=db.Context();verify.PlayerInventoryItems.Sum(x=>x.Quantity).Should().Be(4);verify.Players.Single(x=>x.Id==101).Gold.Should().Be(900+results[0].CoinsGained);
     }
 
     private sealed class ShopMysqlDatabase : IAsyncDisposable

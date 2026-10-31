@@ -284,10 +284,17 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Category")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<string>("IconKey")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
+
+                    b.Property<bool>("IsBoxReward")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsCharacter")
                         .HasColumnType("tinyint(1)");
@@ -312,12 +319,18 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<int>("SellPrice")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ItemKey")
                         .IsUnique();
 
-                    b.ToTable("Items");
+                    b.ToTable("Items", t =>
+                        {
+                            t.HasCheckConstraint("CK_Items_SellPrice", "`SellPrice` >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.Match", b =>
@@ -1027,6 +1040,65 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Players");
+                });
+
+            modelBuilder.Entity("Domain.Models.PlayerBox", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("PlayerProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ShopProductId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShopProductId");
+
+                    b.HasIndex("PlayerProfileId", "ShopProductId")
+                        .IsUnique();
+
+                    b.ToTable("PlayerBoxes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlayerBoxes_Quantity", "`Quantity` >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Models.PlayerCosmeticEquipment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("PlayerProfileId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("PlayerProfileId", "Category")
+                        .IsUnique();
+
+                    b.ToTable("PlayerCosmeticEquipment", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.PlayerEducationOption", b =>
@@ -1775,6 +1847,45 @@ namespace Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Domain.Models.ShopOperation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("PlayerProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<long>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerProfileId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("ShopOperations", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Models.ShopProduct", b =>
                 {
                     b.Property<long>("Id")
@@ -1783,8 +1894,22 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("BoxKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("CategoryOddsJson")
+                        .HasColumnType("longtext");
+
                     b.Property<int?>("CoinPrice")
                         .HasColumnType("int");
+
+                    b.Property<int?>("DisplayLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IconKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
@@ -1799,12 +1924,15 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BoxKey")
+                        .IsUnique();
+
                     b.HasIndex("ItemId")
                         .IsUnique();
 
                     b.ToTable("ShopProducts", t =>
                         {
-                            t.HasCheckConstraint("CK_ShopProducts_DirectPrice", "(`ItemId` IS NULL AND `CoinPrice` IS NULL) OR (`ItemId` IS NOT NULL AND `CoinPrice` IS NOT NULL AND `CoinPrice` > 0)");
+                            t.HasCheckConstraint("CK_ShopProducts_DirectPrice", "(`ItemId` IS NULL AND `CoinPrice` IS NULL AND `BoxKey` IS NULL) OR (`ItemId` IS NOT NULL AND `CoinPrice` IS NOT NULL AND `CoinPrice` > 0 AND `BoxKey` IS NULL) OR (`ItemId` IS NULL AND `CoinPrice` IS NOT NULL AND `CoinPrice` > 0 AND `BoxKey` IS NOT NULL)");
                         });
                 });
 
@@ -2578,6 +2706,36 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Domain.Models.PlayerBox", b =>
+                {
+                    b.HasOne("Domain.Models.Player", null)
+                        .WithMany()
+                        .HasForeignKey("PlayerProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Models.ShopProduct", null)
+                        .WithMany()
+                        .HasForeignKey("ShopProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Models.PlayerCosmeticEquipment", b =>
+                {
+                    b.HasOne("Domain.Models.Item", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Models.Player", null)
+                        .WithMany()
+                        .HasForeignKey("PlayerProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Models.PlayerInventoryItem", b =>
                 {
                     b.HasOne("Domain.Models.Item", null)
@@ -2847,6 +3005,15 @@ namespace Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Models.ShopOperation", b =>
+                {
+                    b.HasOne("Domain.Models.Player", null)
+                        .WithMany()
+                        .HasForeignKey("PlayerProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
