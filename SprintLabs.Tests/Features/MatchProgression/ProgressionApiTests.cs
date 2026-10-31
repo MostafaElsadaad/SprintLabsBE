@@ -134,6 +134,47 @@ public class ProgressionApiTests
         unranked.GetProperty("data").GetProperty("currentPlayer").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
+    [Theory]
+    [InlineData(false, "AllTime")]
+    [InlineData(false, "Week")]
+    [InlineData(false, "Month")]
+    [InlineData(false, "Year")]
+    [InlineData(true, "AllTime")]
+    [InlineData(true, "Week")]
+    [InlineData(true, "Month")]
+    [InlineData(true, "Year")]
+    public async Task Explicit_page_preserves_period_page_size_and_class_filter(bool school, string period)
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        var registered = await f.Matches.RegisterAsync(f.Registration(communityId: 1), default);
+        await f.Matches.CompleteAsync(registered.MatchId, f.Completion(communityId: 1), default);
+        using var server = Server(f, null); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "1");
+        string path = school ? "/api/v1/Communities/1/ranking/leaderboard" : "/api/v1/Ranking/leaderboard";
+        path += $"?period={period}&page=1&pageSize=1";
+        if (school) path += "&gradeId=1&classId=1";
+        var result = await client.GetFromJsonAsync<JsonElement>(path);
+        var data = result.GetProperty("data");
+        data.GetProperty("pageSize").GetInt32().Should().Be(1);
+        data.GetProperty("period").GetString().Should().Be(period);
+        data.GetProperty("items").GetArrayLength().Should().Be(1);
+        data.GetProperty("total").GetInt64().Should().Be(school ? 1 : period == "AllTime" ? 3 : 2);
+        if (school) data.GetProperty("items")[0].GetProperty("playerProfileId").GetInt64().Should().Be(101);
+        var second = await client.GetFromJsonAsync<JsonElement>(path.Replace("page=1", "page=2"));
+        second.GetProperty("data").GetProperty("page").GetInt32().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Explicit_page_does_not_bypass_filter_authorization_or_validation()
+    {
+        using var f = new ProgressionFixture(); await f.SeedAsync();
+        using var server = Server(f, null); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "1");
+        (await client.GetAsync("/api/v1/Communities/1/ranking/leaderboard?page=1&classId=2")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard?page=1&classId=1")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard?page=1&pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/v1/Ranking/leaderboard?page=1&period=Daily")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
     private static TestServer Server(ProgressionFixture f, string? credential) => new(new WebHostBuilder()
         .ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["GameServer:ApiKey"] = credential }))
         .ConfigureServices(services =>

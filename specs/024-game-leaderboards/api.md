@@ -96,3 +96,12 @@ school. Missing enrollment returns null even if legacy school text or account me
 XP is never period points. Classification uses the existing RP-based ordering for the selected
 period; a game may continue showing totalXp in its XP column without changing this ordering.
 These fields require publishing this backend change; no database migration is needed.
+## 2026-10-31 - Flat query binding with explicit page
+
+Both list endpoints explicitly bind flat query keys. A Unity-style request such as
+`?period=Week&page=1&pageSize=20&gradeId=33&classId=1` preserves every filter and pagination
+value. Previously the action parameter named page caused ASP.NET to infer a page prefix
+from the scalar page key and silently use default AllTime/20/unfiltered values. The explicit
+empty model prefix fixes this without route, DTO or service changes. Invalid and unauthorized
+filters still return their documented errors even when page is present. Nine real HTTP tests
+failed before the change and pass afterward, including page2 and all four periods.
