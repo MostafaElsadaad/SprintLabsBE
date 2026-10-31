@@ -45,3 +45,14 @@ Keep backend Int64 IDs, positions and points as C# long. Negative period points 
 5. Check zero/negative scores and an account without period activity.
 6. Verify student school board and own class; reject another class/school, revoked license and inactive class. Verify assigned-teacher restrictions remain intact.
 7. Confirm no email/answer/credential data appears in rows or logs. Verify loading/empty/error/refresh handling.
+
+## 2026-10-31 additive leaderboard display fields
+
+Rows and currentPlayer also return schoolName (nullable string) and totalXp (Int64 lifetime XP).
+The school is derived from active student enrollment matching both player and user, with an
+active school/class and consistent class/grade ownership. Global boards choose the lowest
+community ID (then license ID) for multiple active schools; scoped boards show the requested
+school. Missing enrollment returns null even if legacy school text or account membership exists.
+XP is never period points. Classification uses the existing RP-based ordering for the selected
+period; a game may continue showing totalXp in its XP column without changing this ordering.
+These fields require publishing this backend change; no database migration is needed.

@@ -75,6 +75,13 @@ public partial class ProgressionReadService
         var query = players.Select(p => new LeaderboardEntryResponse
         {
             PlayerProfileId = p.Id, Name = p.Name, AvatarUrl = p.AvatarUrl, Rp = p.Rp,
+            TotalXp = p.Experience,
+            SchoolName = _context.StudentLicenses.Where(l => l.PlayerProfileId == p.Id && l.UserId == p.UserId &&
+                    l.Status == StudentLicenseStatus.Active && l.Community.Status == CommunityStatus.Active &&
+                    l.Class.Status == ClassStatus.Active && l.Class.CommunityId == l.CommunityId &&
+                    l.Grade.CommunityId == l.CommunityId && l.Class.GradeId == l.GradeId &&
+                    (!communityId.HasValue || l.CommunityId == communityId))
+                .OrderBy(l => l.CommunityId).ThenBy(l => l.Id).Select(l => l.Community.Name).FirstOrDefault(),
             Points = start.HasValue
                 ? rewards.Where(r => r.PlayerProfileId == p.Id).Sum(r => (long?)r.RpChange) ?? 0
                 : (long)p.Rp,

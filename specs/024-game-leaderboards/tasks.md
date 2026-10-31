@@ -6,3 +6,5 @@
 - [x] T005 Build/test, document API/frontend usage, review diff and update handoff.
 
 Validation: solution build passed (existing warnings); focused progression/leaderboard 67 passed, four skipped; full suite 519 passed, ten skipped, zero failures. MySQL execution requires an isolated configured test database and remains unverified. No schema migration or manual deployment is required for this feature. Publication is tracked through the feature pull request.
+
+- [x] T006 Add enrollment-derived schoolName and lifetime totalXp to page/standing; validate InMemory/SQLite and Unity mapping (2026-10-31). Publication and Unity visual verification remain pending.

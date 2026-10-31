@@ -6,6 +6,8 @@ public class LeaderboardEntryResponse
     public long PlayerProfileId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
+    public string? SchoolName { get; set; }
+    public long TotalXp { get; set; }
     public int Rp { get; set; }
     public long Points { get; set; }
     public string RankTier { get; set; } = string.Empty;

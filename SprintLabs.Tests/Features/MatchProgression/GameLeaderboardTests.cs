@@ -141,6 +141,8 @@ public class GameLeaderboardTests
             case "wrong-profile": license.PlayerProfileId = 102; break;
         }
         await f.Context.SaveChangesAsync();
+        var global = await f.Reads.GetLeaderboardStandingAsync(1, null, new(), default);
+        global.CurrentPlayer!.SchoolName.Should().BeNull();
         await ErrorAsync(() => f.Reads.GetLeaderboardAsync(1, 1, new(), default),
             cause == "community" ? HttpStatusCode.NotFound : HttpStatusCode.Forbidden);
     }
@@ -167,6 +169,43 @@ public class GameLeaderboardTests
     {
         using var f = await FixtureAsync(false);
         await ErrorAsync(() => f.Reads.GetLeaderboardAsync(1, null, new() { Period = period }, default), HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task School_and_total_xp_are_independent_of_ranking_points(bool relational)
+    {
+        using var f = await FixtureAsync(relational);
+        f.Context.Players.Single(x => x.Id == 101).Experience = 4114;
+        f.Context.Players.Single(x => x.Id == 101).SchoolName = "Stale display name";
+        Reward(f, 101, 17, Now);
+        await f.Context.SaveChangesAsync();
+        var board = await f.Reads.GetLeaderboardAsync(1, null, new() { Period = "Week" }, default);
+        var row = board.Items.Single();
+        row.SchoolName.Should().Be("School");
+        row.TotalXp.Should().Be(4114L);
+        row.Points.Should().Be(17); row.Rp.Should().Be(450);
+        board.CurrentPlayer!.SchoolName.Should().Be("School");
+        var license = f.Context.StudentLicenses.Single(x => x.PlayerProfileId == 101);
+        license.Status = StudentLicenseStatus.Revoked;
+        await f.Context.SaveChangesAsync();
+        var revoked = await f.Reads.GetLeaderboardStandingAsync(1, null, new(), default);
+        revoked.CurrentPlayer!.SchoolName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task School_name_uses_requested_school_and_deterministic_global_membership()
+    {
+        using var f = await FixtureAsync(true);
+        f.Context.StudentLicenses.Add(new StudentLicense { CommunityId = 2, GradeId = 2, ClassId = 3,
+            UserId = 1, PlayerProfileId = 101, Email = "u1@example.com", Status = StudentLicenseStatus.Active, AssignedByUserId = 30 });
+        await f.Context.SaveChangesAsync();
+        var global = await f.Reads.GetLeaderboardStandingAsync(1, null, new(), default);
+        global.CurrentPlayer!.SchoolName.Should().Be("School");
+        var scoped = await f.Reads.GetLeaderboardAsync(1, 2, new(), default);
+        scoped.CurrentPlayer!.SchoolName.Should().Be("Other");
+        scoped.Items.Single(x => x.PlayerProfileId == 101).SchoolName.Should().Be("Other");
     }
 
     private static async Task ErrorAsync(Func<Task> action, HttpStatusCode status)

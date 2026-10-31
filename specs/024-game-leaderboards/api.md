@@ -85,3 +85,14 @@ Use HTTP status and the established error envelope. There are no client-side ran
 No schema migration, package or configuration change. Period results cover only existing authoritative ranked completion reward records; they cannot reconstruct unrecorded historic play. Current enrollment controls school eligibility, not enrollment at match time. Reads are live queries without a multi-query snapshot guarantee; refresh if a concurrent match changes standings while paging.
 
 SQLite/service/HTTP tests validate behavior and translation. The optional isolated MySQL integration test requires `SPRINTLABS_MYSQL_TEST_CONNECTION`; no staging deployment, real MySQL execution or Unity integration is implied by local test success.
+
+## 2026-10-31 additive leaderboard display fields
+
+Rows and currentPlayer also return schoolName (nullable string) and totalXp (Int64 lifetime XP).
+The school is derived from active student enrollment matching both player and user, with an
+active school/class and consistent class/grade ownership. Global boards choose the lowest
+community ID (then license ID) for multiple active schools; scoped boards show the requested
+school. Missing enrollment returns null even if legacy school text or account membership exists.
+XP is never period points. Classification uses the existing RP-based ordering for the selected
+period; a game may continue showing totalXp in its XP column without changing this ordering.
+These fields require publishing this backend change; no database migration is needed.
