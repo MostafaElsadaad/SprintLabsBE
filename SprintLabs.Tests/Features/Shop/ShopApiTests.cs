@@ -28,7 +28,7 @@ using Shared.Responses;
 
 namespace Compass.Tests.Features.Shop;
 
-public class ShopApiTests
+public partial class ShopApiTests
 {
     private static HttpClient Client(Fixture f, string? user = "10")
     {
@@ -44,46 +44,40 @@ public class ShopApiTests
         using var admin = Client(f,"40");
         return (await Data(await admin.PostAsync("/api/v1/admin/shop/seed/example", null))).GetProperty("productId").GetInt64();
     }
+    private static async Task<ShopPurchase> HistoricalPurchase(Fixture f,long productId,Guid requestId)
+    {
+        using var db=f.Context();var product=await db.ShopProducts.SingleAsync(x=>x.Id==productId);
+        var player=await db.Players.SingleAsync(x=>x.Id==100);player.Gold-=product.CoinPrice!.Value;
+        db.PlayerInventoryItems.Add(new(){PlayerProfileId=100,ItemId=product.ItemId!.Value,Quantity=1});
+        var receipt=new ShopPurchase{PlayerProfileId=100,ShopProductId=productId,ItemId=product.ItemId.Value,RequestId=requestId.ToString("N"),
+            CoinsSpent=product.CoinPrice.Value,CoinsAfter=player.Gold,PurchasedAt=DateTime.UtcNow};
+        db.Add(receipt);await db.SaveChangesAsync();return receipt;
+    }
     private static string Buy(long id) => $"/api/v1/Shop/products/{id}/purchase";
     private static object Product(int price = 500, bool active = true) => new { name = "King of Knowledge", coinPrice = price, iconKey = "shop/king", prefabKey = "characters/king", isActive = active };
 
     [Fact]
-    public async Task Catalogue_purchase_inventory_and_use_roundtrip_keep_wallet_and_identity_authoritative()
+    public async Task Direct_characters_are_hidden_and_new_purchases_refused_without_changing_existing_ownership()
     {
-        using var f = new Fixture(); await f.SeedAsync(); var id = await Seed(f); using var c = Client(f);
-        var catalog = await Data(await c.GetAsync("/api/v1/Shop"));
-        catalog.GetProperty("coins").GetInt32().Should().Be(1000);
-        catalog.GetProperty("products").GetArrayLength().Should().Be(1);
-        var key = Guid.NewGuid();
-        var receipt = await Data(await c.PostAsJsonAsync(Buy(id),new { requestId = key, coins = 0, price = 1, userId = 11, playerProfileId = 200 }));
-        receipt.GetProperty("coinsSpent").GetInt32().Should().Be(500);
-        receipt.GetProperty("coinsAfter").GetInt32().Should().Be(500);
-        receipt.GetProperty("isReplay").GetBoolean().Should().BeFalse();
-        var itemId = receipt.GetProperty("itemId").GetInt64();
-        var inventory = await Data(await c.GetAsync("/api/v1/Shop/me/inventory"));
-        inventory.GetProperty("items").GetArrayLength().Should().Be(1);
-        inventory.GetProperty("equippedCharacterItemId").ValueKind.Should().Be(JsonValueKind.Null);
-        var selected = await Data(await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new { itemId }));
-        selected.GetProperty("equippedCharacterItemId").GetInt64().Should().Be(itemId);
-        selected.GetProperty("items")[0].GetProperty("isEquipped").GetBoolean().Should().BeTrue();
-        using var anotherRequest = Client(f);
-        (await Data(await anotherRequest.GetAsync("/api/v1/Shop/me/inventory"))).GetProperty("equippedCharacterItemId").GetInt64().Should().Be(itemId);
-        (await Data(await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new { itemId = (long?)null }))).GetProperty("equippedCharacterItemId").ValueKind.Should().Be(JsonValueKind.Null);
-        using var db = f.Context();
-        var player = await db.Players.SingleAsync(x => x.Id == 100); player.Gold.Should().Be(500); player.Experience.Should().Be(50);
-        (await db.Players.SingleAsync(x => x.Id == 200)).Gold.Should().Be(0);
-        (await db.Set<ShopPurchase>().CountAsync()).Should().Be(1);
+        using var f=new Fixture();await f.SeedAsync();var product=await Seed(f);using var c=Client(f);
+        var historical=await HistoricalPurchase(f,product,Guid.NewGuid());
+        (await Data(await c.GetAsync("/api/v1/Shop"))).GetProperty("products").GetArrayLength().Should().Be(0);
+        (await c.PostAsJsonAsync(Buy(product),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var inventory=await Data(await c.GetAsync("/api/v1/Shop/me/inventory"));inventory.GetProperty("items").GetArrayLength().Should().Be(1);
+        await Data(await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new{itemId=historical.ItemId}));
+        using var verify=f.Context();(await verify.Players.SingleAsync(x=>x.Id==100)).Gold.Should().Be(500);
+        (await verify.PlayerInventoryItems.SingleAsync()).Quantity.Should().Be(1);
     }
 
     [Fact]
     public async Task Retry_returns_same_receipt_even_after_price_change_and_deactivation_without_double_charge()
     {
         using var f = new Fixture(); await f.SeedAsync(); var id=await Seed(f); using var c=Client(f); var key=Guid.NewGuid();
-        var first=await Data(await c.PostAsJsonAsync(Buy(id),new { requestId=key }));
+        var first=await HistoricalPurchase(f,id,key);
         using var admin=Client(f,"40");
         await Data(await admin.PutAsJsonAsync("/api/v1/admin/shop/products/king-of-knowledge",Product(800,false)));
         var repeat=await Data(await c.PostAsJsonAsync(Buy(id),new { requestId=key }));
-        repeat.GetProperty("purchaseId").GetInt64().Should().Be(first.GetProperty("purchaseId").GetInt64());
+        repeat.GetProperty("purchaseId").GetInt64().Should().Be(first.Id);
         repeat.GetProperty("coinsSpent").GetInt32().Should().Be(500);
         repeat.GetProperty("isReplay").GetBoolean().Should().BeTrue();
         using var db=f.Context(); (await db.Players.SingleAsync(x=>x.Id==100)).Gold.Should().Be(500);
@@ -94,7 +88,7 @@ public class ShopApiTests
     public async Task Already_owned_with_another_request_or_from_a_mission_is_not_charged()
     {
         using var f = new Fixture(); await f.SeedAsync(); var id=await Seed(f); using var c=Client(f);
-        (await c.PostAsJsonAsync(Buy(id),new { requestId=Guid.NewGuid() })).EnsureSuccessStatusCode();
+        await HistoricalPurchase(f,id,Guid.NewGuid());
         (await c.PostAsJsonAsync(Buy(id),new { requestId=Guid.NewGuid() })).StatusCode.Should().Be(HttpStatusCode.Conflict);
         using(var db=f.Context()) { db.PlayerInventoryItems.Add(new(){PlayerProfileId=200,ItemId=(await db.ShopProducts.SingleAsync()).ItemId!.Value,Quantity=2}); await db.SaveChangesAsync(); }
         using var other=Client(f,"11");
@@ -109,8 +103,8 @@ public class ShopApiTests
         (await poor.PostAsJsonAsync(Buy(id),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.Conflict);
         using var c=Client(f); using var admin=Client(f,"40");
         await Data(await admin.PutAsJsonAsync("/api/v1/admin/shop/products/king-of-knowledge",Product(active:false)));
-        (await c.PostAsJsonAsync(Buy(id),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await c.PostAsJsonAsync(Buy(9999),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await c.PostAsJsonAsync(Buy(id),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await c.PostAsJsonAsync(Buy(9999),new{requestId=Guid.NewGuid()})).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Data(await c.GetAsync("/api/v1/Shop"))).GetProperty("products").GetArrayLength().Should().Be(0);
         using var db=f.Context(); (await db.PlayerInventoryItems.CountAsync()).Should().Be(0); (await db.Set<ShopPurchase>().CountAsync()).Should().Be(0);
     }
@@ -120,7 +114,7 @@ public class ShopApiTests
     {
         using var f=new Fixture(); await f.SeedAsync(); var id=await Seed(f); using var c=Client(f); using var admin=Client(f,"40");
         var second=await Data(await admin.PutAsJsonAsync("/api/v1/admin/shop/products/another-character",Product(100)));
-        var key=Guid.NewGuid(); await Data(await c.PostAsJsonAsync(Buy(id),new{requestId=key}));
+        var key=Guid.NewGuid(); await HistoricalPurchase(f,id,key);
         (await c.PostAsJsonAsync(Buy(second.GetProperty("productId").GetInt64()),new{requestId=key})).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await Data(await c.GetAsync("/api/v1/Shop/me/purchases?page=1&pageSize=1"))).GetArrayLength().Should().Be(1);
         using var other=Client(f,"11"); (await Data(await other.GetAsync("/api/v1/Shop/me/purchases"))).GetArrayLength().Should().Be(0);
@@ -138,21 +132,6 @@ public class ShopApiTests
         (await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new{itemId=500})).StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new{itemId=9999})).StatusCode.Should().Be(HttpStatusCode.Conflict);
         using var db2=f.Context(); (await db2.Players.SingleAsync(x=>x.Id==100)).Gold.Should().Be(1000);
-    }
-
-    [Fact]
-    public async Task Failed_receipt_insert_rolls_back_wallet_and_ownership_and_allows_safe_retry()
-    {
-        using var f=new Fixture(); await f.SeedAsync(); var id=await Seed(f); using var c=Client(f); var key=Guid.NewGuid();
-        using(var db=f.Context()) await db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FailPurchase BEFORE INSERT ON ShopPurchases BEGIN SELECT RAISE(ABORT, 'forced rollback'); END;");
-        (await c.PostAsJsonAsync(Buy(id),new{requestId=key})).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        using(var db=f.Context())
-        {
-            (await db.Players.SingleAsync(x=>x.Id==100)).Gold.Should().Be(1000);
-            (await db.PlayerInventoryItems.CountAsync()).Should().Be(0);
-            await db.Database.ExecuteSqlRawAsync("DROP TRIGGER FailPurchase;");
-        }
-        (await c.PostAsJsonAsync(Buy(id),new{requestId=key})).EnsureSuccessStatusCode();
     }
 
     [Fact]
@@ -201,12 +180,13 @@ public class ShopApiTests
     [Fact]
     public async Task Purchase_refreshes_a_stale_profile_before_charging_so_a_recent_reward_is_preserved()
     {
-        using var f=new Fixture(); await f.SeedAsync(); var product=await Seed(f);
+        using var f=new Fixture(); await f.SeedAsync(); await SeedBoxes(f);
         using var editing=f.Context(); var service=new Infrastructure.Services.ShopService(editing);
         await service.CatalogueAsync(10,default); // Track the old 1000-coin profile.
         using(var award=f.Context()) await award.Players.Where(x=>x.Id==100).ExecuteUpdateAsync(x=>x.SetProperty(p=>p.Gold,1020));
-        var receipt=await service.PurchaseAsync(10,product,Guid.NewGuid(),default);
-        receipt.CoinsAfter.Should().Be(520);
+        var product=(await service.CatalogueAsync(10,default)).Boxes[0].ProductId;
+        var receipt=await service.PurchaseBoxAsync(10,product,Guid.NewGuid(),default);
+        receipt.CoinsAfter.Should().Be(920);
     }
 
     [Theory]
@@ -222,8 +202,8 @@ public class ShopApiTests
     public async Task Missing_equipped_item_field_does_not_reset_selection_and_retired_owned_items_remain_usable()
     {
         using var f=new Fixture(); await f.SeedAsync(); var product=await Seed(f); using var c=Client(f);
-        var receipt=await Data(await c.PostAsJsonAsync(Buy(product),new{requestId=Guid.NewGuid()}));
-        var itemId=receipt.GetProperty("itemId").GetInt64();
+        var receipt=await HistoricalPurchase(f,product,Guid.NewGuid());
+        var itemId=receipt.ItemId;
         using var admin=Client(f,"40"); await Data(await admin.PutAsJsonAsync("/api/v1/admin/shop/products/king-of-knowledge",Product(active:false)));
         await Data(await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new{itemId}));
         (await c.PutAsJsonAsync("/api/v1/Shop/me/equipped-character",new{})).StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -232,10 +212,13 @@ public class ShopApiTests
 
     private sealed class Fixture : IDisposable
     {
-        private readonly SqliteConnection _connection = new("Data Source=:memory:");
+        private readonly SqliteConnection _connection;
+        private readonly string? _filePath;
         public TestServer Server { get; }
-        public Fixture()
+        public Fixture(bool concurrent = false)
         {
+            _filePath = concurrent ? Path.Combine(Path.GetTempPath(),"sprintlabs-shop-"+Guid.NewGuid().ToString("N")+".db") : null;
+            _connection = new(_filePath == null ? "Data Source=:memory:" : $"Data Source={_filePath};Default Timeout=1;Pooling=False");
             _connection.Open();
             var users = new Mock<IUserService>();
             users.Setup(x => x.GetCurrentUser(It.IsAny<long>())).ReturnsAsync((long id) => new UserIdentityResponse { Id = id, IsSuspended = id == 12 });
@@ -256,7 +239,9 @@ public class ShopApiTests
                 app.UseMiddleware<GlobalExceptionHandler>(); app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(x => x.MapControllers());
             }));
         }
-        public ApplicationDbContext Context() => new SqliteProfileContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options);
+        public ApplicationDbContext Context() => new SqliteProfileContext(_filePath == null
+            ? new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options
+            : new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection.ConnectionString).Options);
         public async Task SeedAsync()
         {
             using var context = Context(); await context.Database.EnsureCreatedAsync();
@@ -267,7 +252,11 @@ public class ShopApiTests
             context.Users.Add(new User { Id = 40, Name = "Admin", UserName = "admin@example.com", Email = "admin@example.com", IsPlatformAdmin = true });
             await context.SaveChangesAsync();
         }
-        public void Dispose() { Server.Dispose(); _connection.Dispose(); }
+        public void Dispose()
+        {
+            Server.Dispose(); _connection.Dispose();
+            if(_filePath != null) File.Delete(_filePath);
+        }
     }
 
     private sealed class SqliteProfileContext : ApplicationDbContext

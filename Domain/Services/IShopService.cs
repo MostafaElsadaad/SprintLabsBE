@@ -4,6 +4,11 @@ namespace Domain.Services;
 
 public interface IShopService
 {
+    Task<ShopBoxPurchaseResponse> PurchaseBoxAsync(long userId, long productId, Guid requestId, CancellationToken ct);
+    Task<ShopBoxOpenResponse> OpenBoxAsync(long userId, long productId, Guid requestId, CancellationToken ct);
+    Task<ShopItemSaleResponse> SellItemAsync(long userId, long itemId, Guid requestId, CancellationToken ct);
+    Task<ShopInventoryResponse> EquipItemAsync(long userId, long? itemId, string? category, CancellationToken ct);
+    Task<List<ShopBoxResponse>> SeedMagicalBoxesAsync(long adminUserId, CancellationToken ct);
     Task<ShopCatalogueResponse> CatalogueAsync(long userId, CancellationToken ct);
     Task<ShopInventoryResponse> InventoryAsync(long userId, CancellationToken ct);
     Task<ShopPurchaseResponse> PurchaseAsync(long userId, long productId, Guid requestId, CancellationToken ct);

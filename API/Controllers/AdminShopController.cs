@@ -1,3 +1,4 @@
+using Application.Features.Shop.SeedMagicalBoxes;
 using System.Net;
 using Application.Features.Shop.UpsertShopProduct;
 using Application.Features.Shop.SeedShopExample;
@@ -29,6 +30,12 @@ public class AdminShopController(IMediator mediator) : ControllerBase
     {
         if (!UserId.HasValue) return Unauthorized();
         return Envelope(await mediator.Send(new SeedShopExampleCommand { UserId = UserId.Value }, ct));
+    }
+    [HttpPost("seed/magical-boxes")]
+    public async Task<IActionResult> SeedBoxes(CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await mediator.Send(new SeedMagicalBoxesCommand {UserId=UserId.Value},ct));
     }
     private IActionResult Envelope<T>(T data) => Ok(new BaseResponse<T>(data, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
 }

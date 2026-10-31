@@ -6,6 +6,9 @@ public class Item
     public string ItemKey { get; set; } = "";
     public string Name { get; set; } = "";
     public bool IsCharacter { get; set; }
+    public string? Category { get; set; }
+    public int SellPrice { get; set; }
+    public bool IsBoxReward { get; set; }
     public string Rarity { get; set; } = "Common";
     public string IconKey { get; set; } = "";
     public string PrefabKey { get; set; } = "";
