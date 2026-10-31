@@ -451,20 +451,7 @@ namespace Infrastructure.Services
                 return null;
             }
 
-            return new UserIdentityResponse
-            {
-                Id = user.Id,
-                GoogleId = user.GoogleId,
-                FirebaseUid = user.FirebaseUid,
-                Email = user.Email ?? string.Empty,
-                Name = user.Name,
-                AvatarUrl = user.AvatarUrl,
-                Status = user.Status.ToString(),
-                IsPlatformAdmin = user.IsPlatformAdmin,
-                IsSuspended = user.Status == UserStatus.Suspended,
-                HasGoogleIdentity = !string.IsNullOrWhiteSpace(user.GoogleId),
-                PlayerProfileId = user.Player?.Id
-            };
+            return ToIdentityResponse(user, user.Email ?? string.Empty);
         }
 
         private static UserIdentityResponse ToIdentityResponse(User user, string fallbackEmail)
