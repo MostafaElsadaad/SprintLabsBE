@@ -236,3 +236,6 @@ Task T017: Add GET controller contract tests in DevelopmentAuthenticationControl
 - [ ] T029 Publish after authorization, verify deployment, assign only the chosen staging
   development account to an existing test school/class, then verify player membership and
   School/Class boards across periods. Record live outcome without credentials.
+
+- [x] Add protected catalogue-only leaderboard demo setup, three classes, calendar-stable synthetic matches and normal calculated rewards; ten InMemory/SQLite tests (2026-10-31).
+- [ ] Deploy and run the fixture on staging; verify all class and calendar-period boards with real accounts.

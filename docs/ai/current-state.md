@@ -61,3 +61,21 @@ capacity. Stable tuple retries reuse the license; role/identity/enrollment confl
 rejected. Provider identity, player IDs, progression and normal login remain unchanged.
 See specs/020-production-like-dev-auth/api.md and frontend.md. Twenty-one new SQLite/HTTP
 checks pass. No schema or package changes. Not deployed; no live assignment performed.
+
+## 2026-10-31 staging deployment recovery and demo leaderboard fixture
+
+User merged PR #47, including the persisted-lockout regression without its UserService fix.
+Release tests reproduced one failure. Restored the complete identity mapper as 925db67, then
+merged PR #48 into development as f50316b after reconnecting GitHub securely. Staging workflow
+completed successfully. Prior failed workflow stopped at Test before changing the live container.
+No credentials are in this document, source or diagnostic outputs.
+
+Local SeedLeaderboardDemo action now prepares eight existing catalogue students across three
+classes in an explicitly chosen active school/grade. It reuses capacity-aware enrollment and
+normal calculated match rewards; three tagged synthetic matches dated to UTC period starts
+provide Year/Month/Week test data without resetting progression. Stable per-period keys prevent
+duplicate rewards; fresh per-match scopes preserve interleaved normal rewards. Production and
+ordinary users are refused by existing guard/admin checks. Docs: specs/020-production-like-dev-auth.
+Ten fixture tests passed (including SQLite); no migration or package change. Not yet published
+or invoked on staging. Next: final Release suite/review, publish, invoke once for Demo School
+community 6 / Grade 7 ID33 / base Class7A ID1, and verify actual leaderboard/class subsets.
