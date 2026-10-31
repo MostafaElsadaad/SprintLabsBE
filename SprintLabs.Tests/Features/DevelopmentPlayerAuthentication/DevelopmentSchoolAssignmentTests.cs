@@ -1,3 +1,6 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -203,6 +206,36 @@ public class DevelopmentSchoolAssignmentTests
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name)));
         }
     }
+    [Theory]
+    [InlineData(5, true)]
+    [InlineData(-5, false)]
+    public async Task Persisted_admin_lockout_is_enforced_through_real_user_service(int minutes, bool locked)
+    {
+        await using var f = await Fixture.Create();
+        var admin = await f.Context.Users.SingleAsync(u => u.Id == 40);
+        admin.LockoutEnabled = true; admin.LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(minutes);
+        await f.Context.SaveChangesAsync();
+        using var userStore = new UserStore<User, IdentityRole<long>, ApplicationDbContext, long>(f.Context);
+        using var manager = new UserManager<User>(userStore, Options.Create(new IdentityOptions()),
+            new PasswordHasher<User>(), new IUserValidator<User>[] { new UserValidator<User>() },
+            Array.Empty<IPasswordValidator<User>>(), new UpperInvariantLookupNormalizer(),
+            new IdentityErrorDescriber(), null!, NullLogger<UserManager<User>>.Instance);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        { ["JWTOptions:Secret"] = new string('x', 64), ["JWTOptions:Issuer"] = "test", ["JWTOptions:Audience"] = "test" }).Build();
+        var realUsers = new UserService(configuration, manager);
+        (await realUsers.GetCurrentUser(40))!.IsLockedOut.Should().Be(locked);
+        if (locked)
+        {
+            var action = () => f.Handler(userService: realUsers).Handle(f.Command(), default);
+            (await action.Should().ThrowAsync<GenericException>()).Which.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await f.Context.StudentLicenses.CountAsync()).Should().Be(0);
+        }
+        else
+        {
+            await f.Handler(userService: realUsers).Handle(f.Command(), default);
+            (await f.Context.StudentLicenses.CountAsync()).Should().Be(1);
+        }
+    }
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly SqliteConnection connection = new("Data Source=:memory:");
@@ -232,8 +265,8 @@ public class DevelopmentSchoolAssignmentTests
         public IPlayerRepository PlayerRepository => players.Object;
         public ApplicationDbContext OpenContext() => new SqliteContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
         public AssignDevelopmentSchoolCommand Command() => new() { AdminUserId = 40, AccountKey = Definition.AccountKey, CommunityId = 1, GradeId = 1, ClassId = 1 };
-        public AssignDevelopmentSchoolCommandHandler Handler(IDevelopmentAuthenticationGuard? guard = null) => new(
-            guard ?? Mock.Of<IDevelopmentAuthenticationGuard>(), Users.Object, players.Object,
+        public AssignDevelopmentSchoolCommandHandler Handler(IDevelopmentAuthenticationGuard? guard = null, IUserService? userService = null) => new(
+            guard ?? Mock.Of<IDevelopmentAuthenticationGuard>(), userService ?? Users.Object, players.Object,
             new BaseRepository<Community>(Context), new BaseRepository<CommunityLicense>(Context),
             new BaseRepository<StudentLicense>(Context), new BaseRepository<CommunityUser>(Context),
             new BaseRepository<Grade>(Context), new BaseRepository<Domain.Models.Class>(Context), new StudentEnrollmentTransaction(Context));
@@ -249,4 +282,3 @@ public class DevelopmentSchoolAssignmentTests
         }
     }
 }
-

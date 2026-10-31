@@ -112,3 +112,13 @@ intentional cleanup; no new deletion or broad reset endpoint is added.
 Local validation: 21 new handler/SQLite/HTTP cases pass, including Production/disabled/key
 and ordinary-user denial, no identity override, capacity limits and repeat safety. Live
 assignment requires deployment of this branch; no staging record is changed by these tests.
+
+### 2026-10-31 rollout verification
+
+The setup route is present in staging after PR #46. dev-player-01 was explicitly assigned
+to the existing SprintLabs Demo School / Grade 7 / Class 7A; its active membership and eight
+own School/Class period queries were verified. No setup is performed automatically.
+A subsequent local review correction makes GetCurrentUser use the complete identity mapper,
+so persisted administrator lockouts reach the assignment check. Two real-service regression
+cases bring the focused suite to 23 passing tests. The correction is not yet published;
+this note does not assert that locked-administrator denial is fixed on staging.
