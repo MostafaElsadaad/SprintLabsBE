@@ -46,4 +46,3 @@ public sealed class SeedJourneyDemoCommandHandler(IDevelopmentAuthenticationGuar
     }
     private static GenericException Error(HttpStatusCode status) => new(ErrorCode.Failure, ErrorMessage.InvalidInput, status);
 }
-
