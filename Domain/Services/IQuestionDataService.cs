@@ -7,6 +7,7 @@ namespace Domain.Services;
 
 public interface IQuestionDataService
 {
+    Task<List<JourneyOptionResponse>> GetJourneyCatalogueAsync(CancellationToken ct);
     Task<Guid> PublishAsync(long adminUserId, QuestionDataRequest request, CancellationToken ct);
     Task<ProgressionPage<QuestionDataRequest>> GetBankAsync(QuestionBankFilter filter, CancellationToken ct);
     Task<List<QuestionDataRequest>> ImportLegacyAsync(long adminUserId, long packId, CancellationToken ct);

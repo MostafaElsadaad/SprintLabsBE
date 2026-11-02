@@ -48,11 +48,11 @@ public class GameLeaderboardTests
         Reward(f, 103, 999, Now.AddMinutes(1));
         await f.Context.SaveChangesAsync();
         var week = await f.Reads.GetLeaderboardAsync(1, null, new() { Period = "week", PageSize = 1 }, default);
-        week.Period.Should().Be("Week"); week.Total.Should().Be(2);
+        week.Period.Should().Be("Week"); week.Total.Should().Be(3);
         week.Items.Single().PlayerProfileId.Should().Be(101);
         week.Items.Single().Points.Should().Be(20); week.Items.Single().Rp.Should().Be(450);
         (await f.Reads.GetLeaderboardStandingAsync(2, null, new() { Period = "Week" }, default)).CurrentPlayer!.Position.Should().Be(2);
-        (await f.Reads.GetLeaderboardStandingAsync(3, null, new() { Period = "Week" }, default)).CurrentPlayer.Should().BeNull();
+        (await f.Reads.GetLeaderboardStandingAsync(3, null, new() { Period = "Week" }, default)).CurrentPlayer!.Points.Should().Be(0);
         var month = await f.Reads.GetLeaderboardAsync(1, null, new() { Period = "Month" }, default);
         month.CurrentPlayer!.Points.Should().Be(27);
         var year = await f.Reads.GetLeaderboardAsync(1, null, new() { Period = "Year" }, default);
@@ -182,7 +182,7 @@ public class GameLeaderboardTests
         Reward(f, 101, 17, Now);
         await f.Context.SaveChangesAsync();
         var board = await f.Reads.GetLeaderboardAsync(1, null, new() { Period = "Week" }, default);
-        var row = board.Items.Single();
+        var row = board.Items.Single(x => x.PlayerProfileId == 101);
         row.SchoolName.Should().Be("School");
         row.TotalXp.Should().Be(4114L);
         row.Points.Should().Be(17); row.Rp.Should().Be(450);
@@ -206,6 +206,30 @@ public class GameLeaderboardTests
         var scoped = await f.Reads.GetLeaderboardAsync(1, 2, new(), default);
         scoped.CurrentPlayer!.SchoolName.Should().Be("Other");
         scoped.Items.Single(x => x.PlayerProfileId == 101).SchoolName.Should().Be("Other");
+    }
+
+    [Theory]
+    [InlineData("AllTime")]
+    [InlineData("Year")]
+    [InlineData("Month")]
+    [InlineData("Week")]
+    public async Task Xp_sort_is_distinct_from_rank_and_preserves_paging_and_standing(string period)
+    {
+        using var f = await FixtureAsync(true);
+        f.Context.Players.Single(p => p.Id == 101).Experience = 5000;
+        f.Context.Players.Single(p => p.Id == 102).Experience = 100;
+        Reward(f, 101, 1, Now); Reward(f, 102, 100, Now);
+        foreach (var r in f.Context.ChangeTracker.Entries<MatchRewardResult>())
+            r.Entity.TotalXp = r.Entity.PlayerProfileId == 101 ? 200 : 10;
+        await f.Context.SaveChangesAsync();
+        var request = new LeaderboardRequest { Period = period, PageSize = 1 };
+        request.SortBy = "Xp";
+        var page = await f.Reads.GetLeaderboardAsync(1, null, request, default);
+        page.Items.Single().PlayerProfileId.Should().Be(101);
+        page.CurrentPlayer!.Position.Should().Be(1);
+        page.Items.Single().Points.Should().Be(period == "AllTime" ? 5000 : 200);
+        request.Page = 2;
+        (await f.Reads.GetLeaderboardAsync(1, null, request, default)).Items.Single().PlayerProfileId.Should().Be(102);
     }
 
     private static async Task ErrorAsync(Func<Task> action, HttpStatusCode status)

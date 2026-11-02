@@ -53,6 +53,8 @@ public partial class ProgressionReadService
         LeaderboardQueryAsync(long userId, long? communityId, LeaderboardRequest request, CancellationToken ct)
     {
         ValidatePage(request);
+        bool sortXp = string.Equals(request.SortBy, "Xp", StringComparison.OrdinalIgnoreCase);
+        if (!sortXp && !string.Equals(request.SortBy, "Rank", StringComparison.OrdinalIgnoreCase)) throw Invalid();
         var now = _clock.GetUtcNow().UtcDateTime;
         var (period, start, end) = LeaderboardPeriod(request.Period, now);
         var user = await CallerAsync(userId, ct);
@@ -71,7 +73,6 @@ public partial class ProgressionReadService
             r.Match.MatchType == Domain.Enums.MatchType.Ranked && r.Match.CompletedAt >= start &&
             r.Match.CompletedAt < end && r.Match.CompletedAt <= now &&
             (!communityId.HasValue || r.Match.CommunityId == communityId));
-        if (start.HasValue) players = players.Where(p => rewards.Any(r => r.PlayerProfileId == p.Id));
         var query = players.Select(p => new LeaderboardEntryResponse
         {
             PlayerProfileId = p.Id, Name = p.Name, AvatarUrl = p.AvatarUrl, Rp = p.Rp,
@@ -82,9 +83,9 @@ public partial class ProgressionReadService
                     l.Grade.CommunityId == l.CommunityId && l.Class.GradeId == l.GradeId &&
                     (!communityId.HasValue || l.CommunityId == communityId))
                 .OrderBy(l => l.CommunityId).ThenBy(l => l.Id).Select(l => l.Community.Name).FirstOrDefault(),
-            Points = start.HasValue
-                ? rewards.Where(r => r.PlayerProfileId == p.Id).Sum(r => (long?)r.RpChange) ?? 0
-                : (long)p.Rp,
+            Points = sortXp
+                ? (start.HasValue ? rewards.Where(r => r.PlayerProfileId == p.Id).Sum(r => (long?)r.TotalXp) ?? 0 : (long)p.Experience)
+                : (start.HasValue ? rewards.Where(r => r.PlayerProfileId == p.Id).Sum(r => (long?)r.RpChange) ?? 0 : (long)p.Rp),
             RankTier = p.RankTier.ToString(), Level = p.Level, TotalWins = p.TotalWins
         });
         return (query, period, start, end, filters);

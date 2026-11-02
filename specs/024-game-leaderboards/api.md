@@ -105,3 +105,18 @@ from the scalar page key and silently use default AllTime/20/unfiltered values. 
 empty model prefix fixes this without route, DTO or service changes. Invalid and unauthorized
 filters still return their documented errors even when page is present. Nine real HTTP tests
 failed before the change and pass afterward, including page2 and all four periods.
+
+## 2026-11-02: explicit XP/rank sorting (not yet deployed)
+
+Existing GET leaderboard list and standing routes accept optional `sortBy=Rank|Xp`
+(case-insensitive; default Rank; invalid values return 400). Authentication and school/class
+authorization are unchanged. No new response shape, identity, or write operation is introduced.
+`Points` sorts by Xp: lifetime Experience for AllTime, or the sum of TotalXp from settled
+ranked matches in the selected UTC Week/Month/Year. `Rank` retains current RP or period
+RpChange. School periods remain restricted to matches in that school. Stable profile-ID
+tie-breaking, pagination, and pinned standing use the selected metric. Display TotalXp
+independently of ordering. Preserve sortBy across scope, period, and page changes, reset
+to page1 on a sort change, and discard responses for a previous sort.
+Example: `GET /api/v1/Ranking/leaderboard?period=Week&page=1&pageSize=20&sortBy=Xp`.
+Empty/error/permission behavior remains unchanged. Period boards include every eligible scoped
+player, including inactive players with zero period points. Zero outranks negative period RP.
