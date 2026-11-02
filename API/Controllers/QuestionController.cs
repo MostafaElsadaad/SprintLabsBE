@@ -27,6 +27,13 @@ namespace API.Controllers
         }
 
 
+        [HttpGet("journeys"), AllowAnonymous]
+        public async Task<IActionResult> Journeys(CancellationToken ct)
+        {
+            var options = await _mediator.Send(new Application.Features.Questions.GetJourneyCatalogue.GetJourneyCatalogueQuery(), ct);
+            return Ok(new BaseResponse<List<JourneyOptionResponse>>(options, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+        }
+
         [HttpGet, AllowAnonymous]
         public async Task<IActionResult> GetQuestions([FromQuery] QuestionBankFilter filter, int? assignment, CancellationToken ct)
         {

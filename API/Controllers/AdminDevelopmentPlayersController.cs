@@ -1,3 +1,4 @@
+using Application.Features.Accounts.DevelopmentAuthentication.SeedJourneyDemo;
 using Application.Features.Accounts.DevelopmentAuthentication.SeedLeaderboardDemo;
 using System.Net;
 using Application.Features.Accounts.DevelopmentAuthentication.AssignDevelopmentSchool;
@@ -16,6 +17,14 @@ namespace API.Controllers;
 [RequestSizeLimit(16 * 1024)]
 public sealed class AdminDevelopmentPlayersController(IMediator mediator) : ControllerBase
 {
+    [HttpPost("journey-demo")]
+    public async Task<IActionResult> SeedJourneyDemo(CancellationToken ct)
+    {
+        if (!long.TryParse(User.FindFirst("userId")?.Value, out var adminId) || adminId <= 0) return Unauthorized();
+        var result = await mediator.Send(new SeedJourneyDemoCommand { AdminUserId = adminId,
+            SuppliedApiKeys = Request.Headers[DevelopmentAuthenticationOptions.HeaderName].Where(v => v != null).Select(v => v!).ToArray() }, ct);
+        return Ok(new BaseResponse<SeedJourneyDemoResponse>(result, ErrorMessage.Success, HttpStatusCode.OK, ErrorCode.Success));
+    }
     [HttpPost("leaderboard-demo")]
     public async Task<IActionResult> SeedLeaderboardDemo([FromBody] SeedLeaderboardDemoRequest request, CancellationToken ct)
     {

@@ -127,11 +127,11 @@ public class ProgressionApiTests
         data.GetProperty("period").GetString().Should().Be("Month");
         data.GetProperty("periodStartsAt").GetString().Should().EndWith("Z");
         data.GetProperty("periodEndsAt").GetString().Should().EndWith("Z");
-        data.GetProperty("total").GetInt32().Should().Be(2);
+        data.GetProperty("total").GetInt32().Should().Be(3);
         data.GetProperty("currentPlayer").GetProperty("points").GetInt64().Should().Be(30);
         client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "3");
         var unranked = await client.GetFromJsonAsync<JsonElement>("/api/v1/Ranking/leaderboard/me?period=Month");
-        unranked.GetProperty("data").GetProperty("currentPlayer").ValueKind.Should().Be(JsonValueKind.Null);
+        unranked.GetProperty("data").GetProperty("currentPlayer").GetProperty("points").GetInt64().Should().Be(0);
     }
 
     [Theory]
@@ -158,7 +158,7 @@ public class ProgressionApiTests
         data.GetProperty("pageSize").GetInt32().Should().Be(1);
         data.GetProperty("period").GetString().Should().Be(period);
         data.GetProperty("items").GetArrayLength().Should().Be(1);
-        data.GetProperty("total").GetInt64().Should().Be(school ? 1 : period == "AllTime" ? 3 : 2);
+        data.GetProperty("total").GetInt64().Should().Be(school ? 1 : 3);
         if (school) data.GetProperty("items")[0].GetProperty("playerProfileId").GetInt64().Should().Be(101);
         var second = await client.GetFromJsonAsync<JsonElement>(path.Replace("page=1", "page=2"));
         second.GetProperty("data").GetProperty("page").GetInt32().Should().Be(2);

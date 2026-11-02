@@ -22,6 +22,44 @@ public class QuestionDataServiceTests
     };
 
     [Fact]
+    public async Task Journey_demo_is_repeatable_and_each_scope_contains_three_questions()
+    {
+        await using var f = await Fixture.CreateAsync();
+        var fixtures = Application.Features.Accounts.DevelopmentAuthentication.SeedJourneyDemo.JourneyDemoContent.Create();
+        Assert.Equal(12, fixtures.Count);
+        foreach (var q in fixtures) await f.Service.PublishAsync(40, q, default);
+        foreach (var q in Application.Features.Accounts.DevelopmentAuthentication.SeedJourneyDemo.JourneyDemoContent.Create())
+            await f.Service.PublishAsync(40, q, default);
+        var options = await f.Service.GetJourneyCatalogueAsync(default);
+        Assert.Equal(4, options.Count);
+        foreach (var option in options)
+        {
+            Assert.Equal("SprintLab Test High School", option.Curriculum);
+            Assert.Equal(10, option.Grade);
+            var bank = await f.Service.GetBankAsync(new() { Curriculum = option.Curriculum, Grade = option.Grade,
+                Subject = option.Subject, Unit = option.Unit }, default);
+            Assert.Equal(3, bank.Items.Count);
+            Assert.All(bank.Items, q => Assert.Single(q.Choices.Where(c => c.IsCorrect == true)));
+        }
+    }
+
+    [Fact]
+    public async Task Journey_catalogue_is_distinct_and_preserves_full_question_scope()
+    {
+        await using var f = await Fixture.CreateAsync();
+        var a = Mcq(); await f.Service.PublishAsync(40, a, default);
+        var b = Mcq(); b.QuestionId = Guid.NewGuid(); b.Subject = "Physics"; b.Unit = 2;
+        foreach (var c in b.Choices) c.ChoiceId = Guid.NewGuid().ToString();
+        await f.Service.PublishAsync(40, b, default);
+        var options = await f.Service.GetJourneyCatalogueAsync(default);
+        Assert.Equal(2, options.Count);
+        Assert.Contains(options, x => x.Curriculum == "Egypt" && x.Grade == 7 && x.Subject == "Physics" && x.Unit == 2);
+        var bank = await f.Service.GetBankAsync(new() { Curriculum = "Egypt", Grade = 7, Subject = "Physics", Unit = 2 }, default);
+        Assert.Equal(b.QuestionId, Assert.Single(bank.Items).QuestionId);
+        Assert.Empty((await f.Service.GetBankAsync(new() { Curriculum = "Other", Grade = 7, Subject = "Physics", Unit = 2 }, default)).Items);
+    }
+
+    [Fact]
     public async Task Publish_preserves_uuid_and_choices_and_identical_retry_does_not_duplicate()
     {
         await using var f = await Fixture.CreateAsync();
