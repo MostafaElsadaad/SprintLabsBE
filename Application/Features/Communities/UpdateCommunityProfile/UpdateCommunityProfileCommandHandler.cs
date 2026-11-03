@@ -93,6 +93,7 @@ public class UpdateCommunityProfileCommandHandler
                 errorCode: ErrorCode.Failure);
         }
 
+        CommunityTermPolicy.Apply(community, request.Term);
         community.Name = name;
         community.Slug = slug;
         community.UpdatedAt = DateTime.UtcNow;
@@ -105,7 +106,7 @@ public class UpdateCommunityProfileCommandHandler
             Id = community.Id,
             Name = community.Name,
             Slug = community.Slug,
-            Status = community.Status.ToString()
+            Status = community.Status.ToString(), Term = CommunityTermPolicy.Read(community)
         };
     }
 

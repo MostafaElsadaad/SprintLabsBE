@@ -7,6 +7,9 @@ public class Community
     public long Id { get; set; }
     public string Name { get; set; } = default!;
     public string Slug { get; set; } = default!;
+    public string? TermName { get; set; }
+    public DateOnly? TermStartDate { get; set; }
+    public DateOnly? TermEndDate { get; set; }
     public CommunityStatus Status { get; set; } = CommunityStatus.Active;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

@@ -28,6 +28,58 @@ namespace Compass.Tests.Features.CommunityDashboard;
 public class DashboardApiTests
 {
     [Fact]
+    public async Task Teacher_reporting_exposes_unavailable_term_and_explicit_score_periods()
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        using var server = Server(f); using var client = server.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", "20");
+        var dashboard = await Data(client, "/api/v1/CommunityDashboard/dashboard");
+        dashboard.GetProperty("classes")[0].GetProperty("termProgress").ValueKind.Should().Be(JsonValueKind.Null);
+        dashboard.GetProperty("classes")[0].GetProperty("term").ValueKind.Should().Be(JsonValueKind.Null);
+        var students = await Data(client, "/api/v1/Communities/students?classId=1");
+        var period = students.GetProperty("items")[0].GetProperty("scorePeriod");
+        period.GetProperty("type").GetString().Should().Be("ALL_TIME");
+        period.GetProperty("name").GetString().Should().Be("All recorded activity");
+        period.GetProperty("startDate").ValueKind.Should().Be(JsonValueKind.Null);
+        period.GetProperty("endDate").ValueKind.Should().Be(JsonValueKind.Null);
+        var detail = await Data(client, "/api/v1/Communities/classes/1");
+        detail.GetProperty("scorePeriod").GetProperty("type").GetString().Should().Be("UNAVAILABLE");
+    }
+
+    [Fact]
+    public async Task Owner_term_configuration_flows_to_teacher_classes_with_iso_dates_and_scope()
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        using var server = Server(f); using var client = server.CreateClient();
+        var body = new { name = "School One", slug = "one", term = new { name = "Archived term", startDate = "2000-01-01", endDate = "2000-06-30" } };
+        client.DefaultRequestHeaders.Add("X-Test-User", "20");
+        (await client.PatchAsJsonAsync("/api/v1/Communities/me", body)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "10");
+        var update = await client.PatchAsJsonAsync("/api/v1/Communities/me", body);
+        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        var profile = (await update.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
+        profile.GetProperty("term").GetProperty("startDate").GetString().Should().Be("2000-01-01");
+        (await client.PatchAsJsonAsync("/api/v1/Communities/me", new { name = "School One", slug = "one",
+            term = new { name = "Invalid", startDate = "2000-07-01", endDate = "2000-06-30" } })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", "20");
+        var dashboard = await Data(client, "/api/v1/CommunityDashboard/dashboard");
+        var row = dashboard.GetProperty("classes")[0];
+        row.GetProperty("termProgress").GetDecimal().Should().Be(100m);
+        row.GetProperty("term").GetProperty("name").GetString().Should().Be("Archived term");
+        row.GetProperty("term").GetProperty("endDate").GetString().Should().Be("2000-06-30");
+        row.GetProperty("term").GetProperty("progressDefinition").GetString().Should().Contain("UTC");
+        var detail = await Data(client, "/api/v1/Communities/classes/1");
+        detail.GetProperty("termProgress").GetDecimal().Should().Be(100m);
+        var roster = await Data(client, "/api/v1/Communities/classes");
+        roster.GetProperty("items")[0].GetProperty("termProgress").GetDecimal().Should().Be(100m);
+        (await client.GetAsync("/api/v1/Communities/classes/3")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var student = await Data(client, "/api/v1/Communities/students/1");
+        student.GetProperty("analytics").GetProperty("scorePeriod").GetProperty("type").GetString().Should().Be("ALL_TIME");
+        // A completed term does not alter the existing all-time student score calculation.
+        student.GetProperty("analytics").GetProperty("averageScore").GetDecimal().Should().Be(0);
+    }
+
+    [Fact]
     public async Task Swagger_document_generates_with_student_multipart_upload()
     {
         using var f = new DashboardFixture();
@@ -98,11 +150,11 @@ public class DashboardApiTests
             row.GetProperty(field).GetDecimal().Should().Be(0);
         var classes = row.GetProperty("classes");
         classes.GetArrayLength().Should().Be(1);
-        Keys(classes[0], "id", "name", "grade", "studentsCount", "nextSession");
+        Keys(classes[0], "id", "name", "grade", "studentsCount", "nextSession", "termProgress", "term");
         classes[0].GetProperty("grade").GetInt32().Should().Be(7);
         classes[0].GetProperty("nextSession").ValueKind.Should().Be(JsonValueKind.Null);
         var detail = await Data(client, "/api/v1/Communities/classes/1");
-        Keys(detail, "id", "name", "grade", "teacherName", "createdAt", "studentsCount", "avgScore", "inactiveStudentsCount");
+        Keys(detail, "id", "name", "grade", "teacherName", "createdAt", "studentsCount", "avgScore", "inactiveStudentsCount", "termProgress", "term", "scorePeriod");
         detail.GetProperty("teacherName").GetString().Should().Be("User 20");
         detail.GetProperty("avgScore").GetDecimal().Should().Be(0);
         detail.GetProperty("inactiveStudentsCount").GetInt32().Should().Be(0);
@@ -126,20 +178,20 @@ public class DashboardApiTests
         Keys(page, "items", "page", "pageSize", "total");
         page.GetProperty("total").GetInt32().Should().Be(2);
         var row = page.GetProperty("items")[0];
-        Keys(row, "id", "name", "grade", "teachers", "studentsCount", "status");
+        Keys(row, "id", "name", "grade", "teachers", "studentsCount", "status", "termProgress", "term");
         Keys(row.GetProperty("grade"), "id", "name");
         row.GetProperty("teachers").GetArrayLength().Should().Be(2);
         var secondPage = await Data(client, "/api/v1/Communities/classes?page=2&pageSize=1");
         secondPage.GetProperty("items")[0].GetProperty("id").GetInt64().Should().Be(2);
         var detail = await Data(client, "/api/v1/Communities/classes/1");
-        Keys(detail, "id", "name", "grade", "status", "teachers", "studentsCount", "avgScore", "createdAt", "lastActiveAt", "studentsPreview");
+        Keys(detail, "id", "name", "grade", "status", "teachers", "studentsCount", "avgScore", "createdAt", "lastActiveAt", "studentsPreview", "termProgress", "term", "scorePeriod");
         Keys(detail.GetProperty("studentsPreview")[0], "id", "fullName");
         var grades = await Data(client, "/api/v1/Communities/grades");
         grades.GetArrayLength().Should().Be(6);
         Keys(grades[0], "id", "name", "classesCount", "studentsCount");
         var students = await Data(client, "/api/v1/Communities/students?classId=1&page=1");
         Keys(students, "items", "page", "pageSize", "total");
-        Keys(students.GetProperty("items")[0], "id", "fullName", "avgScore", "sessionsCount", "status", "studentCode", "email", "class", "grade", "licenseStatus", "joinedAt", "activatedAt");
+        Keys(students.GetProperty("items")[0], "id", "fullName", "avgScore", "sessionsCount", "status", "studentCode", "email", "class", "grade", "licenseStatus", "joinedAt", "activatedAt", "scorePeriod");
         students.GetProperty("items")[0].GetProperty("sessionsCount").GetInt32().Should().Be(0);
         var teachers = await Data(client, "/api/v1/Communities/teachers");
         Keys(teachers.GetProperty("items")[0], "id", "fullName", "title", "teacherCode", "grade", "classes", "studentsCount", "joinedAt", "status");

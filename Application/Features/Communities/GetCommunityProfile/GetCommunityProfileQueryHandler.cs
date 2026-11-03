@@ -68,7 +68,7 @@ public class GetCommunityProfileQueryHandler : IRequestHandler<GetCommunityProfi
             Id = community.Id,
             Name = community.Name,
             Slug = community.Slug,
-            Status = community.Status.ToString()
+            Status = community.Status.ToString(), Term = CommunityTermPolicy.Read(community)
         };
     }
 

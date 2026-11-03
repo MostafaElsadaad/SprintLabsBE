@@ -1,0 +1,16 @@
+# Teacher term progress and score reporting periods
+
+Date: 2026-11-03. Source: K:/Projects/DotNet/BACKEND_API_REQUIREMENTS.md.
+Status: Implemented and locally verified; live migration/seed validation pending.
+
+The user confirmed calendar elapsed time for class term progress and all recorded activity for existing score periods. This supersedes the original dashboard term-progress deferral only. Student/search/statistics/match APIs are not new feature requests; game creation, scheduling, joining, attendance and realtime data remain excluded.
+
+Extend existing APIs, keeping numeric IDs, envelopes and staff/class scope. Persist one optional current term per community with name, start date and inclusive end date. Progress equals UTC elapsed time from start midnight divided by time through the midnight following end date, clamped 0–100 and rounded to two decimals. Missing/invalid legacy dates mean null progress and null term, not fabricated zero. Community current term applies to its classes. This is elapsed calendar progress, not curriculum completion or student performance.
+
+Expose termProgress and term {name,startDate,endDate,progressDefinition} on teacher dashboard classes and existing class list/detail. Dates are ISO calendar dates. Reuse GET/PATCH Communities/me to read/configure current term, with optional nested term input. Omitting or setting term:null leaves it unchanged; term:{} clears all three values. Partial/blank/overlong/invalid/reversed dates return 400; normal existing profile edits preserve term configuration. Only an active owner may edit. No new endpoint family.
+
+Existing student roster avgScore and detail analytics.averageScore use all persisted completed community matches, not a term/year/date filter. Add scorePeriod {type:ALL_TIME,name:All recorded activity,startDate:null,endDate:null,definition} next to existing scores. All-time is deliberately unbounded; null bounds are not missing term data. Class detail avgScore remains its existing deferred zero placeholder and must use scorePeriod.type=UNAVAILABLE, name=Not available, null bounds and a clear definition; do not claim the placeholder is a measured aggregate. No unrelated score calculation change or fabricated match results.
+
+Seed only the existing Development demo community when all term fields are empty. Use a clearly labeled demo calendar-quarter term containing the UTC seed date, with real quarter start/inclusive end dates. Preserve all existing term/custom data on rerun, including partial legacy configuration. Do not seed scores, matches or player progression for this request. Production communities remain unset unless configured.
+
+Add a forward/backward migration for three nullable Communities columns only, no backfill for real schools. Scope migration/snapshot carefully around existing unrelated question work. Provide API/frontend docs and focused tests for UTC boundaries, rounding, missing/invalid configuration, tenant/class isolation, owner-only updates, score metadata and seed idempotency. Build and full regressions are required; report baseline failures separately. User authorized feature publication, PR merge and staging migration/seed on 2026-11-03; preserve unrelated local work.

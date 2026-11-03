@@ -10,4 +10,5 @@ public class UpdateCommunityProfileCommand : IRequest<CommunityProfileResponse>
     public long CommunityId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
+    public Shared.Requests.CommunityTermRequest? Term { get; set; }
 }

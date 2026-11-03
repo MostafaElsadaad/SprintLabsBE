@@ -4,4 +4,5 @@ public class UpdateCommunityProfileRequest
 {
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
+    public Shared.Requests.CommunityTermRequest? Term { get; set; }
 }
