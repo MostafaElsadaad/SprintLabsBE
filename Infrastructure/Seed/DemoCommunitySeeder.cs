@@ -40,6 +40,16 @@ public static class DemoCommunitySeeder
             throw new InvalidOperationException("Demo community slug belongs to incompatible data.");
         }
 
+        if (community.TermName == null && community.TermStartDate == null && community.TermEndDate == null)
+        {
+            var now = DateTime.UtcNow;
+            var quarter = (now.Month - 1) / 3;
+            var start = new DateOnly(now.Year, quarter * 3 + 1, 1);
+            community.TermName = $"Demo term {now.Year} Q{quarter + 1} (sample calendar)";
+            community.TermStartDate = start;
+            community.TermEndDate = start.AddMonths(3).AddDays(-1);
+        }
+
         foreach (var value in Enumerable.Range(7, 6))
         {
             if (!await context.Grades.AnyAsync(x => x.CommunityId == community.Id && x.Value == value, cancellationToken))

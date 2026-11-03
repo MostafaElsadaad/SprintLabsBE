@@ -4,6 +4,7 @@ using Domain.Repositories;
 using Domain.Services;
 using Microsoft.EntityFrameworkCore;
 using Shared.Responses;
+using Application.Features.Communities.Common;
 
 namespace Application.Features.CommunityDashboard.Common;
 
@@ -48,7 +49,7 @@ public class DashboardProjection
 
     public async Task<List<ClassView>> ClassesAsync(DashboardScope scope, CancellationToken ct)
     {
-        var classes = await _classes.AsQueryable().AsNoTracking().Include(x => x.Grade)
+        var classes = await _classes.AsQueryable().AsNoTracking().Include(x => x.Grade).Include(x => x.Community)
             .Where(x => x.CommunityId == scope.CommunityId && scope.ClassIds.Contains(x.Id)).ToListAsync(ct);
         var ids = classes.Select(x => x.Id).ToList();
         var assignments = await _assignments.AsQueryable().AsNoTracking()
@@ -59,12 +60,14 @@ public class DashboardProjection
         var counts = await _licenses.AsQueryable().AsNoTracking().Where(x => x.CommunityId == scope.CommunityId &&
             ids.Contains(x.ClassId) && x.Status != StudentLicenseStatus.Revoked)
             .GroupBy(x => x.ClassId).Select(x => new { Id = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.Id, x => x.Count, ct);
+        var now = DateTimeOffset.UtcNow;
         return classes.Select(x => new ClassView
         {
             Id = x.Id, Name = x.Name, Grade = new GradeSummary { Id = x.GradeId, Value = x.Grade.Value ?? 0, Name = x.Grade.Name },
             Teachers = assignments.Where(a => a.ClassId == x.Id && teachers.ContainsKey(a.TeacherUserId))
                 .OrderBy(a => a.TeacherUserId).Select(a => new TeacherSummary { Id = a.TeacherUserId, FullName = teachers[a.TeacherUserId].Name }).ToList(),
             StudentsCount = counts.GetValueOrDefault(x.Id), CreatedAt = x.CreatedAt,
+            Term = CommunityTermPolicy.Read(x.Community), TermProgress = CommunityTermPolicy.Progress(CommunityTermPolicy.Read(x.Community), now),
             Status = x.Status == ClassStatus.Deleted ? "ARCHIVED" :
                 assignments.Any(a => a.ClassId == x.Id) ? "ACTIVE" : "NO_TEACHER"
         }).ToList();

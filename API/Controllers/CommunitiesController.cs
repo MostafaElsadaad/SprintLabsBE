@@ -117,7 +117,8 @@ public partial class CommunitiesController : ControllerBase
             UserId = userId.Value,
             CommunityId = communityId,
             Name = request.Name,
-            Slug = request.Slug
+            Slug = request.Slug,
+            Term = request.Term
         });
 
         return Ok(new BaseResponse<CommunityProfileResponse>(

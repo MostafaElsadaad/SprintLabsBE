@@ -18,6 +18,27 @@ namespace Compass.Tests.Features.DemoCommunitySeed;
 public class DemoCommunitySeederTests
 {
     [Fact]
+    public async Task SeedAsync_adds_sample_term_only_when_empty_and_preserves_existing_configuration()
+    {
+        await using var context = CreateContext();
+        var manager = CreateUserManager(context);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        await DemoCommunitySeeder.SeedAsync(context, manager);
+        var demo = await context.Communities.SingleAsync();
+        demo.TermName.Should().Contain("sample calendar");
+        demo.TermStartDate.Should().BeOnOrBefore(today);
+        demo.TermEndDate.Should().BeOnOrAfter(today);
+        demo.TermName = "Custom term"; demo.TermStartDate = new(2026, 8, 20); demo.TermEndDate = new(2027, 1, 18);
+        await context.SaveChangesAsync();
+        await DemoCommunitySeeder.SeedAsync(context, manager);
+        demo.TermName.Should().Be("Custom term");
+        demo.TermStartDate.Should().Be(new DateOnly(2026, 8, 20));
+        demo.TermEndDate.Should().Be(new DateOnly(2027, 1, 18));
+        context.Matches.Should().BeEmpty();
+        context.MatchPlayers.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SeedAsync_reserves_four_student_import_seats_and_preserves_higher_limits()
     {
         await using var context = CreateContext();

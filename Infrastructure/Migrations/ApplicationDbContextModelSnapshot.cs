@@ -122,6 +122,16 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(1);
 
+                    b.Property<DateOnly?>("TermEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("TermName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateOnly?>("TermStartDate")
+                        .HasColumnType("date");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -130,7 +140,10 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Communities");
+                    b.ToTable("Communities", t =>
+                        {
+                            t.HasCheckConstraint("CK_Communities_TermDates", "(`TermName` IS NULL AND `TermStartDate` IS NULL AND `TermEndDate` IS NULL) OR (`TermName` IS NOT NULL AND LENGTH(TRIM(`TermName`)) > 0 AND `TermStartDate` IS NOT NULL AND `TermEndDate` IS NOT NULL AND `TermStartDate` >= '1000-01-01' AND `TermEndDate` >= `TermStartDate` AND `TermEndDate` < '9999-12-31')");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.CommunityLicense", b =>

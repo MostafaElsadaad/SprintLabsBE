@@ -30,6 +30,7 @@ public class GetDashboardClassQueryHandler : IRequestHandler<GetDashboardClassQu
             IsOwner = scope.IsOwner, TeacherName = row.Teachers.FirstOrDefault(x => x.Id == request.UserId)?.FullName ?? string.Empty,
             Id = row.Id, Name = row.Name, Grade = row.Grade, Teachers = row.Teachers,
             StudentsCount = row.StudentsCount, CreatedAt = row.CreatedAt, Status = row.Status,
+            Term = row.Term, TermProgress = row.TermProgress,
             StudentsPreview = (await _projection.StudentsAsync(scope, request.ClassId, ct))
                 .OrderBy(x => x.FullName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Id).Take(4).ToList()
         };

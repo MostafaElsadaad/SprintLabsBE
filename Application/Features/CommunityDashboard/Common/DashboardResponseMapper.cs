@@ -23,7 +23,7 @@ public static class DashboardResponseMapper
             AvgHoursPerStudent = row.AvgHoursPerStudent ?? 0,
             Classes = row.Classes.Select(x => new
             {
-                x.Id, x.Name, Grade = x.Grade.Value, x.StudentsCount, NextSession = (DateTime?)null
+                x.Id, x.Name, Grade = x.Grade.Value, x.StudentsCount, NextSession = (DateTime?)null, x.TermProgress, x.Term
             })
         };
         return new
@@ -40,7 +40,7 @@ public static class DashboardResponseMapper
     public static object Class(ClassView row) => new
     {
         row.Id, row.Name, Grade = new { row.Grade.Id, row.Grade.Name },
-        row.Teachers, row.StudentsCount, row.Status
+        row.Teachers, row.StudentsCount, row.Status, row.TermProgress, row.Term
     };
 
     public static object ClassDetail(ClassDetail row)
@@ -48,13 +48,15 @@ public static class DashboardResponseMapper
         if (!row.IsOwner) return new
         {
             row.Id, row.Name, Grade = row.Grade.Value, row.TeacherName, row.CreatedAt,
-            row.StudentsCount, AvgScore = row.AvgScore ?? 0, InactiveStudentsCount = row.InactiveStudentsCount ?? 0
+            row.StudentsCount, AvgScore = row.AvgScore ?? 0, InactiveStudentsCount = row.InactiveStudentsCount ?? 0,
+            row.TermProgress, row.Term, ScorePeriod = ScoreReportingPeriod.Unavailable
         };
         return new
         {
             row.Id, row.Name, Grade = new { row.Grade.Id, row.Grade.Name }, row.Status, row.Teachers,
             row.StudentsCount, AvgScore = row.AvgScore ?? 0, row.CreatedAt, row.LastActiveAt,
-            StudentsPreview = row.StudentsPreview.Select(x => new { x.Id, x.FullName })
+            StudentsPreview = row.StudentsPreview.Select(x => new { x.Id, x.FullName }),
+            row.TermProgress, row.Term, ScorePeriod = ScoreReportingPeriod.Unavailable
         };
     }
 
@@ -62,7 +64,8 @@ public static class DashboardResponseMapper
     {
         row.Id, row.FullName, AvgScore = row.AvgScore ?? 0, SessionsCount = row.SessionsCount ?? 0,
         row.Status, row.StudentCode, row.Email, Class = new { Id = row.ClassId, Name = row.ClassName },
-        row.Grade, LicenseStatus = row.LicenseStatus.ToUpperInvariant(), row.JoinedAt, row.ActivatedAt
+        row.Grade, LicenseStatus = row.LicenseStatus.ToUpperInvariant(), row.JoinedAt, row.ActivatedAt,
+        ScorePeriod = new ScoreReportingPeriod()
     };
 
     private static string? TeacherGrade(TeacherView row) => row.Grades.Count == 0 ? null :

@@ -251,6 +251,13 @@ namespace Infrastructure.DataAccess
 
             modelBuilder.Entity<Community>(e =>
             {
+                e.Property(x => x.TermName).HasMaxLength(100);
+                e.Property(x => x.TermStartDate).HasColumnType("date");
+                e.Property(x => x.TermEndDate).HasColumnType("date");
+                e.ToTable(t => t.HasCheckConstraint("CK_Communities_TermDates",
+                    "(`TermName` IS NULL AND `TermStartDate` IS NULL AND `TermEndDate` IS NULL) OR " +
+                    "(`TermName` IS NOT NULL AND LENGTH(TRIM(`TermName`)) > 0 AND `TermStartDate` IS NOT NULL AND `TermEndDate` IS NOT NULL AND " +
+                    "`TermStartDate` >= '1000-01-01' AND `TermEndDate` >= `TermStartDate` AND `TermEndDate` < '9999-12-31')"));
                 e.Property(x => x.Name)
                     .IsRequired()
                     .HasMaxLength(200);

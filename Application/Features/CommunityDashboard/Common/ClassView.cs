@@ -9,4 +9,6 @@ public class ClassView
     public int StudentsCount { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public Shared.Responses.CommunityTermResponse? Term { get; set; }
+    public decimal? TermProgress { get; set; }
 }

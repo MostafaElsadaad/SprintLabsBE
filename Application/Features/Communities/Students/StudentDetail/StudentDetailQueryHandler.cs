@@ -26,6 +26,6 @@ public class StudentDetailQueryHandler(StudentRosterService roster, DashboardAut
             row.ClassId, row.ClassName, GradeId = row.Grade.Id, GradeName = row.Grade.Name, row.JoinedAt, row.ActivatedAt, CreatedAt = row.JoinedAt,
             AvatarUrl = player?.AvatarUrl, Gold = player?.Gold ?? 0, Experience = player?.Experience ?? 0, Level = player?.Level ?? 0,
             Analytics = new { CompletedAssignments = 0, analytics.MatchesPlayed, SessionsCount = analytics.MatchesPlayed,
-                analytics.AverageScore, analytics.WinRate, analytics.Wins, analytics.CorrectAnswers, analytics.WrongAnswers, analytics.LastActivityAt } };
+                analytics.AverageScore, ScorePeriod = new ScoreReportingPeriod(), analytics.WinRate, analytics.Wins, analytics.CorrectAnswers, analytics.WrongAnswers, analytics.LastActivityAt } };
     }
 }

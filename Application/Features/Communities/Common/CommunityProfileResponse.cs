@@ -6,4 +6,5 @@ public class CommunityProfileResponse
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public Shared.Responses.CommunityTermResponse? Term { get; set; }
 }
