@@ -82,3 +82,16 @@ community 6 / Grade 7 ID33 / base Class7A ID1, and verify actual leaderboard/cla
 ## 2026-11-07 - Local dashboard staging fixes
 
 Clean publication worktree is on codex/staging-dashboard-fixes with uncommitted email-link and scoped student teacher-filter changes. Existing staging deployment is unchanged. No migration, seed or package change. Release suite: 792 passed, 15 opt-in MySQL tests skipped. See specs/028-staging-dashboard-fixes/api.md and frontend.md for contract and rollout checks. Deploy the matching frontend and backend, then retest fresh email links and all three public UI roles. Original backend checkout edits were preserved.
+
+## 2026-11-07 - Dashboard fixes deployed to staging
+
+PR #54 merged into development as e8d31b7; staging workflow 42403030539 succeeded.
+Companion frontend PR #10 merged as bdfcfbb and workflow 42403045428 attempt 3
+activated the new dashboard release. Twelve live API/email checks passed:
+owner/teacher login, unchanged demo student totals, scoped teacher roster/stats/
+CSV export, invalid filter rejection, teacher authorization, and fresh QA reset
+email host/base/auth route plus HTTP availability. Frontend Chrome checks covered
+all three role views and teacher direct owner-route rejection. No migrations,
+seed changes or seeded password/enrollment writes. Public full mutation/mobile
+acceptance still remains; see frontend STAGING_DASHBOARD_FIXES.md for deployment
+key/cache configuration and backend specs/028-staging-dashboard-fixes for contracts.
