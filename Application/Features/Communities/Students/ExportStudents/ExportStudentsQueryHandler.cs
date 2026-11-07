@@ -13,7 +13,7 @@ public class ExportStudentsQueryHandler(StudentRosterService roster, IStudentRos
     {
         var format = request.Format.ToLowerInvariant();
         if (format is not ("csv" or "xlsx")) throw DashboardAuthorization.Invalid();
-        var rows = await roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, request.Status, ct);
+        var rows = await roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, request.Status, ct, request.TeacherId);
         if (rows.Count > 10000) throw DashboardAuthorization.Invalid();
         var content = rows.Select(x => new[] { x.StudentCode, x.FullName, x.Email, x.Status, x.LicenseStatus.ToUpperInvariant(),
             x.ClassId.ToString(CultureInfo.InvariantCulture), x.ClassName, x.Grade.Id.ToString(CultureInfo.InvariantCulture),

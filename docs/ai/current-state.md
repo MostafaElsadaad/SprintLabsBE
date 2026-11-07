@@ -79,3 +79,6 @@ ordinary users are refused by existing guard/admin checks. Docs: specs/020-produ
 Ten fixture tests passed (including SQLite); no migration or package change. Not yet published
 or invoked on staging. Next: final Release suite/review, publish, invoke once for Demo School
 community 6 / Grade 7 ID33 / base Class7A ID1, and verify actual leaderboard/class subsets.
+## 2026-11-07 - Local dashboard staging fixes
+
+Clean publication worktree is on codex/staging-dashboard-fixes with uncommitted email-link and scoped student teacher-filter changes. Existing staging deployment is unchanged. No migration, seed or package change. Release suite: 792 passed, 15 opt-in MySQL tests skipped. See specs/028-staging-dashboard-fixes/api.md and frontend.md for contract and rollout checks. Deploy the matching frontend and backend, then retest fresh email links and all three public UI roles. Original backend checkout edits were preserved.

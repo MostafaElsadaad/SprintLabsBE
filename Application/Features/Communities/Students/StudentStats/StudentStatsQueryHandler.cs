@@ -7,7 +7,7 @@ public class StudentStatsQueryHandler(StudentRosterService roster) : IRequestHan
 {
     public async Task<StudentStatsResponse> Handle(StudentStatsQuery request, CancellationToken ct)
     {
-        var rows = await roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, null, ct);
+        var rows = await roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, null, ct, request.TeacherId);
         return new StudentStatsResponse { Total = rows.Count, Active = rows.Count(x => x.Status == "ACTIVE"),
             Inactive = rows.Count(x => x.Status == "INACTIVE"), Pending = rows.Count(x => x.Status == "PENDING") };
     }

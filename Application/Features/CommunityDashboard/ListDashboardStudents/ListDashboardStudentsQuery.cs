@@ -8,6 +8,7 @@ public class ListDashboardStudentsQuery : IRequest<PagedResponse<StudentView>>
 {
     public long UserId { get; set; }
     public long? ClassId { get; set; }
+    public long? TeacherId { get; set; }
     public long? GradeId { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;

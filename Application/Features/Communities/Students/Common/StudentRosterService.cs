@@ -15,13 +15,21 @@ public class StudentRosterService
     public StudentRosterService(DashboardAuthorization authorization, DashboardProjection projection, IBaseRepository<MatchPlayer> matches)
     { _authorization = authorization; _projection = projection; _matches = matches; }
 
-    public async Task<List<StudentView>> ReadAsync(long userId, long? classId, long? gradeId, string? search, string? status, CancellationToken ct)
+    public async Task<List<StudentView>> ReadAsync(long userId, long? classId, long? gradeId, string? search, string? status, CancellationToken ct, long? teacherId = null)
     {
         var scope = await _authorization.ResolveAsync(userId, false, ct);
         var normalized = status?.Trim().ToUpperInvariant();
         if (normalized != null && normalized is not ("ACTIVE" or "PENDING" or "INACTIVE")) throw DashboardAuthorization.Invalid();
         if (gradeId.HasValue && gradeId <= 0) throw DashboardAuthorization.Invalid();
         var rows = await _projection.StudentsAsync(scope, classId, ct, includeRevoked: true);
+        if (teacherId.HasValue)
+        {
+            if (teacherId <= 0) throw DashboardAuthorization.Invalid();
+            // Filter only within the caller's authorized classes, before statistics/export/paging.
+            var classes = await _projection.ClassesAsync(scope, ct);
+            var teacherClasses = classes.Where(x => x.Teachers.Any(t => t.Id == teacherId.Value)).Select(x => x.Id).ToHashSet();
+            rows = rows.Where(x => teacherClasses.Contains(x.ClassId)).ToList();
+        }
         rows = rows.Where(x => (!gradeId.HasValue || x.Grade.Id == gradeId) &&
             (normalized == null || x.Status == normalized) && (string.IsNullOrWhiteSpace(search) ||
             x.FullName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) || x.Email.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)))

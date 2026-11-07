@@ -7,17 +7,17 @@ public static class TeacherAuthenticationLinkBuilder
 {
     public static string PasswordReset(FrontendOptions options, long userId, string token)
     {
-        return $"{BaseUrl(options)}/reset-password?userId={userId}&token={Uri.EscapeDataString(UrlSafeTokenHelper.Encode(token))}";
+        return $"{BaseUrl(options)}/auth/reset-password?userId={userId}&token={Uri.EscapeDataString(UrlSafeTokenHelper.Encode(token))}";
     }
 
     public static string Invitation(FrontendOptions options, string token)
     {
-        return $"{BaseUrl(options)}/invitations/teacher/setup?token={Uri.EscapeDataString(token)}";
+        return $"{BaseUrl(options)}/auth/register?token={Uri.EscapeDataString(token)}";
     }
 
     public static string CommunityAdminSetup(FrontendOptions options, string token)
     {
-        return $"{BaseUrl(options)}/invitations/community-admin/setup?token={Uri.EscapeDataString(token)}";
+        return $"{BaseUrl(options)}/auth/register?token={Uri.EscapeDataString(token)}";
     }
 
     private static string BaseUrl(FrontendOptions options)

@@ -75,6 +75,7 @@ jobs:
             --network sprintlabs-net \
             --add-host=host.docker.internal:host-gateway \
             --env-file /opt/sprintlabs/.env \
+            -e Frontend__BaseUrl=https://noxed.ddns.net/dashboard \
             -v /var/secrets/firebase:/var/secrets/firebase:ro \
             -p 8080:8080 \
             sprintlabs-api:latest
