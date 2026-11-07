@@ -7,6 +7,7 @@ public class ExportStudentsQuery : IRequest<StudentRosterDownload>
 {
     public long UserId { get; set; }
     public long? ClassId { get; set; }
+    public long? TeacherId { get; set; }
     public long? GradeId { get; set; }
     public string? Search { get; set; }
     public string? Status { get; set; }

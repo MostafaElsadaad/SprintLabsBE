@@ -66,7 +66,7 @@ public class InviteTeacherCommandHandlerTests
             "teacher@example.com",
             It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 30, 31 })),
             It.IsAny<CancellationToken>()), Times.Once);
-        email.Verify(x => x.SendCommunityInvitationEmailAsync("teacher@example.com", "Teacher", "Alpha", It.Is<string>(url => url.Contains("/invitations/teacher/setup?token=token")), It.IsAny<CancellationToken>()), Times.Once);
+        email.Verify(x => x.SendCommunityInvitationEmailAsync("teacher@example.com", "Teacher", "Alpha", It.Is<string>(url => url.Contains("/auth/register?token=token")), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

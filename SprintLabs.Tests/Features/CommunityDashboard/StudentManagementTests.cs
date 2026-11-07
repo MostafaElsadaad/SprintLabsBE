@@ -25,6 +25,39 @@ namespace Compass.Tests.Features.CommunityDashboard;
 
 public class StudentManagementTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Teacher_filter_rejects_non_positive_identifiers(long teacherId)
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        await Assert.ThrowsAsync<GenericException>(() => f.StudentRoster.ReadAsync(10, null, null, null, null, default, teacherId));
+    }
+
+    [Fact]
+    public async Task Another_teacher_filter_cannot_expand_the_callers_class_access()
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        f.Context.TeacherClassAssignments.Add(new TeacherClassAssignment { ClassId = 2, TeacherUserId = 21 });
+        await f.Context.SaveChangesAsync();
+        var rows = await f.StudentRoster.ReadAsync(20, null, null, null, null, default, 21);
+        Assert.Equal(1, Assert.Single(rows).ClassId);
+    }
+
+    [Fact]
+    public async Task Teacher_filter_runs_before_paging_and_keeps_tenant_scope()
+    {
+        using var f = new DashboardFixture(); await f.SeedAsync();
+        var handler = new ListDashboardStudentsQueryHandler(f.StudentRoster);
+        var page = await handler.Handle(new ListDashboardStudentsQuery { UserId = 10, TeacherId = 20, PageSize = 1 }, default);
+        Assert.Equal(1, page.TotalRecords);
+        Assert.Equal(1, Assert.Single(page.Data).ClassId);
+        var foreign = await handler.Handle(new ListDashboardStudentsQuery { UserId = 30, TeacherId = 20 }, default);
+        Assert.Empty(foreign.Data);
+        var stats = await new StudentStatsQueryHandler(f.StudentRoster).Handle(new StudentStatsQuery { UserId = 10, TeacherId = 20 }, default);
+        Assert.Equal(1, stats.Total);
+    }
+
     [Fact]
     public async Task ActiveFilter_ReturnsEnrollmentFieldsAndSearch()
     {

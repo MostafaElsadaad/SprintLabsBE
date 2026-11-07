@@ -23,7 +23,7 @@ public class ListDashboardStudentsQueryHandler : IRequestHandler<ListDashboardSt
     {
         DashboardPaging.Validate(request.PageNumber, request.PageSize);
         var descending = DashboardPaging.Descending(request.Sort, "name");
-        var rows = (await _roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, request.Status, ct)).AsEnumerable();
+        var rows = (await _roster.ReadAsync(request.UserId, request.ClassId, request.GradeId, request.Search, request.Status, ct, request.TeacherId)).AsEnumerable();
         rows = descending ? rows.OrderByDescending(x => x.FullName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Id) :
             rows.OrderBy(x => x.FullName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Id);
         return DashboardPaging.Page(rows, request.PageNumber, request.PageSize);
