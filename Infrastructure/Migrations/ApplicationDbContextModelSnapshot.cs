@@ -346,6 +346,81 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Domain.Models.LiveGame", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Curriculum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<int?>("Lesson")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxPlayers")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int?>("Term")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int?>("Unit")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Code", "Status");
+
+                    b.ToTable("LiveGames");
+                });
+
             modelBuilder.Entity("Domain.Models.Match", b =>
                 {
                     b.Property<long>("Id")
@@ -2523,6 +2598,15 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Community");
+                });
+
+            modelBuilder.Entity("Domain.Models.LiveGame", b =>
+                {
+                    b.HasOne("Infrastructure.DataAccess.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Models.Match", b =>

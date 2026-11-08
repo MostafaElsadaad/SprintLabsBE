@@ -33,6 +33,8 @@ var builder = WebApplication.CreateBuilder(args);
 //builder.WebHost.UseUrls("http://localhost:5005", "https://localhost:7005");
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Domain.Services.ILiveGameBroadcaster, API.Hubs.SignalRLiveGameBroadcaster>();
 
 
 #region Swagger
@@ -108,6 +110,23 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
     API.Authentication.GameServerAuthenticationHandler>(API.Authentication.GameServerAuthenticationHandler.SchemeName, _ => { });
 builder.Services.AddHttpClient();
+
+// SignalR WebSocket/SSE requests cannot send an Authorization header from the browser.
+builder.Services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    var previous = options.Events?.OnMessageReceived;
+    options.Events ??= new JwtBearerEvents();
+    options.Events.OnMessageReceived = async context =>
+    {
+        if (previous != null) await previous(context);
+        var accessToken = context.Request.Query["access_token"];
+        if (string.IsNullOrEmpty(context.Token) && !string.IsNullOrEmpty(accessToken) &&
+            context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+        {
+            context.Token = accessToken;
+        }
+    };
+});
 
 // API Versioning
 builder.Services.AddApiVersioning(o =>
@@ -231,5 +250,6 @@ app.UseAuthorization();
 app.UseHealthChecks("/");
 
 app.MapControllers();
+app.MapHub<API.Hubs.LiveGameHub>(API.Hubs.LiveGameHub.Path);
 
 app.Run();

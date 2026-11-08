@@ -47,6 +47,7 @@ namespace Infrastructure.DataAccess
         public DbSet<Item> Items { get; set; }
         public DbSet<BoxRewardEntry> BoxRewardEntries { get; set; }
         public DbSet<PlayerInventoryItem> PlayerInventoryItems { get; set; }
+        public DbSet<LiveGame> LiveGames { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,6 +55,18 @@ namespace Infrastructure.DataAccess
             MissionModelConfiguration.Configure(modelBuilder);
             ShopModelConfiguration.Configure(modelBuilder);
             QuestionDataModelConfiguration.Configure(modelBuilder, Database.IsMySql());
+            modelBuilder.Entity<LiveGame>(e =>
+            {
+                e.Property(x => x.Code).IsRequired().HasMaxLength(8);
+                e.Property(x => x.Title).IsRequired().HasMaxLength(100);
+                e.Property(x => x.Curriculum).IsRequired().HasMaxLength(64);
+                e.Property(x => x.Subject).HasMaxLength(64);
+                e.Property(x => x.Language).HasMaxLength(16);
+                e.Property(x => x.ResultJson).HasColumnType("longtext");
+                e.HasIndex(x => new { x.Code, x.Status });
+                e.HasIndex(x => x.CreatedAt);
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
 
             modelBuilder.Entity<CommunityUser>().Property(x => x.TeacherTitle).IsRequired().HasMaxLength(32).HasDefaultValue("TEACHER");
             modelBuilder.Entity<Notification>(e =>
