@@ -20,7 +20,7 @@ Visible only to `PlatformAdmin` (sidebar tab "Live Games", routes `/live-games` 
   replaces the cached snapshot. Falls back to polling (4 s when live updates are off).
 - Header: name, status badge, question filter, "Game server connected" and "Live updates" indicators.
 - Lobby: large join code with copy button and joining instructions; **Start game** (disabled until one player
-  is in the room) and **Close lobby**.
+  is in the room), **Add bot** (to test with one player) and **Close lobby**.
 - Running: stat cards (players, round x/10, right this round, leader), current question with right/wrong/waiting
   bar, leaderboard with each player's answer to the current question, activity feed, **End game** (confirm).
 - Completed: final standings table.

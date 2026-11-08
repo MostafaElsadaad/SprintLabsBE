@@ -14,6 +14,7 @@ public class LiveGameResponse
     public int? Term { get; set; }
     public string? Language { get; set; }
     public int MaxPlayers { get; set; }
+    public int BotCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }

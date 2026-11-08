@@ -25,6 +25,7 @@ internal static class LiveGameMapper
             Term = game.Term,
             Language = game.Language,
             MaxPlayers = game.MaxPlayers,
+            BotCount = game.BotCount,
             CreatedAt = game.CreatedAt,
             StartedAt = game.StartedAt,
             EndedAt = game.EndedAt

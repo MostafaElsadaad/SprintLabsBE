@@ -116,6 +116,9 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
                 player.Connected = true;
                 AddActivity(state, at, name + " reconnected");
                 return true;
+            case "bot_joined":
+                AddActivity(state, at, (Trim(e.DisplayName, 64) ?? "A bot") + " (bot) joined");
+                return true;
             case "match_started":
                 state.Started = true;
                 AddActivity(state, at, "The game started");

@@ -20,6 +20,8 @@ public class LiveGame
     public int? Term { get; set; }
     public string? Language { get; set; }
     public int MaxPlayers { get; set; }
+    /// <summary>Bots the game server should add to the lobby, requested by the admin for testing.</summary>
+    public int BotCount { get; set; }
     public long CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? StartedAt { get; set; }

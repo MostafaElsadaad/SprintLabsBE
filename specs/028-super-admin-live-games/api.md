@@ -14,6 +14,7 @@ All return `BaseResponse<LiveGameResponse>` (or a list). Non-admins get `403`.
 | GET | `/api/v1/admin/live-games` | — | Latest 50 games, newest first. |
 | GET | `/api/v1/admin/live-games/{id}` | — | Full snapshot; use after a page reload. `404` if missing. |
 | POST | `/api/v1/admin/live-games/{id}/start` | — | Lobby → Running. `400` when nobody has joined or the game has ended. |
+| POST | `/api/v1/admin/live-games/{id}/bots` | â€” | Lobby only: asks the game server to add one bot (random bot name). `400` when the room is full or the game started. |
 | POST | `/api/v1/admin/live-games/{id}/end` | — | Lobby → Cancelled, Running → Completed. The game server ends the match on its next poll. |
 
 `LiveGameResponse`: `id, code, title, status (Lobby|Running|Completed|Cancelled), curriculum, grade, subject, unit,

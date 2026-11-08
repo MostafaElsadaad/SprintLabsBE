@@ -2,7 +2,7 @@ namespace Shared.Requests.LiveGames;
 
 /// <summary>
 /// A server-derived fact reported by the dedicated game server. Types: player_joined, player_left,
-/// match_started, start_failed, question_opened, answer_graded, score_changed, player_disconnected,
+/// bot_joined, match_started, start_failed, question_opened, answer_graded, score_changed, player_disconnected,
 /// player_reconnected, player_result, match_ended.
 /// </summary>
 public class LiveGameEventRequest

@@ -1,4 +1,5 @@
 using System.Net;
+using Application.Features.LiveGames.AddLiveGameBot;
 using Application.Features.LiveGames.CreateLiveGame;
 using Application.Features.LiveGames.EndLiveGame;
 using Application.Features.LiveGames.GetLiveGame;
@@ -51,6 +52,13 @@ public class LiveGamesController : ControllerBase
     {
         if (!UserId.HasValue) return Unauthorized();
         return Envelope(await _mediator.Send(new StartLiveGameCommand { AuthenticatedUserId = UserId.Value, LiveGameId = id }, ct));
+    }
+
+    [HttpPost("{id:long}/bots")]
+    public async Task<IActionResult> AddBot(long id, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await _mediator.Send(new AddLiveGameBotCommand { AuthenticatedUserId = UserId.Value, LiveGameId = id }, ct));
     }
 
     [HttpPost("{id:long}/end")]

@@ -26,7 +26,8 @@ public class GetActiveLiveGamesQueryHandler(IBaseRepository<LiveGame> liveGames,
         {
             Code = g.Code,
             Status = g.Status.ToString(),
-            MaxPlayers = g.MaxPlayers
+            MaxPlayers = g.MaxPlayers,
+            BotCount = g.BotCount
         }).ToList();
     }
 }
