@@ -42,7 +42,7 @@ Combined suite at that rollout: 700 passed, 13 opt-in MySQL tests skipped, 0 fai
 
 - Backend: `https://github.com/MostafaElsadaad/SprintLabsBE`; staging branch `development`.
 - Unity: `https://github.com/MostafaElsadaad/SprintLab`; inspect its current branch, AGENTS.md and PROJECT_HANDOFF.md.
-- Staging API: `https://noxed.ddns.net`; local example API: `http://localhost:5153`. Backend API and Mirror server addresses are separate settings.
+- Staging API: `https://api.noxed.tech`; local example API: `http://localhost:5153`. Backend API and Mirror server addresses are separate settings.
 - Paths vary by workstation. Never assume another developer's drive letters, credentials, branch or dirty files are available.
 
 See [the developer guide](game-developer-guide.md) for local setup, seeds and cross-repository changes.
@@ -95,3 +95,17 @@ all three role views and teacher direct owner-route rejection. No migrations,
 seed changes or seeded password/enrollment writes. Public full mutation/mobile
 acceptance still remains; see frontend STAGING_DASHBOARD_FIXES.md for deployment
 key/cache configuration and backend specs/028-staging-dashboard-fixes for contracts.
+
+## 2026-11-12 - Backend DNS migration
+
+Staging API/SSH now use `api.noxed.tech`; the dashboard is at `https://dashboard.noxed.tech/`.
+Namecheap DDClient is active and No-IP DUC has been removed. Existing-client compatibility
+continues through the old virtual host only while its No-IP DNS remains maintained.
+Unity settings and dashboard API/deployment settings were updated in companion repositories.
+The staging workflow uses the new non-secret SSH hostname. Database connection configuration
+must come from the process environment or User Secrets; the legacy tracked connection-string
+fallback is now empty. Staging's database environment override was verified without printing it.
+Mail fallback host uses the new API hostname; effective staging mail remains mailpit:1025.
+Backend frontend links use the dedicated dashboard origin. Live API/question reads, authenticated
+browser session refresh/Communities reads, and service health checks passed. No schema/seed changes.
+Publication validation: Release suite 795 passed, 15 opt-in MySQL tests skipped, 0 failed.

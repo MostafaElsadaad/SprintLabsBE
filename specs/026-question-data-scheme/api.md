@@ -17,9 +17,9 @@ Admin import uses the existing POST `/bank/import-legacy/{packId}` with no body.
 Staging's four packs were imported on 2026-10-13 using a temporary EF runner calling the existing service: pack 1=grade 5 (55), 2=grade 6 (14), 3=grade 7 (14), 4=grade 8 (14). Total 97, source rows retained, repeated import unchanged. Imported curriculum/subject are DUMMY, language und, term/unit/lesson 1; original grade and timer are retained. Exported IDs live outside Git in SprintLab-Artifacts/question-data-scheme/staging-import-shared-identities.json. This publication enables the corrected HTTP importer and count limit on staging; verify both after deployment.
 
 ```sh
-curl.exe -X POST "https://noxed.ddns.net/api/v1/Question/bank/import-legacy/3" -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
-curl.exe "https://noxed.ddns.net/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10"
-curl.exe "https://noxed.ddns.net/api/v1/Question?grade=7&count=10"
+curl.exe -X POST "https://api.noxed.tech/api/v1/Question/bank/import-legacy/3" -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+curl.exe "https://api.noxed.tech/api/v1/Question?curriculum=DUMMY&grade=7&unit=1&count=10"
+curl.exe "https://api.noxed.tech/api/v1/Question?grade=7&count=10"
 ```
 
 The import token must belong to an active platform administrator. GET needs no authentication. Curriculum filters must match stored values; imported rows do not have Egypt classification.
