@@ -53,8 +53,16 @@ public class CreateLiveGameCommandHandler(
             Language = language,
             Count = 1
         };
-        if (await questions.ProjectBankAsync(filter, cancellationToken) == null)
+        string? questionsJson = null;
+        if (request.Questions is { Count: > 0 })
+        {
+            var items = await LiveGameQuestionNormalizer.NormalizeAsync(questions, request.Questions, cancellationToken);
+            questionsJson = LiveGameQuestionNormalizer.Serialize(items);
+        }
+        else if (await questions.ProjectBankAsync(filter, cancellationToken) == null)
+        {
             throw BadRequest("No questions match this curriculum and grade. Change the filters and try again.");
+        }
 
         var game = new LiveGame
         {
@@ -69,6 +77,7 @@ public class CreateLiveGameCommandHandler(
             Term = request.Term,
             Language = language,
             MaxPlayers = maxPlayers,
+            QuestionsJson = questionsJson,
             CreatedByUserId = command.AuthenticatedUserId,
             CreatedAt = DateTime.UtcNow
         };

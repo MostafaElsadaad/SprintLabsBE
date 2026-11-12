@@ -1,5 +1,7 @@
 using System.Net;
 using Application.Features.LiveGames.AddLiveGameBot;
+using Application.Features.LiveGames.AutoSelectQuestions;
+using Application.Features.LiveGames.ListLessons;
 using Application.Features.LiveGames.CreateLiveGame;
 using Application.Features.LiveGames.EndLiveGame;
 using Application.Features.LiveGames.GetLiveGame;
@@ -19,7 +21,7 @@ namespace API.Controllers;
 [ApiController, ApiVersion("1.0"), Authorize]
 [Route("api/v{version:apiVersion}/admin/live-games")]
 [Tags("Super Admin Control")]
-[RequestSizeLimit(16 * 1024)]
+[RequestSizeLimit(1024 * 1024)]
 public class LiveGamesController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -31,6 +33,22 @@ public class LiveGamesController : ControllerBase
     {
         if (!UserId.HasValue) return Unauthorized();
         return Envelope(await _mediator.Send(new CreateLiveGameCommand { AuthenticatedUserId = UserId.Value, Request = request }, ct));
+    }
+
+    [HttpGet("lessons")]
+    public async Task<IActionResult> Lessons([FromQuery] string curriculum, [FromQuery] int grade, [FromQuery] int unit,
+        [FromQuery] string? subject, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await _mediator.Send(new ListLessonsQuery
+            { AuthenticatedUserId = UserId.Value, Curriculum = curriculum, Grade = grade, Unit = unit, Subject = subject }, ct));
+    }
+
+    [HttpPost("auto-select")]
+    public async Task<IActionResult> AutoSelect([FromBody] AutoSelectQuestionsRequest request, CancellationToken ct)
+    {
+        if (!UserId.HasValue) return Unauthorized();
+        return Envelope(await _mediator.Send(new AutoSelectQuestionsQuery { AuthenticatedUserId = UserId.Value, Request = request }, ct));
     }
 
     [HttpGet]

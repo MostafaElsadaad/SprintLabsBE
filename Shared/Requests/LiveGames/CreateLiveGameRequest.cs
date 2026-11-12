@@ -11,4 +11,6 @@ public class CreateLiveGameRequest
     public int? Term { get; set; }
     public string? Language { get; set; }
     public int MaxPlayers { get; set; } = 8;
+    /// <summary>Ordered questions for the game. When empty, the game uses the curriculum/grade filter instead.</summary>
+    public List<LiveGameQuestionItem>? Questions { get; set; }
 }

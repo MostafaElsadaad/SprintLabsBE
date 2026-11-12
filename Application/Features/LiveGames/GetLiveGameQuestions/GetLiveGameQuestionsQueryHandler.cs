@@ -31,6 +31,13 @@ public class GetLiveGameQuestionsQueryHandler(IBaseRepository<LiveGame> liveGame
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new GenericException(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);
 
+        if (!string.IsNullOrWhiteSpace(game.QuestionsJson))
+        {
+            var items = LiveGameQuestionNormalizer.Deserialize(game.QuestionsJson);
+            if (items.Count == 0) throw new GenericException(ErrorCode.Failure, ErrorMessage.NotFound, HttpStatusCode.NotFound);
+            return new LiveGameQuestionsResponse { PayloadJson = questions.ProjectQuestions(LiveGameQuestionNormalizer.ForGame(items)) };
+        }
+
         var payload = await questions.ProjectBankAsync(new QuestionBankFilter
         {
             Grade = game.Grade,

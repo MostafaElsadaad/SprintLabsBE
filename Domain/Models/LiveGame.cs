@@ -27,4 +27,6 @@ public class LiveGame
     public DateTime? StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public string? ResultJson { get; set; }
+    /// <summary>Ordered question copies chosen for this game (LiveGameQuestionItem JSON); null = legacy filter game.</summary>
+    public string? QuestionsJson { get; set; }
 }

@@ -48,6 +48,8 @@ namespace Infrastructure.DataAccess
         public DbSet<BoxRewardEntry> BoxRewardEntries { get; set; }
         public DbSet<PlayerInventoryItem> PlayerInventoryItems { get; set; }
         public DbSet<LiveGame> LiveGames { get; set; }
+        public DbSet<TeacherQuestion> TeacherQuestions { get; set; }
+        public DbSet<LiveGameQuestionSet> LiveGameQuestionSets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -55,6 +57,27 @@ namespace Infrastructure.DataAccess
             MissionModelConfiguration.Configure(modelBuilder);
             ShopModelConfiguration.Configure(modelBuilder);
             QuestionDataModelConfiguration.Configure(modelBuilder, Database.IsMySql());
+            modelBuilder.Entity<TeacherQuestion>(e =>
+            {
+                e.Property(x => x.Curriculum).IsRequired().HasMaxLength(120);
+                e.Property(x => x.Subject).IsRequired().HasMaxLength(120);
+                e.Property(x => x.QuestionType).IsRequired().HasMaxLength(32);
+                e.Property(x => x.QuestionText).IsRequired().HasColumnType("longtext");
+                e.Property(x => x.ThinkingSkill).HasMaxLength(32);
+                e.Property(x => x.PayloadJson).IsRequired().HasColumnType("longtext");
+                e.HasIndex(x => x.QuestionId).IsUnique();
+                e.HasIndex(x => new { x.OwnerUserId, x.Grade, x.Unit, x.Lesson });
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<LiveGameQuestionSet>(e =>
+            {
+                e.Property(x => x.Name).IsRequired().HasMaxLength(100);
+                e.Property(x => x.Curriculum).IsRequired().HasMaxLength(64);
+                e.Property(x => x.Subject).HasMaxLength(64);
+                e.Property(x => x.QuestionsJson).IsRequired().HasColumnType("longtext");
+                e.HasIndex(x => new { x.OwnerUserId, x.UpdatedAt });
+                e.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+            });
             modelBuilder.Entity<LiveGame>(e =>
             {
                 e.Property(x => x.Code).IsRequired().HasMaxLength(8);
@@ -63,6 +86,7 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Subject).HasMaxLength(64);
                 e.Property(x => x.Language).HasMaxLength(16);
                 e.Property(x => x.ResultJson).HasColumnType("longtext");
+                e.Property(x => x.QuestionsJson).HasColumnType("longtext");
                 e.HasIndex(x => new { x.Code, x.Status });
                 e.HasIndex(x => x.CreatedAt);
                 e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);

@@ -30,6 +30,8 @@ internal static class LiveGameMapper
             StartedAt = game.StartedAt,
             EndedAt = game.EndedAt
         };
+        response.Questions = LiveGameQuestionNormalizer.Deserialize(game.QuestionsJson);
+        response.QuestionCount = response.Questions.Count;
         state.Fill(game.Id, response);
 
         // After an API restart the in-memory view is empty; fall back to the stored final standings.

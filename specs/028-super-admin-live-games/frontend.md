@@ -24,3 +24,25 @@ Visible only to `PlatformAdmin` (sidebar tab "Live Games", routes `/live-games` 
 - Running: stat cards (players, round x/10, right this round, leader), current question with right/wrong/waiting
   bar, leaderboard with each player's answer to the current question, activity feed, **End game** (confirm).
 - Completed: final standings table.
+
+
+## Question builder (2026-11-12)
+
+The create dialog is replaced by a page, `/live-games/new` (`?set={id}` loads a saved set).
+
+1. **Choose content**: game name, curriculum, grade, subject (optional), unit, lesson (from `/live-games/lessons`, or all
+   lessons in the unit), question count (5–30), players. **Pick questions automatically** calls `auto-select`; the warning
+   is shown when the lesson is short.
+2. **Review questions**: ordered cards showing type, source (Sprintlab library / Edited copy / My question), unit and lesson,
+   thinking skill and the correct answer. Per card: move up/down, edit, replace (another library question, excluding all
+   current ones), remove. Cards without a correct answer are outlined red and block **Create game**.
+   - **Add questions** dialog: *Sprintlab Library* (paged `GET /Question/bank/admin`, unit/lesson/type filters) and
+     *My Questions* (search and filters). Duplicates are skipped with a notice.
+   - **Write a question**: editor for all six types; saving always stores it in My Questions, then adds it.
+   - Editing a library question changes only this game's copy (optionally also saves a copy to My Questions); editing a
+     personal question can also update it in My Questions.
+   - **Save as set**: name; when a set is loaded, choose "Update" or "Save as a new set".
+3. Sticky footer: question and round count, **Create game**.
+
+Live Games page tabs: **Games** (as before, now with the chosen question count), **My Questions** (filters, new, edit,
+delete), **Saved sets** (Use → builder, Delete). The live view shows rounds as `x / questionCount` (10 for filter games).

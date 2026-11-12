@@ -52,3 +52,32 @@ Event types: `player_joined`, `player_left`, `match_started`, `start_failed`, `q
   game loses the live view; final standings are stored in `LiveGames.ResultJson` when the game ends.
 - At most 8 players per game: more than 8 pawns on one tile breaks the board on the phones.
 - Reconnects during a running match are not reported yet, so a player who drops and returns may show "Left".
+
+
+## Question builder (2026-11-12)
+
+Implements the "Teacher Question Experience" brief for the super-admin create flow. All routes need a platform-admin JWT;
+My Questions and sets are scoped to the calling user.
+
+| Method | Route | Body / query | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/v1/admin/live-games/lessons` | `curriculum, grade, unit, subject?` | `[{ lesson, questionCount }]` from the library. |
+| POST | `/api/v1/admin/live-games/auto-select` | `{ curriculum, grade, subject?, unit?, lesson?, count (1–30), excludeQuestionIds[] }` | Library questions balanced across question types; never generates questions. `{ questions, availableCount, warning }`; `warning` when the lesson has fewer than `count`. With `count: 1` and exclusions it is the "replace" action. |
+| POST | `/api/v1/admin/live-games` | adds `questions: LiveGameQuestionItem[]` | When present, the game plays these questions in order (1–30), one round each. Each must have a correct answer; duplicates (same id, or same type + text) are rejected with the question number. Without `questions` the old filter behaviour stays. |
+| GET | `/api/v1/admin/my-questions` | `curriculum?, grade?, unit?, lesson?, questionType?, search?` | Private questions, newest first (max 200). |
+| POST / PUT / DELETE | `/api/v1/admin/my-questions[/{id}]` | `{ thinkingSkill?, question: QuestionDataRequest }` | Validated with the library rules; a new UUID is assigned. Never added to the shared library. Deleting does not change games/sets that copied it. |
+| GET | `/api/v1/admin/live-game-sets[/{id}]` | — | List (without questions) or one set with its ordered questions. |
+| POST / PUT / DELETE | `/api/v1/admin/live-game-sets[/{id}]` | `{ name, curriculum, grade, subject?, unit?, lesson?, questions }` | PUT overwrites; to keep the original, POST a new set. |
+
+`LiveGameQuestionItem`: `{ source: "library" | "edited" | "mine", teacherQuestionId?, thinkingSkill?, question: QuestionDataRequest }`.
+A `library` item whose content differs from the stored library question is saved as `edited` (a game-only copy; the shared
+question is never changed). `thinkingSkill` is one of Remember, Understand, Apply, Analyze, Evaluate, Create, or null.
+
+`LiveGameResponse` adds `questionCount` and `questions`.
+
+Game server: `GET /game-server/live-games/{code}/questions` returns the chosen questions in order. Only unchanged library
+questions keep their UUID; edited and personal questions are sent with an empty UUID, so the game server leaves their
+answers out of the match report (the backend could not validate them) and the rest of the match, XP included, is saved.
+
+Not covered: the library has no thinking-skill tags, so auto-select balances question types only. Personal questions
+can carry a confirmed thinking skill, but nothing uses it in AI insights yet.

@@ -389,6 +389,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("MaxPlayers")
                         .HasColumnType("int");
 
+                    b.Property<string>("QuestionsJson")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ResultJson")
                         .HasColumnType("longtext");
 
@@ -422,6 +425,60 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Code", "Status");
 
                     b.ToTable("LiveGames");
+                });
+
+            modelBuilder.Entity("Domain.Models.LiveGameQuestionSet", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Curriculum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Lesson")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<long>("OwnerUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("QuestionCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("QuestionsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int?>("Unit")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId", "UpdatedAt");
+
+                    b.ToTable("LiveGameQuestionSets");
                 });
 
             modelBuilder.Entity("Domain.Models.Match", b =>
@@ -2275,6 +2332,72 @@ namespace Infrastructure.Migrations
                     b.ToTable("TeacherInvitations");
                 });
 
+            modelBuilder.Entity("Domain.Models.TeacherQuestion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Curriculum")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Lesson")
+                        .HasColumnType("int");
+
+                    b.Property<long>("OwnerUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("QuestionType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("ThinkingSkill")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("Unit")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerUserId", "Grade", "Unit", "Lesson");
+
+                    b.ToTable("TeacherQuestions");
+                });
+
             modelBuilder.Entity("Infrastructure.DataAccess.User", b =>
                 {
                     b.Property<long>("Id")
@@ -2608,6 +2731,15 @@ namespace Infrastructure.Migrations
                     b.HasOne("Infrastructure.DataAccess.User", null)
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Models.LiveGameQuestionSet", b =>
+                {
+                    b.HasOne("Infrastructure.DataAccess.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -3242,6 +3374,15 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CommunityUser");
+                });
+
+            modelBuilder.Entity("Domain.Models.TeacherQuestion", b =>
+                {
+                    b.HasOne("Infrastructure.DataAccess.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<long>", b =>

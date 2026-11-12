@@ -1,3 +1,5 @@
+using Shared.Requests.LiveGames;
+
 namespace Shared.Responses.LiveGames;
 
 public class LiveGameResponse
@@ -21,6 +23,9 @@ public class LiveGameResponse
     public bool GameServerConnected { get; set; }
     public DateTime? GameServerLastSeenAt { get; set; }
     public int QuestionsAsked { get; set; }
+    /// <summary>Questions chosen for the game (0 for legacy filter games, which play 10 rounds).</summary>
+    public int QuestionCount { get; set; }
+    public List<LiveGameQuestionItem> Questions { get; set; } = new();
     public LiveGameQuestionResponse? CurrentQuestion { get; set; }
     public List<LiveGamePlayerResponse> Players { get; set; } = new();
     public List<LiveGameActivityResponse> Activity { get; set; } = new();
