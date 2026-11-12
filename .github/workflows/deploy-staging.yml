@@ -41,7 +41,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "api.noxed.tech" >> ~/.ssh/known_hosts
 
       - name: Upload source
         run: |
@@ -51,12 +51,12 @@ jobs:
             --exclude ".env" \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./ \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/sprintlabs/"
+            "${{ secrets.SSH_USER }}@api.noxed.tech:/opt/sprintlabs/"
 
       - name: Build and deploy on Oracle VM
         run: |
           ssh -i ~/.ssh/deploy_key \
-          "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
+          "${{ secrets.SSH_USER }}@api.noxed.tech" << 'EOF'
 
           set -e
 
@@ -75,7 +75,7 @@ jobs:
             --network sprintlabs-net \
             --add-host=host.docker.internal:host-gateway \
             --env-file /opt/sprintlabs/.env \
-            -e Frontend__BaseUrl=https://noxed.ddns.net/dashboard \
+            -e Frontend__BaseUrl=https://dashboard.noxed.tech \
             -v /var/secrets/firebase:/var/secrets/firebase:ro \
             -p 8080:8080 \
             sprintlabs-api:latest

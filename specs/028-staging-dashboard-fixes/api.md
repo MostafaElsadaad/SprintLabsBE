@@ -26,7 +26,7 @@ New owner and teacher setup emails use `{Frontend:BaseUrl}/auth/register?token=.
 Password reset uses `{Frontend:BaseUrl}/auth/reset-password?userId=...&token=...`.
 The existing token encoding and validation remain unchanged; the configured base
 path is retained. Staging deployment explicitly sets `Frontend__BaseUrl` to
-`https://noxed.ddns.net/dashboard`. Existing email contents are not rewritten.
+`https://dashboard.noxed.tech`. Existing email contents are not rewritten.
 
 ## Validation
 
