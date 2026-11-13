@@ -3,10 +3,10 @@ namespace Application.Features.LiveGames.Common;
 internal static class LiveGameRules
 {
     /// <summary>
-    /// The game board places at most 8 pawns on one tile without a client error (PlayerMovement offsets),
-    /// and every player starts on the same tile.
+    /// Players per live game (humans plus bots). Must match Matchmaker.LiveGameMaxPlayers in the Unity game
+    /// server, which lays out any number of pawns on one tile.
     /// </summary>
-    public const int MaxPlayersLimit = 8;
+    public const int MaxPlayersLimit = 30;
     public const int DefaultMaxPlayers = 8;
     public const int CodeLength = 5;
     public const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

@@ -9,6 +9,7 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
 {
     private const int MaxRememberedEvents = 5000;
     private const int MaxActivity = 40;
+    private const int MaxRounds = 100;
     private readonly ConcurrentDictionary<long, GameState> games = new();
     private long gameServerLastSeenTicks;
 
@@ -68,6 +69,7 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
             response.Activity = state.Activity
                 .Select(a => new LiveGameActivityResponse { At = a.At, Message = a.Message })
                 .ToList();
+            response.Rounds = MapRounds(state);
         }
     }
 
@@ -76,6 +78,26 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
         if (!games.TryGetValue(liveGameId, out GameState? state)) return new List<LiveGamePlayerResponse>();
         lock (state) return RankedPlayers(state);
     }
+
+    public List<LiveGameQuestionResponse> Rounds(long liveGameId)
+    {
+        if (!games.TryGetValue(liveGameId, out GameState? state)) return new List<LiveGameQuestionResponse>();
+        lock (state) return MapRounds(state);
+    }
+
+    private static List<LiveGameQuestionResponse> MapRounds(GameState state)
+        => state.Rounds
+            .OrderBy(r => r.Number)
+            .Select(r => new LiveGameQuestionResponse
+            {
+                Number = r.Number,
+                Type = r.Type,
+                Text = r.Text,
+                OpenedAt = r.OpenedAt,
+                CorrectCount = r.CorrectCount,
+                WrongCount = r.WrongCount
+            })
+            .ToList();
 
     private static bool ApplyLocked(GameState state, LiveGameEventRequest e)
     {
@@ -128,13 +150,18 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
                 return true;
             case "question_opened":
                 int number = e.QuestionNumber is > 0 ? e.QuestionNumber.Value : state.QuestionsAsked + 1;
-                state.CurrentQuestion = new QuestionState
+                // Each round is kept for the game's history; the current question is the same object.
+                QuestionState? round = state.Rounds.FirstOrDefault(r => r.Number == number);
+                if (round == null)
                 {
-                    Number = number,
-                    Type = Trim(e.QuestionType, 32),
-                    Text = Trim(e.QuestionText, 500),
-                    OpenedAt = at
-                };
+                    if (state.Rounds.Count >= MaxRounds) return false;
+                    round = new QuestionState { Number = number };
+                    state.Rounds.Add(round);
+                }
+                round.Type = Trim(e.QuestionType, 32);
+                round.Text = Trim(e.QuestionText, 500);
+                round.OpenedAt = at;
+                state.CurrentQuestion = round;
                 state.QuestionsAsked = Math.Max(state.QuestionsAsked, number);
                 foreach (PlayerState p in state.Players.Values) p.CurrentAnswer = null;
                 AddActivity(state, at, "Question " + number + " opened");
@@ -218,6 +245,7 @@ public sealed class LiveGameStateStore : ILiveGameStateStore
         public readonly Queue<string> SeenOrder = new();
         public readonly Dictionary<long, PlayerState> Players = new();
         public readonly List<ActivityState> Activity = new();
+        public readonly List<QuestionState> Rounds = new();
         public QuestionState? CurrentQuestion;
         public int QuestionsAsked;
         public int NextJoinOrder;

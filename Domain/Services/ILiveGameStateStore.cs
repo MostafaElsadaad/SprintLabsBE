@@ -18,4 +18,7 @@ public interface ILiveGameStateStore
     int JoinedCount(long liveGameId);
     void Fill(long liveGameId, LiveGameResponse response);
     List<LiveGamePlayerResponse> Standings(long liveGameId);
+
+    /// <summary>Every question asked so far, in order, with how many players got it right or wrong.</summary>
+    List<LiveGameQuestionResponse> Rounds(long liveGameId);
 }

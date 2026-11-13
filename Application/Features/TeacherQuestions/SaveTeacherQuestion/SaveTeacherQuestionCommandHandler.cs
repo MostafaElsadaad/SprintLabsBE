@@ -44,6 +44,8 @@ public class SaveTeacherQuestionCommandHandler(
         {
             throw LiveGameQuestionNormalizer.BadRequest(exception.Message);
         }
+        string? tooMany = LiveGameAnswerLimits.Violation(normalized);
+        if (tooMany != null) throw LiveGameQuestionNormalizer.BadRequest(tooMany);
         string? skill = LiveGameQuestionNormalizer.NormalizeThinkingSkill(command.Request.ThinkingSkill);
 
         if (entity == null)

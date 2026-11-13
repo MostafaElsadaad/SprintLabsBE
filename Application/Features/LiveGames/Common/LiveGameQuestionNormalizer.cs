@@ -10,7 +10,8 @@ namespace Application.Features.LiveGames.Common;
 
 /// <summary>
 /// Validates and normalizes an ordered question list for a game or saved set: every question must have
-/// a correct answer, duplicates are rejected, and a library question that was changed becomes a
+/// a correct answer and no more answers than the game can show (<see cref="LiveGameAnswerLimits"/>),
+/// duplicates are rejected, and a library question that was changed becomes a
 /// game-only "edited" copy (the shared original is never modified).
 /// </summary>
 internal static class LiveGameQuestionNormalizer
@@ -59,6 +60,9 @@ internal static class LiveGameQuestionNormalizer
             {
                 throw BadRequest($"Question {number}: {exception.Message}");
             }
+
+            string? tooMany = LiveGameAnswerLimits.Violation(normalized);
+            if (tooMany != null) throw BadRequest($"Question {number}: {tooMany}");
 
             if (source == Library &&
                 (!originals.TryGetValue(normalized.QuestionId, out var original) || Json(original) != Json(normalized)))

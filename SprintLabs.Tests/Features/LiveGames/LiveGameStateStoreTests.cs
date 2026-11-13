@@ -25,6 +25,28 @@ public class LiveGameStateStoreTests
         };
 
     [Fact]
+    public void Keeps_every_round_with_its_correct_and_wrong_counts()
+    {
+        var store = new LiveGameStateStore();
+        store.Apply(5, Event("player_joined", 10, "Mona"));
+        store.Apply(5, Event("player_joined", 20, "Omar"));
+        store.Apply(5, Event("match_started"));
+        store.Apply(5, Event("question_opened", question: 1));
+        store.Apply(5, Event("answer_graded", 10, correct: true, score: 10));
+        store.Apply(5, Event("answer_graded", 20, correct: true, score: 10));
+        store.Apply(5, Event("question_opened", question: 2));
+        store.Apply(5, Event("answer_graded", 10, correct: false));
+        store.Apply(5, Event("match_ended"));
+
+        var rounds = store.Rounds(5);
+        rounds.Select(r => (r.Number, r.CorrectCount, r.WrongCount)).Should().Equal((1, 2, 0), (2, 0, 1));
+        var view = new LiveGameResponse();
+        store.Fill(5, view);
+        view.Rounds.Should().HaveCount(2);
+        view.CurrentQuestion.Should().BeNull();
+    }
+
+    [Fact]
     public void Folds_a_full_game_into_a_ranked_live_view()
     {
         var store = new LiveGameStateStore();

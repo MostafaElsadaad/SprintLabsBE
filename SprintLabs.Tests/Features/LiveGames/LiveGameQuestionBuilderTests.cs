@@ -129,4 +129,49 @@ public class LiveGameQuestionBuilderTests
                 { Name = "Broken", Curriculum = "Egypt", Grade = 7, Questions = new() { new() { Source = "mine", Question = broken } } } }, default);
         (await act.Should().ThrowAsync<GenericException>()).Which.Message.Should().StartWith("Question 1:");
     }
+
+    private static QuestionDataRequest McqWithChoices(string text, int choices)
+    {
+        var question = Mcq(text);
+        question.Choices = Enumerable.Range(0, choices)
+            .Select(i => new QuestionChoiceData { ChoiceId = Guid.NewGuid().ToString("N"), ChoiceText = "choice " + i, IsCorrect = i == 0 })
+            .ToList();
+        return question;
+    }
+
+    [Fact]
+    public async Task Questions_with_more_answers_than_the_game_shows_are_rejected_and_never_auto_picked()
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var wide = McqWithChoices("Five choices", 5);
+        var fits = McqWithChoices("Four choices", 4);
+        await f.Service.PublishAsync(Admin, wide, default);
+        await f.Service.PublishAsync(Admin, fits, default);
+
+        var picked = await new AutoSelectQuestionsQueryHandler(Users(), f.Service).Handle(new AutoSelectQuestionsQuery
+            { AuthenticatedUserId = Admin, Request = new() { Curriculum = "Egypt", Grade = 7, Unit = 1, Lesson = 1, Count = 2 } }, default);
+        picked.Questions.Select(q => q.Question.QuestionId).Should().Equal(fits.QuestionId);
+
+        var saveSet = () => new SaveLiveGameSetCommandHandler(Users(), new BaseRepository<LiveGameQuestionSet>(f.Context), f.Service)
+            .Handle(new SaveLiveGameSetCommand { AuthenticatedUserId = Admin, Request = new()
+                { Name = "Wide", Curriculum = "Egypt", Grade = 7, Questions = new() { new() { Source = "mine", Question = McqWithChoices("Mine, five", 5) } } } }, default);
+        (await saveSet.Should().ThrowAsync<GenericException>()).Which.Message.Should().StartWith("Question 1: Use at most 4 choices");
+
+        var saveMine = () => new SaveTeacherQuestionCommandHandler(Users(), new BaseRepository<TeacherQuestion>(f.Context), f.Service)
+            .Handle(new SaveTeacherQuestionCommand { AuthenticatedUserId = Admin, Request = new() { Question = McqWithChoices("Mine, six", 6) } }, default);
+        (await saveMine.Should().ThrowAsync<GenericException>()).Which.Message.Should().Contain("at most 4 choices");
+    }
+
+    [Theory]
+    [InlineData(30, true)]
+    [InlineData(31, false)]
+    public async Task A_game_allows_up_to_30_players(int maxPlayers, bool allowed)
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var create = () => new CreateLiveGameCommandHandler(Users(), new BaseRepository<LiveGame>(f.Context), f.Service, new Infrastructure.Services.LiveGameStateStore())
+            .Handle(new CreateLiveGameCommand { AuthenticatedUserId = Admin, Request = new()
+                { Title = "Big class", Curriculum = "Egypt", Grade = 7, MaxPlayers = maxPlayers, Questions = new() { new() { Source = "mine", Question = TrueFalse("Big class question") } } } }, default);
+        if (allowed) (await create()).MaxPlayers.Should().Be(30);
+        else await create.Should().ThrowAsync<GenericException>();
+    }
 }

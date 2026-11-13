@@ -44,7 +44,8 @@ public class AutoSelectQuestionsQueryHandler(IUserService users, IQuestionDataSe
                 PageNumber = page,
                 PageSize = PoolPageSize
             }, cancellationToken);
-            pool.AddRange(result.Items.Where(q => !excluded.Contains(q.QuestionId)));
+            // Library questions with more answers than the game can show are never picked.
+            pool.AddRange(result.Items.Where(q => !excluded.Contains(q.QuestionId) && LiveGameAnswerLimits.Fits(q)));
             if (page * PoolPageSize >= result.Total || result.Items.Count == 0) break;
         }
 

@@ -36,7 +36,8 @@ public class EndLiveGameCommandHandler(
             game.Status = game.Status == LiveGameStatus.Lobby ? LiveGameStatus.Cancelled : LiveGameStatus.Completed;
             game.EndedAt = DateTime.UtcNow;
             var standings = state.Standings(game.Id);
-            if (standings.Count > 0) game.ResultJson = LiveGameMapper.SerializeStandings(standings);
+            var rounds = state.Rounds(game.Id);
+            if (standings.Count > 0 || rounds.Count > 0) game.ResultJson = LiveGameMapper.SerializeResults(standings, rounds);
             await liveGames.SaveChangesAsync();
         }
 

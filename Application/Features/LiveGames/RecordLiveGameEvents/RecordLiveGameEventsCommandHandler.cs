@@ -32,11 +32,13 @@ public class RecordLiveGameEventsCommandHandler(
 
         int applied = 0;
         bool ended = false;
+        bool roundOpened = false;
         foreach (var liveEvent in request.Events.OrderBy(e => e.OccurredAt))
         {
             if (!state.Apply(game.Id, liveEvent)) continue;
             applied++;
             if (liveEvent.Type == "match_ended") ended = true;
+            if (liveEvent.Type == "question_opened") roundOpened = true;
         }
 
         if (ended)
@@ -46,7 +48,13 @@ public class RecordLiveGameEventsCommandHandler(
                 game.Status = LiveGameStatus.Completed;
                 game.EndedAt = DateTime.UtcNow;
             }
-            game.ResultJson = LiveGameMapper.SerializeStandings(state.Standings(game.Id));
+            game.ResultJson = LiveGameMapper.SerializeResults(state.Standings(game.Id), state.Rounds(game.Id));
+            await liveGames.SaveChangesAsync();
+        }
+        else if (roundOpened && game.Status == LiveGameStatus.Running)
+        {
+            // Save progress each round so the history survives an API restart in the middle of a game.
+            game.ResultJson = LiveGameMapper.SerializeResults(state.Standings(game.Id), state.Rounds(game.Id));
             await liveGames.SaveChangesAsync();
         }
 

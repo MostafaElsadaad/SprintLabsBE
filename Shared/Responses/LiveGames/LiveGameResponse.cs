@@ -29,4 +29,6 @@ public class LiveGameResponse
     public LiveGameQuestionResponse? CurrentQuestion { get; set; }
     public List<LiveGamePlayerResponse> Players { get; set; } = new();
     public List<LiveGameActivityResponse> Activity { get; set; } = new();
+    /// <summary>Round history: each question asked and its correct/wrong counts. Saved with the final standings.</summary>
+    public List<LiveGameQuestionResponse> Rounds { get; set; } = new();
 }
