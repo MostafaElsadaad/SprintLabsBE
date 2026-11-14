@@ -75,6 +75,7 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Curriculum).IsRequired().HasMaxLength(64);
                 e.Property(x => x.Subject).HasMaxLength(64);
                 e.Property(x => x.QuestionsJson).IsRequired().HasColumnType("longtext");
+                e.Property(x => x.ScopeJson).HasColumnType("longtext");
                 e.HasIndex(x => new { x.OwnerUserId, x.UpdatedAt });
                 e.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
             });
@@ -87,6 +88,7 @@ namespace Infrastructure.DataAccess
                 e.Property(x => x.Language).HasMaxLength(16);
                 e.Property(x => x.ResultJson).HasColumnType("longtext");
                 e.Property(x => x.QuestionsJson).HasColumnType("longtext");
+                e.Property(x => x.ScopeJson).HasColumnType("longtext");
                 e.HasIndex(x => new { x.Code, x.Status });
                 e.HasIndex(x => x.CreatedAt);
                 e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);

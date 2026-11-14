@@ -13,9 +13,9 @@ public class ListLessonsQueryHandler(IUserService users, IQuestionDataService qu
     {
         await AdminCommunityAuthorization.EnsurePlatformAdmin(users, request.AuthenticatedUserId);
         string curriculum = (request.Curriculum ?? "").Trim();
-        if (curriculum.Length == 0 || request.Grade < 1 || request.Unit < 1)
-            throw LiveGameQuestionNormalizer.BadRequest("Choose a curriculum, grade and unit.");
-        string? subject = string.IsNullOrWhiteSpace(request.Subject) ? null : request.Subject.Trim();
-        return await questions.GetLessonsAsync(curriculum, request.Grade, subject, request.Unit, cancellationToken);
+        if (curriculum.Length == 0 || request.Grade < 1 || request.Units == null || request.Units.Count == 0)
+            throw LiveGameQuestionNormalizer.BadRequest("Choose a curriculum, grade and at least one unit.");
+        var scope = LiveGameScopeRules.Normalize(request.Subjects ?? new(), request.Units, new(), null, null, null);
+        return await questions.GetLessonsAsync(curriculum, request.Grade, scope.Subjects, scope.Units, cancellationToken);
     }
 }

@@ -11,6 +11,9 @@ public class LiveGameQuestionSetResponse
     public string? Subject { get; set; }
     public int? Unit { get; set; }
     public int? Lesson { get; set; }
+    public List<string> Subjects { get; set; } = new();
+    public List<int> Units { get; set; } = new();
+    public List<LiveGameLessonRef> Lessons { get; set; } = new();
     public int QuestionCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

@@ -30,6 +30,10 @@ internal static class LiveGameMapper
             StartedAt = game.StartedAt,
             EndedAt = game.EndedAt
         };
+        var scope = LiveGameScopeRules.Read(game.ScopeJson, game.Subject, game.Unit, game.Lesson);
+        response.Subjects = scope.Subjects;
+        response.Units = scope.Units;
+        response.Lessons = scope.Lessons;
         response.Questions = LiveGameQuestionNormalizer.Deserialize(game.QuestionsJson);
         response.QuestionCount = response.Questions.Count;
         state.Fill(game.Id, response);

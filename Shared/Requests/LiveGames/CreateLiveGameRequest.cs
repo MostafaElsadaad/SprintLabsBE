@@ -8,6 +8,10 @@ public class CreateLiveGameRequest
     public string? Subject { get; set; }
     public int? Unit { get; set; }
     public int? Lesson { get; set; }
+    /// <summary>Several subjects/units/lessons (empty or null = all). When null the single values above are used.</summary>
+    public List<string>? Subjects { get; set; }
+    public List<int>? Units { get; set; }
+    public List<LiveGameLessonRef>? Lessons { get; set; }
     public int? Term { get; set; }
     public string? Language { get; set; }
     public int MaxPlayers { get; set; } = 8;

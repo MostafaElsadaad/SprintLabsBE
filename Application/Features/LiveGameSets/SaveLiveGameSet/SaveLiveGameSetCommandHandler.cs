@@ -28,8 +28,7 @@ public class SaveLiveGameSetCommandHandler(
         if (name.Length is 0 or > 100) throw LiveGameQuestionNormalizer.BadRequest("Give the set a name of up to 100 characters.");
         if (curriculum.Length is 0 or > 64) throw LiveGameQuestionNormalizer.BadRequest("Choose a curriculum.");
         if (request.Grade is < 1 or > 12) throw LiveGameQuestionNormalizer.BadRequest("Choose a grade from 1 to 12.");
-        string? subject = string.IsNullOrWhiteSpace(request.Subject) ? null : request.Subject.Trim();
-        if (subject?.Length > 64) throw LiveGameQuestionNormalizer.BadRequest(ErrorMessage.InvalidInput);
+        var scope = LiveGameScopeRules.Normalize(request.Subjects, request.Units, request.Lessons, request.Subject, request.Unit, request.Lesson);
 
         var items = await LiveGameQuestionNormalizer.NormalizeAsync(questions, request.Questions, cancellationToken);
 
@@ -46,9 +45,10 @@ public class SaveLiveGameSetCommandHandler(
         set.Name = name;
         set.Curriculum = curriculum;
         set.Grade = request.Grade;
-        set.Subject = subject;
-        set.Unit = request.Unit is > 0 ? request.Unit : null;
-        set.Lesson = request.Lesson is > 0 ? request.Lesson : null;
+        set.Subject = LiveGameScopeRules.SingleSubject(scope);
+        set.Unit = LiveGameScopeRules.SingleUnit(scope);
+        set.Lesson = LiveGameScopeRules.SingleLesson(scope);
+        set.ScopeJson = LiveGameScopeRules.Serialize(scope);
         set.QuestionCount = items.Count;
         set.QuestionsJson = LiveGameQuestionNormalizer.Serialize(items);
         set.UpdatedAt = DateTime.UtcNow;

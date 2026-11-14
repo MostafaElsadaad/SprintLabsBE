@@ -30,7 +30,10 @@ public class CreateLiveGameCommandHandler(
         string title = (request.Title ?? "").Trim();
         if (title.Length == 0) title = "Live game";
         string curriculum = (request.Curriculum ?? "").Trim();
-        string? subject = string.IsNullOrWhiteSpace(request.Subject) ? null : request.Subject.Trim();
+        var scope = LiveGameScopeRules.Normalize(request.Subjects, request.Units, request.Lessons, request.Subject, request.Unit, request.Lesson);
+        string? subject = LiveGameScopeRules.SingleSubject(scope);
+        int? unit = LiveGameScopeRules.SingleUnit(scope);
+        int? lesson = LiveGameScopeRules.SingleLesson(scope);
         string? language = string.IsNullOrWhiteSpace(request.Language) ? null : request.Language.Trim();
         int maxPlayers = request.MaxPlayers == 0 ? LiveGameRules.DefaultMaxPlayers : request.MaxPlayers;
 
@@ -47,8 +50,8 @@ public class CreateLiveGameCommandHandler(
             Grade = request.Grade,
             Curriculum = curriculum,
             Subject = subject,
-            Unit = request.Unit,
-            Lesson = request.Lesson,
+            Unit = unit,
+            Lesson = lesson,
             Term = request.Term,
             Language = language,
             Count = 1
@@ -72,8 +75,9 @@ public class CreateLiveGameCommandHandler(
             Curriculum = curriculum,
             Grade = request.Grade,
             Subject = subject,
-            Unit = request.Unit,
-            Lesson = request.Lesson,
+            Unit = unit,
+            Lesson = lesson,
+            ScopeJson = LiveGameScopeRules.Serialize(scope),
             Term = request.Term,
             Language = language,
             MaxPlayers = maxPlayers,

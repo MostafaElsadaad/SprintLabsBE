@@ -2,6 +2,7 @@ using System.Text.Json;
 using Application.Features.LiveGames.AutoSelectQuestions;
 using Application.Features.LiveGames.CreateLiveGame;
 using Application.Features.LiveGames.GetLiveGameQuestions;
+using Application.Features.LiveGames.ListLessons;
 using Application.Features.LiveGameSets.SaveLiveGameSet;
 using Application.Features.TeacherQuestions.SaveTeacherQuestion;
 using Compass.Tests.Features.QuestionData;
@@ -173,5 +174,74 @@ public class LiveGameQuestionBuilderTests
                 { Title = "Big class", Curriculum = "Egypt", Grade = 7, MaxPlayers = maxPlayers, Questions = new() { new() { Source = "mine", Question = TrueFalse("Big class question") } } } }, default);
         if (allowed) (await create()).MaxPlayers.Should().Be(30);
         else await create.Should().ThrowAsync<GenericException>();
+    }
+
+    private static QuestionDataRequest At(string subject, int unit, int lesson)
+    {
+        var question = Mcq($"{subject} U{unit} L{lesson}");
+        question.Subject = subject;
+        question.Unit = unit;
+        question.Lesson = lesson;
+        return question;
+    }
+
+    [Fact]
+    public async Task Several_subjects_units_and_lessons_can_be_chosen_together()
+    {
+        await using var f = await QuestionDataServiceTests.Fixture.CreateAsync();
+        var scienceU1L1 = At("Science", 1, 1);
+        var scienceU1L2 = At("Science", 1, 2);
+        var scienceU2L1 = At("Science", 2, 1);
+        var scienceU2L3 = At("Science", 2, 3);
+        var mathU2L3 = At("Math", 2, 3);
+        var mathU3L1 = At("Math", 3, 1);
+        var artU1L1 = At("Art", 1, 1);
+        foreach (var q in new[] { scienceU1L1, scienceU1L2, scienceU2L1, scienceU2L3, mathU2L3, mathU3L1, artU1L1 })
+            await f.Service.PublishAsync(Admin, q, default);
+
+        // Lessons are listed per unit, across the chosen subjects only.
+        var lessons = await new ListLessonsQueryHandler(Users(), f.Service).Handle(new ListLessonsQuery
+            { AuthenticatedUserId = Admin, Curriculum = "Egypt", Grade = 7, Subjects = new() { "Science", "Math" }, Units = new() { 1, 2 } }, default);
+        lessons.Select(l => (l.Unit, l.Lesson, l.QuestionCount)).Should().Equal((1, 1, 1), (1, 2, 1), (2, 1, 1), (2, 3, 2));
+
+        // Science + Math; unit 1 limited to lesson 2, unit 2 limited to lesson 3, unit 3 whole.
+        var picked = await new AutoSelectQuestionsQueryHandler(Users(), f.Service).Handle(new AutoSelectQuestionsQuery
+        {
+            AuthenticatedUserId = Admin,
+            Request = new()
+            {
+                Curriculum = "Egypt", Grade = 7, Count = 10,
+                Subjects = new() { "Science", "Math" },
+                Units = new() { 1, 2, 3 },
+                Lessons = new() { new() { Unit = 1, Lesson = 2 }, new() { Unit = 2, Lesson = 3 }, new() { Unit = 9, Lesson = 1 } }
+            }
+        }, default);
+        picked.Questions.Select(q => q.Question.QuestionId).Should().BeEquivalentTo(new[]
+            { scienceU1L2.QuestionId, scienceU2L3.QuestionId, mathU2L3.QuestionId, mathU3L1.QuestionId });
+
+        // The scope is stored with a game and a saved set; single columns stay empty when several are chosen.
+        var game = await new CreateLiveGameCommandHandler(Users(), new BaseRepository<LiveGame>(f.Context), f.Service, new Infrastructure.Services.LiveGameStateStore())
+            .Handle(new CreateLiveGameCommand { AuthenticatedUserId = Admin, Request = new()
+            {
+                Title = "Mixed", Curriculum = "Egypt", Grade = 7, MaxPlayers = 4,
+                Subjects = new() { "Math", "Science" }, Units = new() { 2, 1 },
+                Lessons = new() { new() { Unit = 2, Lesson = 3 } },
+                Questions = picked.Questions
+            } }, default);
+        game.Subject.Should().BeNull();
+        game.Unit.Should().BeNull();
+        game.Subjects.Should().Equal("Math", "Science");
+        game.Units.Should().Equal(1, 2);
+        game.Lessons.Select(l => (l.Unit, l.Lesson)).Should().Equal((2, 3));
+
+        var set = await new SaveLiveGameSetCommandHandler(Users(), new BaseRepository<LiveGameQuestionSet>(f.Context), f.Service)
+            .Handle(new SaveLiveGameSetCommand { AuthenticatedUserId = Admin, Request = new()
+            {
+                Name = "Single", Curriculum = "Egypt", Grade = 7,
+                Subjects = new() { "Science" }, Units = new() { 2 }, Lessons = new() { new() { Unit = 2, Lesson = 3 } },
+                Questions = new() { new() { Source = "library", Question = scienceU2L3 } }
+            } }, default);
+        (set.Subject, set.Unit, set.Lesson).Should().Be(("Science", 2, 3));
+        set.Lessons.Select(l => (l.Unit, l.Lesson)).Should().Equal((2, 3));
     }
 }

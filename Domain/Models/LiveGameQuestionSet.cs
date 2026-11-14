@@ -11,6 +11,8 @@ public class LiveGameQuestionSet
     public string? Subject { get; set; }
     public int? Unit { get; set; }
     public int? Lesson { get; set; }
+    /// <summary>Several subjects/units/lessons (LiveGameScope JSON); null = only the single values above.</summary>
+    public string? ScopeJson { get; set; }
     public int QuestionCount { get; set; }
     public string QuestionsJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }

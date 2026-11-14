@@ -395,6 +395,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("ResultJson")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ScopeJson")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("datetime(6)");
 
@@ -462,6 +465,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("QuestionsJson")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ScopeJson")
                         .HasColumnType("longtext");
 
                     b.Property<string>("Subject")

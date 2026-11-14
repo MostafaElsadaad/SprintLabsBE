@@ -36,12 +36,16 @@ public class LiveGamesController : ControllerBase
     }
 
     [HttpGet("lessons")]
-    public async Task<IActionResult> Lessons([FromQuery] string curriculum, [FromQuery] int grade, [FromQuery] int unit,
-        [FromQuery] string? subject, CancellationToken ct)
+    public async Task<IActionResult> Lessons([FromQuery] string curriculum, [FromQuery] int grade,
+        [FromQuery] List<int>? units, [FromQuery] List<string>? subjects,
+        [FromQuery] int? unit, [FromQuery] string? subject, CancellationToken ct)
     {
         if (!UserId.HasValue) return Unauthorized();
+        var unitList = units is { Count: > 0 } ? units : unit is > 0 ? new List<int> { unit.Value } : new List<int>();
+        var subjectList = subjects is { Count: > 0 } ? subjects
+            : string.IsNullOrWhiteSpace(subject) ? new List<string>() : new List<string> { subject };
         return Envelope(await _mediator.Send(new ListLessonsQuery
-            { AuthenticatedUserId = UserId.Value, Curriculum = curriculum, Grade = grade, Unit = unit, Subject = subject }, ct));
+            { AuthenticatedUserId = UserId.Value, Curriculum = curriculum, Grade = grade, Units = unitList, Subjects = subjectList }, ct));
     }
 
     [HttpPost("auto-select")]
